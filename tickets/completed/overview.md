@@ -18,3 +18,4 @@
 
 **Tickets:**
 - [x] [Ticket 209: Check Catalogue and Availability Model](./209-check-catalogue-and-availability-model.md)
+- [x] [Ticket 210: Audit Wizard and Check Selection](./210-audit-wizard-and-check-selection.md)

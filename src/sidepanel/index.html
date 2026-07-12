@@ -32,6 +32,7 @@
         <div class="actions">
           <button type="button" id="allow-site" hidden>Allow this site</button>
           <button type="button" id="collect-dom" hidden>Start audit</button>
+          <button type="button" id="choose-checks" class="secondary" hidden>Choose checks</button>
           <button type="button" id="refresh" class="secondary">Refresh</button>
           <button type="button" id="ping" class="secondary" hidden>Test page access</button>
           <button type="button" id="open-report" class="secondary" hidden>Open report</button>
@@ -39,6 +40,18 @@
             Back to findings
           </button>
           <p id="collect-summary" class="status" hidden></p>
+        </div>
+      </section>
+
+      <section id="check-selection-section" aria-labelledby="check-selection-heading" hidden>
+        <h2 id="check-selection-heading" tabindex="-1">Choose audit checks</h2>
+        <p class="lede">
+          Safe DOM checks are selected by default. Experimental checks stay off until you consent.
+        </p>
+        <div id="check-selection-list"></div>
+        <div class="actions">
+          <button type="button" id="start-selected-checks">Start selected checks</button>
+          <button type="button" id="cancel-check-selection" class="secondary">Cancel</button>
         </div>
       </section>
 

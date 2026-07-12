@@ -126,7 +126,6 @@ be discovered, crawled, and indexed.
 - [ ] [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
 - [ ] [Ticket 208: Structured Data Inventory and Validation](./208-structured-data-inventory-and-validation.md)
 - [ ] [Ticket 204: Indexability Reconciliation Rules](./204-indexability-reconciliation-rules.md)
-- [ ] [Ticket 210: Audit Wizard and Check Selection](./210-audit-wizard-and-check-selection.md)
 - [ ] [Ticket 205: Crawl Signals Workspace](./205-crawl-signals-workspace.md)
 - [ ] [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md)
 

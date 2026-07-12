@@ -5,6 +5,7 @@ import {
 } from '../content/dom-collector';
 import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
 import { evaluatePageSnapshot, type PageSummary } from './rules/engine';
+import { availabilityFromEvidence, resolveAuditCheckSelection } from './rules/check-selection';
 import type { AuditSession, CaptureError, Finding, PageSnapshot } from './schemas/audit';
 import { parseDomFacts } from './schemas/dom-evidence';
 import { DEFAULT_DOM_COLLECT_LIMITS as SCHEMA_LIMITS, DOM_LIMITS } from './schemas/dom-limits';
@@ -99,6 +100,7 @@ function enforceSnapshotBudget(snapshot: PageSnapshot): {
 
 export async function collectDomForActiveTab(
   repo: SessionRepository = new SessionRepository(),
+  selectedCheckIds?: ReadonlySet<string>,
 ): Promise<CollectDomResult> {
   const tab = await getActiveTabSnapshot();
   if (tab.status === 'missing' || tab.status === 'unsupported') {
@@ -203,9 +205,14 @@ export async function collectDomForActiveTab(
       headerCapture: 'unavailable' as const,
       robotsFetch: 'unavailable' as const,
     };
+    const checkSelection = resolveAuditCheckSelection({
+      requestedCheckIds: selectedCheckIds,
+      availability: availabilityFromEvidence(true, snapshot.evidence),
+    });
     const { findings, summary } = evaluatePageSnapshot(snapshot, {
       featureAvailability,
       captureErrors,
+      checkIds: new Set(checkSelection.selectedCheckIds),
     });
     const session: AuditSession = createEmptySession({
       id: newId('sess'),
@@ -218,6 +225,7 @@ export async function collectDomForActiveTab(
     session.snapshots = [snapshot];
     session.findings = findings;
     session.captureErrors = captureErrors;
+    session.checkSelection = checkSelection;
 
     const encoded = JSON.stringify(session);
     if (encoded.length > DOM_LIMITS.maxSessionChars) {

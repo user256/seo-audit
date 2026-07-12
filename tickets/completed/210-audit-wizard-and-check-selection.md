@@ -1,8 +1,8 @@
 # Ticket 210: Audit Wizard and Check Selection
 
 **Sprint:** 2 — Crawl and Index Signals
-**Status:** Not started
-**Owner:** unassigned
+**Status:** Complete
+**Owner:** agent/ticket-210-audit-wizard
 **Estimate:** L
 
 ## Context
@@ -23,22 +23,22 @@ audit, defaulting to the full safe set so the one-click fast path is unchanged.
 
 ## Acceptance criteria
 
-- [ ] A “Choose checks” affordance opens a selection view listing catalogue
+- [x] A “Choose checks” affordance opens a selection view listing catalogue
   checks grouped by category, each with label, description, and a cost badge
   (DOM / network / experiment) sourced from the catalogue (Ticket 209).
-- [ ] Checks whose required access or captured evidence is missing are shown
+- [x] Checks whose required access or captured evidence is missing are shown
   disabled with the reason (never silently omitted), using the catalogue’s
   `availability(ctx)` resolver.
-- [ ] Opt-in / experimental checks are unchecked by default and disclose their
+- [x] Opt-in / experimental checks are unchecked by default and disclose their
   permission and network consequence before they can be selected.
-- [ ] “Start audit” without opening the wizard runs the default safe set exactly
+- [x] “Start audit” without opening the wizard runs the default safe set exactly
   as today — the wizard is never a mandatory gate, so it cannot reintroduce the
   empty-screen problem Ticket 111 fixed.
-- [ ] The saved session records which checks were selected, which were skipped,
+- [x] The saved session records which checks were selected, which were skipped,
   and why, so a partial audit is self-describing (and stays honest in exports).
-- [ ] Selection view is keyboard-operable, has accessible names and visible
+- [x] Selection view is keyboard-operable, has accessible names and visible
   focus, is usable at 320 CSS px, and meets WCAG AA contrast in both themes.
-- [ ] Unit tests cover default selection, availability-driven disabling, opt-in
+- [x] Unit tests cover default selection, availability-driven disabling, opt-in
   consent copy, and that a selected subset runs exactly those checks.
 
 ## Out of scope

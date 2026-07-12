@@ -108,14 +108,14 @@ describe('SessionRepository', () => {
     const loaded = await repo.get('legacy-1');
     expect(loaded.status).toBe('ok');
     if (loaded.status === 'ok') {
-      expect(loaded.session.schemaVersion).toBe(2);
+      expect(loaded.session.schemaVersion).toBe(3);
       expect(loaded.session.snapshots[0]?.captureLimits).toBeTruthy();
     }
 
     const again = await repo.get('legacy-1');
     expect(again.status).toBe('ok');
     if (again.status === 'ok') {
-      expect(again.session.schemaVersion).toBe(2);
+      expect(again.session.schemaVersion).toBe(3);
     }
   });
 
