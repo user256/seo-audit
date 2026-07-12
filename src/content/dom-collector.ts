@@ -94,11 +94,23 @@ export function collectDomFactsInPage(
   };
 
   const title = safe('title', (): FieldState => {
-    const el = document.querySelector('title');
-    if (!el) return { state: 'absent' };
-    const raw = (el.textContent ?? '').trim();
-    if (raw === '') return { state: 'empty', raw: '', selector: 'title' };
-    return { state: 'present', value: raw, raw, selector: 'title', count: 1 };
+    const nodes = Array.from(document.querySelectorAll('title'));
+    if (nodes.length === 0) return { state: 'absent' };
+    const values = nodes.map((n, i) => ({
+      raw: (n.textContent ?? '').trim(),
+      selector: `title:nth-of-type(${i + 1})`,
+    }));
+    if (values.length > 1) {
+      return {
+        state: 'duplicate',
+        values: values.map((v) => v.raw),
+        selectors: values.map((v) => v.selector),
+        count: values.length,
+      };
+    }
+    const only = values[0]!;
+    if (only.raw === '') return { state: 'empty', raw: '', selector: 'title' };
+    return { state: 'present', value: only.raw, raw: only.raw, selector: 'title', count: 1 };
   });
 
   const metaDescription = safe('metaDescription', () => metaContent('meta[name="description" i]'));

@@ -5,4 +5,5 @@
 - [x] [Ticket 101: Extension Shell and Permission Boundary](./101-extension-shell-and-permission-boundary.md)
 - [x] [Ticket 102: Audit Data Contract and Local Session Store](./102-audit-data-contract-and-local-session-store.md)
 - [x] [Ticket 103: Active-Page DOM Collector](./103-active-page-dom-collector.md)
+- [x] [Ticket 104: Findings Engine and Page Summary](./104-findings-engine-and-page-summary.md)
 
