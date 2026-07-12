@@ -1,8 +1,8 @@
 # Ticket 110: Source-Specific DOM Evidence Validation
 
-**Sprint:** 1 — Inspect One Page  
-**Status:** Not started  
-**Owner:** unassigned  
+**Sprint:** 1 — Inspect One Page
+**Status:** Done
+**Owner:** agent/ticket-110-dom-evidence-validation
 **Estimate:** M
 
 ## Context
@@ -21,16 +21,16 @@ bounded before it can be transformed, evaluated, or saved.
 
 ## Acceptance criteria
 
-- [ ] Define discriminated, source-specific Zod schemas for every value emitted
+- [x] Define discriminated, source-specific Zod schemas for every value emitted
   by `collectDomFactsInPage`, including bounded strings and item arrays.
-- [ ] Apply documented item and string limits to duplicate title/meta/robots/
+- [x] Apply documented item and string limits to duplicate title/meta/robots/
   canonical values and to canonical/alternate URL and hreflang strings; retain
   truthful truncation evidence.
-- [ ] Validate source-specific values at collection and save boundaries, with a
+- [x] Validate source-specific values at collection and save boundaries, with a
   readable `dom-evidence-invalid` capture error for malformed payloads.
-- [ ] Add adversarial tests for malformed source payloads and each formerly
+- [x] Add adversarial tests for malformed source payloads and each formerly
   unbounded duplicate/URL path; retain valid historical v1 session migration.
-- [ ] Update the data-contract documentation and Ticket 107’s completion note
+- [x] Update the data-contract documentation and Ticket 107’s completion note
   with the final schema version and limits.
 
 ## Out of scope
@@ -49,6 +49,11 @@ bounded before it can be transformed, evaluated, or saved.
 - 2026-07-12 — Filed during PR review of Ticket 107. Generic field-state
   validation is present, but per-source payload validation and several bounds
   remain incomplete.
+- 2026-07-12 — Shipped DOM evidence schema v2: discriminated, source-specific
+  payload validation occurs before transformation and again for v2 snapshots at
+  session save. Duplicate title/meta/robots/canonical lists use `maxMetaItems`;
+  canonical/alternate URLs and hreflang strings use `maxStringChars`, with
+  retained-prefix truncation evidence. Historical v1 sessions remain readable.
 
 ---
 

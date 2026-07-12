@@ -10,7 +10,7 @@ tickets are archived in [completed/](./completed/).
 ## Now — finish the Sprint 1 gate
 
 1. [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md) — compose findings/evidence/summary into a real report; "Open report" is currently a blank notes box. Fatal gap; blocks 199.
-2. [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md) — implement the remaining per-source persisted-evidence validation and adversarial tests.
+2. [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md) — **completed by agent/ticket-110-dom-evidence-validation**; source-specific persisted-evidence validation and adversarial tests are complete.
 3. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally** until a fresh Chrome 114+ profile completes the documented smoke checklist.
 4. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — run only after 110, 112, and 109 are complete.
 

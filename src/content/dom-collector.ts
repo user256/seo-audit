@@ -119,11 +119,25 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
     return { text: text.slice(0, caps.maxStringChars), truncated: true };
   };
 
+  const limitsFor = (
+    omitted: number,
+    stringTruncated: boolean,
+    itemLabel: string,
+    itemCap: number,
+  ): FieldLimits | undefined => {
+    const reasons: string[] = [];
+    if (omitted > 0) reasons.push(`${itemLabel} clipped to ${itemCap} entries`);
+    if (stringTruncated) reasons.push(`String clipped to ${caps.maxStringChars} characters`);
+    return reasons.length > 0
+      ? { truncated: true, reason: reasons.join('; '), omittedCount: omitted || undefined }
+      : undefined;
+  };
+
   const safe = <T>(label: string, fn: () => T): T | FieldState => {
     try {
       return fn();
     } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
+      const detail = clip(err instanceof Error ? err.message : String(err)).text;
       return { state: 'inaccessible', detail: `${label}: ${detail}` };
     }
   };
@@ -131,22 +145,24 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
   const metaContent = (selector: string): FieldState => {
     const nodes = Array.from(document.querySelectorAll(selector));
     if (nodes.length === 0) return { state: 'absent' };
-    const values = nodes.map((n) => {
+    const all = nodes.map((n) => {
       const clipped = clip((n.getAttribute('content') ?? '').trim());
       return { raw: clipped.text, selector, truncated: clipped.truncated };
     });
-    if (values.length > 1) {
+    const omitted = Math.max(0, all.length - caps.maxMetaItems);
+    const values = all.slice(0, caps.maxMetaItems);
+    if (all.length > 1) {
       return {
         state: 'duplicate',
         values: values.map((v) => v.raw),
         selectors: values.map((v) => v.selector),
-        count: values.length,
-        limits: values.some((v) => v.truncated)
-          ? {
-              truncated: true,
-              reason: `String clipped to ${caps.maxStringChars} characters`,
-            }
-          : undefined,
+        count: all.length,
+        limits: limitsFor(
+          omitted,
+          all.some((v) => v.truncated),
+          'Meta duplicate list',
+          caps.maxMetaItems,
+        ),
       };
     }
     const only = values[0]!;
@@ -157,19 +173,14 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
       raw: only.raw,
       selector,
       count: 1,
-      limits: only.truncated
-        ? {
-            truncated: true,
-            reason: `String clipped to ${caps.maxStringChars} characters`,
-          }
-        : undefined,
+      limits: limitsFor(0, only.truncated, 'Meta duplicate list', caps.maxMetaItems),
     };
   };
 
   const title = safe('title', (): FieldState => {
     const nodes = Array.from(document.querySelectorAll('title'));
     if (nodes.length === 0) return { state: 'absent' };
-    const values = nodes.map((n, i) => {
+    const all = nodes.map((n, i) => {
       const clipped = clip((n.textContent ?? '').trim());
       return {
         raw: clipped.text,
@@ -177,18 +188,20 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
         truncated: clipped.truncated,
       };
     });
-    if (values.length > 1) {
+    const omitted = Math.max(0, all.length - caps.maxMetaItems);
+    const values = all.slice(0, caps.maxMetaItems);
+    if (all.length > 1) {
       return {
         state: 'duplicate',
         values: values.map((v) => v.raw),
         selectors: values.map((v) => v.selector),
-        count: values.length,
-        limits: values.some((v) => v.truncated)
-          ? {
-              truncated: true,
-              reason: `String clipped to ${caps.maxStringChars} characters`,
-            }
-          : undefined,
+        count: all.length,
+        limits: limitsFor(
+          omitted,
+          all.some((v) => v.truncated),
+          'Title duplicate list',
+          caps.maxMetaItems,
+        ),
       };
     }
     const only = values[0]!;
@@ -199,12 +212,7 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
       raw: only.raw,
       selector: 'title',
       count: 1,
-      limits: only.truncated
-        ? {
-            truncated: true,
-            reason: `String clipped to ${caps.maxStringChars} characters`,
-          }
-        : undefined,
+      limits: limitsFor(0, only.truncated, 'Title duplicate list', caps.maxMetaItems),
     };
   });
 
@@ -215,7 +223,7 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
       document.querySelectorAll('meta[name="robots" i], meta[name="googlebot" i]'),
     );
     if (nodes.length === 0) return { state: 'absent' };
-    const values = nodes.map((n, i) => {
+    const all = nodes.map((n, i) => {
       const name = (n.getAttribute('name') ?? 'robots').toLowerCase();
       const clipped = clip((n.getAttribute('content') ?? '').trim());
       return {
@@ -225,18 +233,20 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
         truncated: clipped.truncated,
       };
     });
-    if (values.length > 1) {
+    const omitted = Math.max(0, all.length - caps.maxMetaItems);
+    const values = all.slice(0, caps.maxMetaItems);
+    if (all.length > 1) {
       return {
         state: 'duplicate',
         values: values.map(({ name, content, selector }) => ({ name, content, selector })),
         selectors: values.map((v) => v.selector),
-        count: values.length,
-        limits: values.some((v) => v.truncated)
-          ? {
-              truncated: true,
-              reason: `String clipped to ${caps.maxStringChars} characters`,
-            }
-          : undefined,
+        count: all.length,
+        limits: limitsFor(
+          omitted,
+          all.some((v) => v.truncated),
+          'Robots duplicate list',
+          caps.maxMetaItems,
+        ),
       };
     }
     const only = values[0]!;
@@ -249,12 +259,7 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
       raw: only.content,
       selector: only.selector,
       count: 1,
-      limits: only.truncated
-        ? {
-            truncated: true,
-            reason: `String clipped to ${caps.maxStringChars} characters`,
-          }
-        : undefined,
+      limits: limitsFor(0, only.truncated, 'Robots duplicate list', caps.maxMetaItems),
     };
   });
 
@@ -262,7 +267,7 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
     try {
       return { href, absolute: new URL(href, document.baseURI).toString() };
     } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
+      const detail = clip(err instanceof Error ? err.message : String(err)).text;
       return { href, absolute: null, detail };
     }
   };
@@ -270,22 +275,37 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
   const canonical = safe('canonical', (): FieldState => {
     const nodes = Array.from(document.querySelectorAll('link[rel="canonical" i]'));
     if (nodes.length === 0) return { state: 'absent' };
-    const values = nodes.map((n, i) => {
+    const all = nodes.map((n, i) => {
       const href = n.getAttribute('href') ?? '';
       const resolved = resolveUrl(href);
+      const hrefClipped = clip(href);
+      const absoluteClipped = resolved.absolute === null ? null : clip(resolved.absolute);
+      const detailClipped = resolved.detail === undefined ? undefined : clip(resolved.detail);
       return {
-        href,
-        absolute: resolved.absolute,
+        href: hrefClipped.text,
+        absolute: absoluteClipped?.text ?? null,
         selector: `link[rel="canonical" i]:nth-of-type(${i + 1})`,
-        detail: resolved.detail,
+        detail: detailClipped?.text,
+        truncated:
+          hrefClipped.truncated ||
+          Boolean(absoluteClipped?.truncated) ||
+          Boolean(detailClipped?.truncated),
       };
     });
-    if (values.length > 1) {
+    const omitted = Math.max(0, all.length - caps.maxMetaItems);
+    const values = all.slice(0, caps.maxMetaItems);
+    if (all.length > 1) {
       return {
         state: 'duplicate',
-        values,
+        values: values.map(({ truncated: _truncated, ...value }) => value),
         selectors: values.map((v) => v.selector),
-        count: values.length,
+        count: all.length,
+        limits: limitsFor(
+          omitted,
+          all.some((v) => v.truncated),
+          'Canonical duplicate list',
+          caps.maxMetaItems,
+        ),
       };
     }
     const only = values[0]!;
@@ -306,6 +326,7 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
       raw: only.href,
       selector: only.selector,
       count: 1,
+      limits: limitsFor(0, only.truncated, 'Canonical duplicate list', caps.maxMetaItems),
     };
   });
 
@@ -316,29 +337,38 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
       const href = n.getAttribute('href') ?? '';
       const hreflang = n.getAttribute('hreflang') ?? '';
       const resolved = resolveUrl(href);
+      const hrefClipped = clip(href);
+      const hreflangClipped = clip(hreflang);
+      const absoluteClipped = resolved.absolute === null ? null : clip(resolved.absolute);
+      const detailClipped = resolved.detail === undefined ? undefined : clip(resolved.detail);
       return {
-        href,
-        hreflang,
-        absolute: resolved.absolute,
+        href: hrefClipped.text,
+        hreflang: hreflangClipped.text,
+        absolute: absoluteClipped?.text ?? null,
         selector: `link[rel="alternate" i][hreflang]:nth-of-type(${i + 1})`,
-        detail: resolved.detail,
+        detail: detailClipped?.text,
+        truncated:
+          hrefClipped.truncated ||
+          hreflangClipped.truncated ||
+          Boolean(absoluteClipped?.truncated) ||
+          Boolean(detailClipped?.truncated),
       };
     });
     const omitted = Math.max(0, all.length - caps.maxAlternateItems);
-    const values = all.slice(0, caps.maxAlternateItems);
+    const values = all
+      .slice(0, caps.maxAlternateItems)
+      .map(({ truncated: _truncated, ...value }) => value);
     return {
       state: 'present',
       value: values,
       selector: 'link[rel="alternate" i][hreflang]',
       count: all.length,
-      limits:
-        omitted > 0
-          ? {
-              truncated: true,
-              reason: `Alternate list clipped to ${caps.maxAlternateItems} items`,
-              omittedCount: omitted,
-            }
-          : undefined,
+      limits: limitsFor(
+        omitted,
+        all.some((v) => v.truncated),
+        'Alternate list',
+        caps.maxAlternateItems,
+      ),
     };
   });
 
@@ -358,22 +388,12 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
     const omitted = Math.max(0, all.length - caps.maxMetaItems);
     const values = all.slice(0, caps.maxMetaItems).map(({ key, content }) => ({ key, content }));
     const stringTruncated = all.some((v) => v.truncated);
-    const reasons: string[] = [];
-    if (omitted > 0) reasons.push(`Item list clipped to ${caps.maxMetaItems} entries`);
-    if (stringTruncated) reasons.push(`String clipped to ${caps.maxStringChars} characters`);
     return {
       state: 'present',
       value: values,
       selector,
       count: all.length,
-      limits:
-        reasons.length > 0
-          ? {
-              truncated: true,
-              reason: reasons.join('; '),
-              omittedCount: omitted > 0 ? omitted : undefined,
-            }
-          : undefined,
+      limits: limitsFor(omitted, stringTruncated, 'Item list', caps.maxMetaItems),
     };
   };
 
@@ -467,10 +487,12 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
       }
       if (inventory.length < caps.maxLinkInventory) {
         const resolved = resolveUrl(href);
+        const hrefClipped = clip(href);
+        const absoluteClipped = resolved.absolute === null ? null : clip(resolved.absolute);
         const textClipped = clip((a.textContent ?? '').trim());
         inventory.push({
-          href,
-          absolute: resolved.absolute,
+          href: hrefClipped.text,
+          absolute: absoluteClipped?.text ?? null,
           text: textClipped.text,
         });
       }
@@ -549,7 +571,7 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
     for (const tag of tags) {
       counts[tag] = document.querySelectorAll(tag).length;
     }
-    const doctype = document.doctype ? `<!DOCTYPE ${document.doctype.name}>` : null;
+    const doctype = document.doctype ? clip(`<!DOCTYPE ${document.doctype.name}>`).text : null;
     return {
       state: 'present',
       value: {
@@ -629,7 +651,7 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
           parseStatus: 'ok',
         });
       } catch (err) {
-        const detail = err instanceof Error ? err.message : String(err);
+        const detail = clip(err instanceof Error ? err.message : String(err)).text;
         entries.push({
           index: i,
           selector,
