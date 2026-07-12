@@ -47,9 +47,24 @@ These are load-bearing for Ticket 404 packaging and the product privacy promise:
    `dist/`, never loaded from a CDN at runtime.
 4. **`package:check`.** Today a stub that asserts `dist/manifest.json` is MV3.
    Ticket 404 expands it to ZIP contents allow/deny lists and version stamping.
-5. **Least privilege remains a product invariant.** The toolchain placeholder
-   requests only `sidePanel`. Host access is added per-origin at user action in
-   Ticket 101 — never as `<all_urls>` in the baseline manifest.
+5. **Least privilege remains a product invariant.** Required permissions are
+   `storage`, `activeTab`, `sidePanel`, `scripting`, and `tabs`. There is **no**
+   required `host_permissions` / `<all_urls>` entry. Optional
+   `http://*/*` + `https://*/*` patterns exist only so
+   `chrome.permissions.request` can grant a single active origin
+   (`https://host/*` or `http://host/*`) after an explicit “Allow this site”
+   click in the side panel. URL eligibility and pattern generation live in
+   `src/lib/origins.ts` — do not invent ad-hoc permission patterns elsewhere.
+
+## Permission boundary (Ticket 101)
+
+| Surface          | Behaviour                                                                                                      |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| Toolbar action   | Opens the side panel (`openPanelOnActionClick`).                                                               |
+| Side panel       | Shows active tab URL, access state, and Allow / ping actions.                                                  |
+| Allow this site  | Calls `chrome.permissions.request` **in the side panel** (user gesture) for exactly the active origin pattern. |
+| Unsupported URLs | `chrome://`, `file://`, extension pages, etc. are explained; no request is made.                               |
+| Content ping     | After grant, `chrome.scripting.executeScript` injects a no-op ping and returns `location.href`.                |
 
 ## npm scripts (contract for later tickets)
 

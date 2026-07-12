@@ -9,7 +9,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/test/**', 'src/sidepanel/**', 'src/background/**'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/test/**',
+        'src/sidepanel/sidepanel.ts',
+        'src/background/service-worker.ts',
+      ],
     },
   },
 });

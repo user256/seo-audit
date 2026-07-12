@@ -1,8 +1,8 @@
 # Ticket 101: Extension Shell and Permission Boundary
 
-**Sprint:** 1 — Inspect One Page  
-**Status:** Not started  
-**Owner:** unassigned  
+**Sprint:** 1 — Inspect One Page
+**Status:** Done
+**Owner:** unassigned
 **Estimate:** M
 
 ## Context
@@ -18,16 +18,16 @@ origins.
 
 ## Acceptance criteria
 
-- [ ] `manifest.json` uses Manifest V3, declares `storage`, `activeTab`, and
+- [x] `manifest.json` uses Manifest V3, declares `storage`, `activeTab`, and
   `sidePanel`, and has no required blanket host permission.
-- [ ] A toolbar action opens the side panel and shows the active tab URL,
+- [x] A toolbar action opens the side panel and shows the active tab URL,
   origin-access state, and a clear “Allow this site” action.
-- [ ] Access is requested with `chrome.permissions.request` for exactly the
+- [x] Access is requested with `chrome.permissions.request` for exactly the
   active origin (`https://host/*` or `http://host/*`); `chrome://`, extension,
   file, and other unsupported URLs are explained without requesting access.
-- [ ] The service worker, side-panel page, and no-op content-script injection
+- [x] The service worker, side-panel page, and no-op content-script injection
   round trip are covered by unit tests with Chrome APIs mocked.
-- [ ] `npm run lint`, `npm test`, and `npm run build` pass; the generated
+- [x] `npm run lint`, `npm test`, and `npm run build` pass; the generated
   archive loads as an unpacked extension in Chrome.
 
 ## Out of scope
@@ -53,4 +53,21 @@ cannot invent their own permission behaviour.
 
 - 2026-07-12 — `activeTab` is transient; explicit optional host permission is
   required for repeatable origin-scoped auditing and background fetches.
+- 2026-07-12 — Also declare `scripting` (programmatic ping injection) and `tabs`
+  (reliable active-URL read from the side panel). Neither is a host permission.
+  `optional_host_permissions: http(s)://*/*` enables per-origin
+  `permissions.request` without granting blanket access up front.
+- 2026-07-12 — `chrome.permissions.request` runs in the side panel (user
+  gesture), not the service worker. Origin eligibility/patterns live in
+  `src/lib/origins.ts`.
 
+---
+
+## Definition of done
+
+This ticket is closeable when:
+
+1. All acceptance criteria above are checked.
+2. Changes are merged to the main branch (or the sprint's working branch).
+3. The corresponding bullet in `tickets/overview.md` is changed from `- [ ]` to `- [x]`.
+4. Any follow-up work discovered during implementation is filed as a new ticket — not silently absorbed.

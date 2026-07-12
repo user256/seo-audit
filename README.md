@@ -43,9 +43,10 @@ and the ticket workflow. **Ticket 100** stands up the toolchain and **Ticket
 
 ## Status
 
-Sprint 1 (“Inspect One Page”) is active. Toolchain bootstrap (Ticket 100) is in
-place; next pick is **Ticket 101 (Extension Shell and Permission Boundary)**.
-Track progress in [`tickets/overview.md`](./tickets/overview.md).
+Sprint 1 (“Inspect One Page”) is active. Toolchain (100) and extension shell /
+permission boundary (101) are in place; next pick is **Ticket 102 (Audit Data
+Contract and Local Session Store)**. Track progress in
+[`tickets/overview.md`](./tickets/overview.md).
 
 ---
 
