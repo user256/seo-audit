@@ -77,6 +77,9 @@ publisher markup or complete source coverage.
 - 2026-07-12 — Post-merge review found that the collector schema validates the
   generic field envelope but still leaves individual payload values as
   `unknown`. Ticket 110 tracks source-specific schemas and boundary tests.
+- 2026-07-12 — Ticket 110 completed the follow-up with DOM evidence schema v2:
+  source-specific payload schemas, duplicate/URL bounds, collection/save
+  validation, and v1 historical-session compatibility.
 
 ---
 

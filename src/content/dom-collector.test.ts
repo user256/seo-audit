@@ -162,6 +162,74 @@ describe('collectDomFactsInPage', () => {
     expect(snapshot.evidence.some((e) => e.source === 'capture.limits')).toBe(true);
   });
 
+  it('bounds duplicate title/meta/robots/canonical values and long canonical/alternate URL strings', () => {
+    const long = 'x'.repeat(400);
+    const repeated = Array.from(
+      { length: 5 },
+      (_, i) => `
+      <title>Title ${i} ${long}</title>
+      <meta name="description" content="Description ${i} ${long}" />
+      <meta name="robots" content="index ${i} ${long}" />
+      <link rel="canonical" href="https://example.com/${long}/${i}" />
+      <link rel="alternate" hreflang="en-${long}-${i}" href="https://example.com/${long}/alt/${i}" />
+    `,
+    ).join('');
+    loadFixture(
+      `<!doctype html><html><head>${repeated}</head><body></body></html>`,
+      'https://example.com/huge',
+    );
+
+    const facts = collectDomFactsInPage({
+      ...DEFAULT_DOM_COLLECT_LIMITS,
+      maxStringChars: 30,
+      maxMetaItems: 2,
+      maxAlternateItems: 2,
+    });
+
+    for (const field of [facts.title, facts.metaDescription, facts.metaRobots, facts.canonical]) {
+      expect(field.state).toBe('duplicate');
+      if (field.state === 'duplicate') {
+        expect(field.values).toHaveLength(2);
+        expect(field.count).toBe(5);
+        expect(field.limits?.omittedCount).toBe(3);
+        expect(field.limits?.truncated).toBe(true);
+      }
+    }
+    expect(facts.alternates.state).toBe('present');
+    if (facts.alternates.state === 'present') {
+      const values = facts.alternates.value as { href: string; hreflang: string }[];
+      expect(values).toHaveLength(2);
+      expect(values[0]?.href).toHaveLength(30);
+      expect(values[0]?.hreflang).toHaveLength(30);
+      expect(facts.alternates.limits?.omittedCount).toBe(3);
+      expect(facts.alternates.limits?.truncated).toBe(true);
+    }
+    expect(parseDomFacts(facts).ok).toBe(true);
+  });
+
+  it('rejects malformed source-specific field values before they become snapshots', () => {
+    loadFixture(FIXTURE_RELATIVE_URLS, 'https://example.com/shop/item');
+    const facts = collectDomFactsInPage();
+    facts.title = {
+      state: 'present',
+      value: { text: 'not a title string' },
+      selector: 'title',
+    };
+    const titleResult = parseDomFacts(facts);
+    expect(titleResult.ok).toBe(false);
+    if (!titleResult.ok) expect(titleResult.issues.join(' ')).toMatch(/title\.value/);
+
+    facts.title = collectDomFactsInPage().title;
+    facts.links = {
+      state: 'present',
+      value: { total: 1, internal: 1, external: 0, other: 0, inventory: 'not an array' },
+      selector: 'a[href]',
+    };
+    const linksResult = parseDomFacts(facts);
+    expect(linksResult.ok).toBe(false);
+    if (!linksResult.ok) expect(linksResult.issues.join(' ')).toMatch(/links\.value\.inventory/);
+  });
+
   it('marks budget-truncated valid JSON-LD as truncated, not invalid-json', () => {
     const budget = 80;
     loadFixture(fixtureBudgetTruncatedJsonLd(budget), 'https://example.com/jsonld');

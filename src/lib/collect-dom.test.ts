@@ -144,6 +144,37 @@ describe('collectDomForActiveTab', () => {
     }
   });
 
+  it('rejects malformed source-specific collector evidence with dom-evidence-invalid', async () => {
+    Object.assign(globalThis, {
+      chrome: createChromeStub({
+        tabs: {
+          query: async () => [{ id: 4, url: 'https://example.com/shop/item' }],
+        },
+        permissions: {
+          contains: async () => true,
+        },
+        scripting: {
+          executeScript: async () => {
+            const facts = collectDomFactsInPage();
+            facts.canonical = {
+              state: 'present',
+              value: { href: 42, absolute: 'https://example.com/canonical' },
+              selector: 'link[rel=canonical]',
+            };
+            return [{ result: facts }];
+          },
+        },
+      }),
+    });
+
+    const result = await collectDomForActiveTab(new SessionRepository(new IDBFactory()));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.captureError?.code).toBe('dom-evidence-invalid');
+      expect(result.captureError?.message).toMatch(/canonical\.value\.href/);
+    }
+  });
+
   it('rejects a null executeScript result with collector-empty-result', async () => {
     Object.assign(globalThis, {
       chrome: createChromeStub({

@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { DOM_EVIDENCE_SCHEMA_VERSION } from './dom-evidence';
+import {
+  DOM_EVIDENCE_SCHEMA_VERSION,
+  HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION,
+  parseDomEvidenceValue,
+} from './dom-evidence';
 import { DOM_LIMITS } from './dom-limits';
 
 /** Bump when the persisted shape changes; see docs/data-contract.md. */
@@ -77,18 +81,39 @@ export const CaptureLimitsSchema = z.object({
   }),
   maxSnapshotChars: z.number().int().positive(),
   maxSessionChars: z.number().int().positive(),
-  domEvidenceSchemaVersion: z.literal(DOM_EVIDENCE_SCHEMA_VERSION).optional(),
+  domEvidenceSchemaVersion: z
+    .union([
+      z.literal(HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION),
+      z.literal(DOM_EVIDENCE_SCHEMA_VERSION),
+    ])
+    .optional(),
 });
 export type CaptureLimits = z.infer<typeof CaptureLimitsSchema>;
 
-export const PageSnapshotSchema = z.object({
-  id: z.string().min(1),
-  url: z.string().min(1),
-  capturedAt: z.string().datetime(),
-  evidence: z.array(EvidenceSchema),
-  /** Caps applied during DOM capture (Ticket 107). Optional for migrated v1 rows. */
-  captureLimits: CaptureLimitsSchema.optional(),
-});
+export const PageSnapshotSchema = z
+  .object({
+    id: z.string().min(1),
+    url: z.string().min(1),
+    capturedAt: z.string().datetime(),
+    evidence: z.array(EvidenceSchema),
+    /** Caps applied during DOM capture (Ticket 107). Optional for migrated v1 rows. */
+    captureLimits: CaptureLimitsSchema.optional(),
+  })
+  .superRefine((snapshot, ctx) => {
+    // Ticket 110 validates only new v2 DOM evidence. Historical v1 snapshots
+    // stay readable after migration rather than being quarantined wholesale.
+    if (snapshot.captureLimits?.domEvidenceSchemaVersion !== DOM_EVIDENCE_SCHEMA_VERSION) return;
+    snapshot.evidence.forEach((evidence, index) => {
+      if (evidence.kind !== 'dom') return;
+      const parsed = parseDomEvidenceValue(evidence.source, evidence.value);
+      if (parsed.ok) return;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['evidence', index, 'value'],
+        message: parsed.issues.join('; '),
+      });
+    });
+  });
 export type PageSnapshot = z.infer<typeof PageSnapshotSchema>;
 
 export const FeatureAvailabilitySchema = z.record(
@@ -158,7 +183,7 @@ export function migrateAuditSessionV1ToV2(input: unknown): unknown {
             },
             maxSnapshotChars: DOM_LIMITS.maxSnapshotChars,
             maxSessionChars: DOM_LIMITS.maxSessionChars,
-            domEvidenceSchemaVersion: DOM_EVIDENCE_SCHEMA_VERSION,
+            domEvidenceSchemaVersion: HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION,
           },
         };
       })

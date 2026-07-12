@@ -7,6 +7,11 @@ import {
   parseAuditSession,
 } from './audit';
 import { createEmptySession } from '../storage/session-repository';
+import { DOM_LIMITS } from './dom-limits';
+import {
+  DOM_EVIDENCE_SCHEMA_VERSION,
+  HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION,
+} from './dom-evidence';
 
 describe('audit schemas', () => {
   it('parses a valid empty session', () => {
@@ -77,6 +82,49 @@ describe('audit schemas', () => {
     }
   });
 
+  it('rejects malformed source-specific DOM evidence at the save boundary', () => {
+    const session = createEmptySession({
+      id: 'sess-invalid-dom',
+      tabUrl: 'https://example.com/',
+      finalUrl: 'https://example.com/',
+      extensionVersion: '0.1.0',
+    });
+    session.snapshots.push({
+      id: 'snap-invalid-dom',
+      url: 'https://example.com/',
+      capturedAt: session.captureTime,
+      evidence: [
+        {
+          id: 'title-0',
+          kind: 'dom',
+          source: 'title',
+          value: { state: 'present', value: ['not', 'a', 'title'], selector: 'title' },
+          capturedAt: session.captureTime,
+        },
+      ],
+      captureLimits: {
+        schemaVersion: 1,
+        applied: {
+          maxStringChars: DOM_LIMITS.maxStringChars,
+          maxMetaItems: DOM_LIMITS.maxMetaItems,
+          maxAlternateItems: DOM_LIMITS.maxAlternateItems,
+          maxJsonLdChars: DOM_LIMITS.maxJsonLdChars,
+          maxJsonLdScripts: DOM_LIMITS.maxJsonLdScripts,
+          maxHeadingSamplesPerLevel: DOM_LIMITS.maxHeadingSamplesPerLevel,
+          maxLinkInventory: DOM_LIMITS.maxLinkInventory,
+          maxImageInventory: DOM_LIMITS.maxImageInventory,
+        },
+        maxSnapshotChars: DOM_LIMITS.maxSnapshotChars,
+        maxSessionChars: DOM_LIMITS.maxSessionChars,
+        domEvidenceSchemaVersion: DOM_EVIDENCE_SCHEMA_VERSION,
+      },
+    });
+
+    const result = parseAuditSession(session);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues?.join(' ')).toMatch(/title\.value/);
+  });
+
   it('migrates representative schemaVersion-1 sessions to the current contract', () => {
     const v1 = {
       schemaVersion: 1,
@@ -113,6 +161,9 @@ describe('audit schemas', () => {
     if (result.ok) {
       expect(result.value.schemaVersion).toBe(AUDIT_SCHEMA_VERSION);
       expect(result.value.snapshots[0]?.captureLimits?.applied.maxStringChars).toBeGreaterThan(0);
+      expect(result.value.snapshots[0]?.captureLimits?.domEvidenceSchemaVersion).toBe(
+        HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION,
+      );
       expect(result.value.reportMarkdown).toBe('notes');
     }
   });

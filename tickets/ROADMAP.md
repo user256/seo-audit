@@ -10,10 +10,9 @@ tickets are archived in [completed/](./completed/).
 ## Now — finish the Sprint 1 gate
 
 1. [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md) — in review; blocks 199.
-2. [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md) — in review; blocks 199 and later DOM evidence consumers.
-3. [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md) — add direct dashboard rendering/clipboard UI tests; blocks 199.
-4. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally** until a fresh Chrome 114+ profile completes the documented smoke checklist.
-5. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — run only after 109, 110, 112, and 113 are complete.
+2. [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md) — add direct dashboard rendering/clipboard UI tests; blocks 199.
+3. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally** until a fresh Chrome 114+ profile completes the documented smoke checklist.
+4. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — run only after 109, 112, and 113 are complete.
 
 ## Next — Sprint 2: Crawl and index signals
 
