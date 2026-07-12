@@ -156,7 +156,9 @@ describe('evaluatePageSnapshot', () => {
     // At least two conflicting signal families: robots + canonical multiplicity
     expect(ids).toEqual(expect.arrayContaining(['canonical-multiple', 'robots-noindex']));
     expect(ids).toEqual(expect.arrayContaining(['robots-nofollow']));
-    expect(ids.filter((id) => id.startsWith('robots-') || id.startsWith('canonical-')).length).toBeGreaterThanOrEqual(2);
+    expect(
+      ids.filter((id) => id.startsWith('robots-') || id.startsWith('canonical-')).length,
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it('flags duplicate title from synthetic evidence', () => {
