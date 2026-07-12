@@ -1,5 +1,6 @@
 /**
- * Debounced callback helper for report autosave (Ticket 105).
+ * Debounced callback helper for report autosave (Tickets 105 + 108).
+ * The serial chain recovers after a rejected save so later edits still flush.
  */
 export function createDebouncedSaver(
   save: (markdown: string) => void | Promise<void>,
@@ -11,11 +12,16 @@ export function createDebouncedSaver(
 } {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let pending: string | undefined;
-  let chain: Promise<void> = Promise.resolve();
+  /** Settles even when a save fails so the next schedule/flush can run. */
+  let gate: Promise<void> = Promise.resolve();
 
   const run = (markdown: string): Promise<void> => {
-    chain = chain.then(() => Promise.resolve(save(markdown)));
-    return chain;
+    const task = gate.then(() => Promise.resolve(save(markdown)));
+    gate = task.then(
+      () => undefined,
+      () => undefined,
+    );
+    return task;
   };
 
   return {
@@ -27,7 +33,7 @@ export function createDebouncedSaver(
         const value = pending;
         pending = undefined;
         if (value !== undefined) {
-          void run(value);
+          void run(value).catch(() => undefined);
         }
       }, delayMs);
     },
@@ -41,7 +47,7 @@ export function createDebouncedSaver(
         pending = undefined;
         await run(value);
       } else {
-        await chain;
+        await gate;
       }
     },
     cancel() {

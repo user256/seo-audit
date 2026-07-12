@@ -91,12 +91,26 @@ async function send<T extends ExtensionResponse>(message: ExtensionRequest): Pro
   return chrome.runtime.sendMessage(message) as Promise<T>;
 }
 
-function ensureReportEditor(sessionId: string, initialMarkdown: string): void {
+async function ensureReportEditor(sessionId: string, initialMarkdown: string): Promise<void> {
   reportSessionLabel.textContent = `Session ${sessionId} — Markdown is saved locally; preview HTML is not stored.`;
-  if (reportEditor) {
+
+  if (reportEditor && reportEditor.sessionId === sessionId) {
     reportEditor.setMarkdown(initialMarkdown);
     return;
   }
+
+  if (reportEditor) {
+    // Flush the previous session's pending Markdown to its bound ID, then detach.
+    // Never let a delayed write land on the newly collected audit.
+    try {
+      await reportEditor.flush();
+    } catch {
+      // Save failure already surfaced in the editor status; still switch sessions.
+    }
+    reportEditor.destroy();
+    reportEditor = null;
+  }
+
   reportEditor = mountReportEditor(
     {
       textarea: document.querySelector('#report-markdown') as HTMLTextAreaElement,
@@ -110,12 +124,12 @@ function ensureReportEditor(sessionId: string, initialMarkdown: string): void {
       status: document.querySelector('#report-status') as HTMLElement,
     },
     {
+      sessionId,
       initialMarkdown,
-      onAutosave: async (markdown) => {
-        if (!workspace.sessionId) return;
+      onAutosave: async (boundSessionId, markdown) => {
         const response = await send<ExtensionResponse>({
           type: 'SAVE_REPORT_MARKDOWN',
-          sessionId: workspace.sessionId,
+          sessionId: boundSessionId,
           markdown,
         });
         if (response.type === 'ERROR') {
@@ -234,7 +248,10 @@ async function collectDom(): Promise<void> {
       sessionId: response.result.sessionId,
     });
     if (loaded.type === 'SESSION_LOADED' && loaded.result.status === 'ok') {
-      ensureReportEditor(loaded.result.session.id, loaded.result.session.reportMarkdown ?? '');
+      await ensureReportEditor(
+        loaded.result.session.id,
+        loaded.result.session.reportMarkdown ?? '',
+      );
     }
     renderWorkspace();
   } finally {

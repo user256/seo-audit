@@ -15,30 +15,61 @@ export type ReportEditorHost = {
 };
 
 export type ReportEditorController = {
+  /** Immutable session this controller is allowed to autosave. */
+  readonly sessionId: string;
   setMarkdown: (markdown: string) => void;
   getMarkdown: () => string;
   isDirty: () => boolean;
   setDirty: (dirty: boolean) => void;
+  /** Persist any pending debounce immediately (rejects if save fails). */
+  flush: () => Promise<void>;
+  /**
+   * Cancel pending debounce and detach listeners. Does not flush — call
+   * `flush()` first when replacing sessions if unsaved work must be kept.
+   */
   destroy: () => void;
 };
 
 /**
  * Wire the Markdown report editor UI. Markdown is source-of-truth; preview HTML
  * is regenerated on demand and never treated as persisted state.
+ *
+ * Each controller is bound to a single `sessionId`. Autosave callbacks receive
+ * that ID so a delayed write cannot land on a newer audit after a session switch.
  */
 export function mountReportEditor(
   host: ReportEditorHost,
   options: {
+    sessionId: string;
     initialMarkdown?: string;
-    onAutosave: (markdown: string) => void | Promise<void>;
+    onAutosave: (sessionId: string, markdown: string) => void | Promise<void>;
     debounceMs?: number;
   },
 ): ReportEditorController {
+  const boundSessionId = options.sessionId;
   let dirty = false;
+  let destroyed = false;
+
+  const setStatus = (text: string, kind: 'plain' | 'ok' | 'error' = 'plain'): void => {
+    host.status.textContent = text;
+    host.status.classList.toggle('is-ok', kind === 'ok');
+    host.status.classList.toggle('is-error', kind === 'error');
+  };
+
   const saver = createDebouncedSaver(async (markdown) => {
-    await options.onAutosave(markdown);
-    dirty = false;
-    host.status.textContent = 'Report saved';
+    if (destroyed) return;
+    try {
+      await options.onAutosave(boundSessionId, markdown);
+      if (destroyed) return;
+      dirty = false;
+      setStatus('Report saved', 'ok');
+    } catch (err) {
+      if (destroyed) return;
+      dirty = true;
+      const message = err instanceof Error ? err.message : String(err);
+      setStatus(`Save failed: ${message}`, 'error');
+      throw err;
+    }
   }, options.debounceMs ?? 400);
 
   const refreshWordCount = (): void => {
@@ -62,7 +93,7 @@ export function mountReportEditor(
 
   const onInput = (): void => {
     dirty = true;
-    host.status.textContent = 'Unsaved changes…';
+    setStatus('Unsaved changes…', 'plain');
     refreshWordCount();
     saver.schedule(host.textarea.value);
   };
@@ -118,6 +149,7 @@ export function mountReportEditor(
   host.textarea.value = options.initialMarkdown ?? '';
   refreshWordCount();
   showSource();
+  setStatus('', 'plain');
 
   host.textarea.addEventListener('input', onInput);
   host.textarea.addEventListener('keydown', onKeydown);
@@ -126,11 +158,12 @@ export function mountReportEditor(
   host.modePreviewBtn.addEventListener('click', showPreview);
 
   return {
+    sessionId: boundSessionId,
     setMarkdown(markdown: string) {
       host.textarea.value = markdown;
       refreshWordCount();
       dirty = false;
-      host.status.textContent = '';
+      setStatus('', 'plain');
       if (!host.previewPanel.hidden) {
         host.preview.innerHTML = renderSafeMarkdownPreview(markdown);
       }
@@ -140,7 +173,12 @@ export function mountReportEditor(
     setDirty: (value: boolean) => {
       dirty = value;
     },
+    async flush() {
+      if (destroyed) return;
+      await saver.flush();
+    },
     destroy() {
+      destroyed = true;
       saver.cancel();
       host.textarea.removeEventListener('input', onInput);
       host.textarea.removeEventListener('keydown', onKeydown);
