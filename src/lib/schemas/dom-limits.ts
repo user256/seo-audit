@@ -16,6 +16,10 @@ export const DOM_LIMITS = {
   maxJsonLdScripts: 25,
   /** Heading text samples kept per heading level. */
   maxHeadingSamplesPerLevel: 5,
+  /** Max link rows retained for clipboard inventory. */
+  maxLinkInventory: 200,
+  /** Max image rows retained for clipboard inventory. */
+  maxImageInventory: 100,
   /** Soft ceiling for one PageSnapshot JSON (UTF-16 code units ≈ JS string length). */
   maxSnapshotChars: 400_000,
   /** Soft ceiling for one AuditSession JSON. */
@@ -29,6 +33,8 @@ export type DomCollectLimits = {
   maxJsonLdChars: number;
   maxJsonLdScripts: number;
   maxHeadingSamplesPerLevel: number;
+  maxLinkInventory: number;
+  maxImageInventory: number;
 };
 
 export const DEFAULT_DOM_COLLECT_LIMITS: DomCollectLimits = {
@@ -38,6 +44,8 @@ export const DEFAULT_DOM_COLLECT_LIMITS: DomCollectLimits = {
   maxJsonLdChars: DOM_LIMITS.maxJsonLdChars,
   maxJsonLdScripts: DOM_LIMITS.maxJsonLdScripts,
   maxHeadingSamplesPerLevel: DOM_LIMITS.maxHeadingSamplesPerLevel,
+  maxLinkInventory: DOM_LIMITS.maxLinkInventory,
+  maxImageInventory: DOM_LIMITS.maxImageInventory,
 };
 
 export type CaptureLimitsRecord = {

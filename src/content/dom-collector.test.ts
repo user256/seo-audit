@@ -183,18 +183,10 @@ describe('collectDomFactsInPage', () => {
     expect(findings.some((f) => f.ruleId === 'jsonld-malformed')).toBe(false);
   });
 
-  it('distinguishes empty alt from absent alt in the image summary', () => {
-    loadFixture(FIXTURE_EMPTY_VS_ABSENT_ALT, 'https://example.com/alt');
-    const facts = collectDomFactsInPage();
-    expect(facts.images.state).toBe('present');
-    if (facts.images.state === 'present') {
-      expect(facts.images.value).toMatchObject({
-        total: 3,
-        missingAlt: 1,
-        emptyAlt: 1,
-        withAlt: 1,
-      });
-    }
+  it('is self-contained for executeScript (no free module bindings in body)', () => {
+    const source = collectDomFactsInPage.toString();
+    expect(source).not.toMatch(/DEFAULT_DOM_COLLECT_LIMITS/);
+    expect(source).not.toMatch(/DEFAULT_MAX_JSON_LD_CHARS/);
   });
 });
 

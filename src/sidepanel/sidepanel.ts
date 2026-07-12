@@ -1,6 +1,12 @@
 import type { ExtensionRequest, ExtensionResponse } from '../background/messages';
+import {
+  buildGlanceDashboard,
+  buildPreAccessDashboard,
+  type SeoDashboardModel,
+} from '../lib/dashboard/model';
 import type { Evidence } from '../lib/schemas/audit';
 import { requestOriginAccess } from '../lib/tab-access';
+import { renderSeoDashboard } from './dashboard-view';
 import { renderFindingsPanel } from './findings-view';
 import { mountReportEditor, type ReportEditorController } from './report-editor';
 import { viewFromSnapshot } from './view-state';
@@ -24,6 +30,7 @@ const refreshBtn = document.querySelector('#refresh') as HTMLButtonElement;
 const pingBtn = document.querySelector('#ping') as HTMLButtonElement;
 const openReportBtn = document.querySelector('#open-report') as HTMLButtonElement;
 const backToFindingsBtn = document.querySelector('#back-to-findings') as HTMLButtonElement;
+const dashboardSection = document.querySelector('#dashboard-section') as HTMLElement;
 const findingsSection = document.querySelector('#findings-section') as HTMLElement;
 const findingsSummaryEl = document.querySelector('#findings-summary')!;
 const findingsPanel = document.querySelector('#findings-panel') as HTMLElement;
@@ -34,6 +41,7 @@ let workspace: WorkspaceModel = initialWorkspace();
 let reportEditor: ReportEditorController | null = null;
 let evidenceById = new Map<string, Evidence>();
 let viewingReport = false;
+let dashboard: SeoDashboardModel | null = null;
 
 const PHASE_LABEL: Record<WorkspaceModel['phase'], string> = {
   'unsupported-tab': 'Unsupported tab',
@@ -73,6 +81,12 @@ function renderWorkspace(): void {
   setStatus(workspace.statusMessage, workspace.statusKind);
 
   const hasSession = Boolean(workspace.sessionId);
+  const showDashboard = Boolean(dashboard) && !viewingReport;
+  dashboardSection.hidden = !showDashboard;
+  if (showDashboard && dashboard) {
+    renderSeoDashboard(dashboardSection, dashboard);
+  }
+
   findingsSection.hidden = !hasSession || viewingReport;
   reportSection.hidden = !hasSession || !viewingReport;
   openReportBtn.hidden = !hasSession || viewingReport;
@@ -85,6 +99,33 @@ function renderWorkspace(): void {
       : '';
     renderFindingsPanel(findingsPanel, workspace.findings, evidenceById);
   }
+}
+
+async function loadGlanceDashboard(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready') {
+    dashboard = null;
+    return;
+  }
+  if (!tab.granted) {
+    dashboard = buildPreAccessDashboard(tab.url);
+    return;
+  }
+
+  const response = await send<ExtensionResponse>({ type: 'GLANCE_DOM_INVENTORY' });
+  if (response.type !== 'GLANCE_DOM_RESULT') {
+    dashboard = buildPreAccessDashboard(tab.url);
+    return;
+  }
+  if (!response.result.ok) {
+    dashboard = buildPreAccessDashboard(tab.url);
+    setStatus(response.result.error, 'error');
+    return;
+  }
+  dashboard = buildGlanceDashboard({
+    tabUrl: response.result.tabUrl,
+    facts: response.result.facts,
+  });
 }
 
 async function send<T extends ExtensionResponse>(message: ExtensionRequest): Promise<T> {
@@ -152,6 +193,10 @@ async function refresh(): Promise<void> {
     return;
   }
   workspace = withTab(workspace, response.snapshot);
+  await loadGlanceDashboard();
+  if (workspace.tab?.status === 'ready' && workspace.tab.granted && dashboard?.inventoryLoaded) {
+    setStatus('Page glance updated from the live tab.', 'ok');
+  }
   renderWorkspace();
 }
 
@@ -241,7 +286,10 @@ async function collectDom(): Promise<void> {
     });
     viewingReport = false;
     collectSummaryEl.hidden = false;
-    collectSummaryEl.textContent = `Snapshot URL: ${response.result.snapshot.url}`;
+    collectSummaryEl.textContent = `Audit saved for ${response.result.snapshot.url}`;
+
+    // Refresh glance from the same capture so the dashboard stays in sync.
+    await loadGlanceDashboard();
 
     const loaded = await send<ExtensionResponse>({
       type: 'LOAD_SESSION',

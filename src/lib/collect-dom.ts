@@ -142,7 +142,20 @@ export async function collectDomForActiveTab(
       return { ok: false, error: captureError.message, captureError };
     }
 
-    const rawFacts = results[0]?.result as DomFacts | undefined;
+    const rawFacts = results[0]?.result as DomFacts | undefined | null;
+    if (rawFacts == null) {
+      const captureError: CaptureError = {
+        id: newId('cerr'),
+        code: 'collector-empty-result',
+        source: 'domCollector',
+        message:
+          'DOM collector returned no result (injection failed or threw in the page). Reload the extension and retry.',
+        url: urlBefore,
+        capturedAt: new Date().toISOString(),
+      };
+      return { ok: false, error: captureError.message, captureError };
+    }
+
     const parsed = parseDomFacts(rawFacts);
     if (!parsed.ok) {
       const captureError: CaptureError = {

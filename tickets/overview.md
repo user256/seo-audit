@@ -16,7 +16,7 @@ can pass its go/no-go gate.
 
 The product will provide:
 
-- a side-panel audit workspace for the active tab;
+- a side-panel **SEO dashboard** for the active tab (glance inventory before deep tests);
 - structured page findings backed by captured browser evidence;
 - local audit sessions and Markdown/JSON exports;
 - a Markdown report editor with source/preview modes.
@@ -50,9 +50,8 @@ Constraints that shape the plan:
 2. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — blocked on an external fresh-Chrome smoke run
 3. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
-**Recommended next pick:** **110** — enforce the source-specific evidence
-contract before the Sprint 1 review gate. Then complete the browser-only
-evidence in 109 and run 199.
+**Recommended next pick:** **110** — schema hardening; then smoke/199. Dashboard
+glance (111) is in review — live HTTP status/redirects still wait on Ticket 201.
 
 ---
 

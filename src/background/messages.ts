@@ -1,4 +1,8 @@
 import { collectDomForActiveTab, type CollectDomResult } from '../lib/collect-dom';
+import {
+  glanceDomInventoryForActiveTab,
+  type GlanceInventoryResult,
+} from '../lib/dashboard/glance';
 import type { AuditSession } from '../lib/schemas/audit';
 import { SessionRepository } from '../lib/storage/session-repository';
 import { getActiveTabSnapshot, pingActiveTab, type ActiveTabSnapshot } from '../lib/tab-access';
@@ -8,6 +12,7 @@ const repo = new SessionRepository();
 export type ExtensionRequest =
   | { type: 'GET_ACTIVE_TAB_SNAPSHOT' }
   | { type: 'PING_ACTIVE_TAB'; tabId: number }
+  | { type: 'GLANCE_DOM_INVENTORY' }
   | { type: 'COLLECT_DOM_SNAPSHOT' }
   | { type: 'LOAD_SESSION'; sessionId: string }
   | { type: 'SAVE_REPORT_MARKDOWN'; sessionId: string; markdown: string };
@@ -18,6 +23,7 @@ export type ExtensionResponse =
       type: 'PING_RESULT';
       result: Awaited<ReturnType<typeof pingActiveTab>>;
     }
+  | { type: 'GLANCE_DOM_RESULT'; result: GlanceInventoryResult }
   | { type: 'COLLECT_DOM_RESULT'; result: CollectDomResult }
   | {
       type: 'SESSION_LOADED';
@@ -42,6 +48,11 @@ export async function handleExtensionRequest(
       return {
         type: 'PING_RESULT',
         result: await pingActiveTab(message.tabId),
+      };
+    case 'GLANCE_DOM_INVENTORY':
+      return {
+        type: 'GLANCE_DOM_RESULT',
+        result: await glanceDomInventoryForActiveTab(),
       };
     case 'COLLECT_DOM_SNAPSHOT':
       return {
@@ -78,7 +89,7 @@ export async function handleExtensionRequest(
     }
     default: {
       const _exhaustive: never = message;
-      return { type: 'ERROR', message: `Unknown message: ${JSON.stringify(_exhaustive)}` };
+      return { type: 'ERROR', message: `Unhandled message: ${JSON.stringify(_exhaustive)}` };
     }
   }
 }

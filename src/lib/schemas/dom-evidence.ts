@@ -84,6 +84,7 @@ export const DomFactsSchema = z.object({
   headings: FieldStateSchema,
   links: FieldStateSchema,
   images: FieldStateSchema,
+  html5: FieldStateSchema,
   jsonLd: FieldStateSchema,
 });
 export type DomFactsParsed = z.infer<typeof DomFactsSchema>;
