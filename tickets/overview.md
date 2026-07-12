@@ -8,9 +8,9 @@ findings. It is an interactive inspector, not a site crawler.
 
 # Current Product Shape
 
-The repository currently contains the project specification and a ticket
-workflow, but no extension implementation. The first release must establish a
-safe, local-first inspection loop before adding site-wide checks.
+The repository currently contains the project specification, ticket workflow,
+and toolchain bootstrap (Ticket 100). The first release must establish a safe,
+local-first inspection loop before adding site-wide checks.
 
 The product will provide:
 
@@ -35,7 +35,7 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | In progress | Create the MV3 shell, evidence contracts, and the usable audit workspace |
+| **Sprint 1 — Inspect one page** | In progress | Extension shell + permission boundary (101); evidence contracts and workspace follow |
 | **Sprint 2 — Crawl/index signals** | Planned | Add robots, headers, and sitemap inspection on the settled page contract |
 | **Sprint 3 — Comparisons and site checks** | Planned | Add bounded rendering and URL-variant experiments |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
@@ -44,17 +44,16 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 100: Toolchain and CI Bootstrap](./100-toolchain-and-ci-bootstrap.md)
-2. [Ticket 101: Extension Shell and Permission Boundary](./101-extension-shell-and-permission-boundary.md)
-3. [Ticket 102: Audit Data Contract and Local Session Store](./102-audit-data-contract-and-local-session-store.md)
-4. [Ticket 103: Active-Page DOM Collector](./103-active-page-dom-collector.md)
-5. [Ticket 104: Findings Engine and Page Summary](./104-findings-engine-and-page-summary.md)
-6. [Ticket 105: Markdown Report Editor and Safe Preview](./105-markdown-report-editor-and-safe-preview.md)
-7. [Ticket 106: Audit Workspace and Accessibility Baseline](./106-audit-workspace-and-accessibility-baseline.md)
-8. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
+1. [Ticket 101: Extension Shell and Permission Boundary](./101-extension-shell-and-permission-boundary.md)
+2. [Ticket 102: Audit Data Contract and Local Session Store](./102-audit-data-contract-and-local-session-store.md)
+3. [Ticket 103: Active-Page DOM Collector](./103-active-page-dom-collector.md)
+4. [Ticket 104: Findings Engine and Page Summary](./104-findings-engine-and-page-summary.md)
+5. [Ticket 105: Markdown Report Editor and Safe Preview](./105-markdown-report-editor-and-safe-preview.md)
+6. [Ticket 106: Audit Workspace and Accessibility Baseline](./106-audit-workspace-and-accessibility-baseline.md)
+7. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
-**Recommended next pick:** **100** — the toolchain has to exist before 101 can
-run its `npm` gates.
+**Recommended next pick:** **101** — the MV3 shell and per-origin permission
+boundary, now that the toolchain from 100 exists.
 
 ---
 
@@ -89,7 +88,6 @@ useful from the side panel.
 
 **Tickets:**
 
-- [ ] [Ticket 100: Toolchain and CI Bootstrap](./100-toolchain-and-ci-bootstrap.md)
 - [ ] [Ticket 101: Extension Shell and Permission Boundary](./101-extension-shell-and-permission-boundary.md)
 - [ ] [Ticket 102: Audit Data Contract and Local Session Store](./102-audit-data-contract-and-local-session-store.md)
 - [ ] [Ticket 103: Active-Page DOM Collector](./103-active-page-dom-collector.md)

@@ -1,7 +1,7 @@
 # Ticket 100: Toolchain and CI Bootstrap
 
 **Sprint:** 1 — Inspect One Page
-**Status:** Not started
+**Status:** Done
 **Owner:** unassigned
 **Estimate:** M
 
@@ -27,22 +27,22 @@ a loadable MV3 extension skeleton and runs green in CI.
 
 ## Acceptance criteria
 
-- [ ] `package.json` defines pinned dev dependencies and the scripts every later
+- [x] `package.json` defines pinned dev dependencies and the scripts every later
   ticket references: `dev`, `build`, `lint`, `test`, `test:watch`, and
   `package:check` (the last may be a stub that 404 completes).
-- [ ] `npm install && npm run build` on a clean checkout produces a `dist/`
+- [x] `npm install && npm run build` on a clean checkout produces a `dist/`
   directory that loads as an unpacked MV3 extension in Chrome with no console
   errors (a placeholder manifest + empty side panel is sufficient here; 101
   builds the real shell).
-- [ ] TypeScript is configured `strict`, ESLint + Prettier run over `src/` and
+- [x] TypeScript is configured `strict`, ESLint + Prettier run over `src/` and
   agree with each other, and `npm run lint` fails on a deliberately introduced
   violation.
-- [ ] The test runner executes an example unit test with Chrome APIs and
+- [x] The test runner executes an example unit test with Chrome APIs and
   IndexedDB mockable (e.g. a stub `chrome` global and `fake-indexeddb`), and
   `npm test` reports coverage.
-- [ ] CI runs `lint`, `test`, and `build` on a clean checkout on every push/PR
+- [x] CI runs `lint`, `test`, and `build` on a clean checkout on every push/PR
   and is green; the workflow file is committed.
-- [ ] `docs/architecture.md` records the chosen stack, the directory layout, and
+- [x] `docs/architecture.md` records the chosen stack, the directory layout, and
   the reproducible-build / no-remote-code constraints that 404 will enforce.
 
 ## Out of scope
@@ -92,6 +92,10 @@ loop, not features.
 
 - 2026-07-12 — Filed as the true first pick for Sprint 1: 101 and everything
   after it call npm scripts that do not exist until this ticket lands.
+- 2026-07-12 — Ratified stack: TypeScript strict, Vite 6 + `@crxjs/vite-plugin`
+  2.7.0, Zod (present for 102), Vitest + fake-indexeddb + chrome stub, ESLint
+  flat config + Prettier, GitHub Actions CI. `package:check` is a dist/manifest
+  stub pending Ticket 404.
 
 ---
 
