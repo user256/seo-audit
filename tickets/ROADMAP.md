@@ -9,9 +9,10 @@ tickets are archived in [completed/](./completed/).
 
 ## Now — finish the Sprint 1 gate
 
-1. [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md) — implement the remaining per-source persisted-evidence validation and adversarial tests.
-2. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally** until a fresh Chrome 114+ profile completes the documented smoke checklist.
-3. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — run only after 109 and 110 are complete.
+1. [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md) — compose findings/evidence/summary into a real report; "Open report" is currently a blank notes box. Fatal gap; blocks 199.
+2. [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md) — implement the remaining per-source persisted-evidence validation and adversarial tests.
+3. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally** until a fresh Chrome 114+ profile completes the documented smoke checklist.
+4. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — run only after 110, 112, and 109 are complete.
 
 ## Next — Sprint 2: Crawl and index signals
 
@@ -20,8 +21,10 @@ tickets are archived in [completed/](./completed/).
 3. [203](./203-xml-sitemap-and-hreflang-parser.md) — sitemap parsing, after 202.
 4. [207](./207-hreflang-directive-validation.md) and [208](./208-structured-data-inventory-and-validation.md) — directive and structured-data validation.
 5. [204](./204-indexability-reconciliation-rules.md) — reconcile all captured signals.
-6. [205](./205-crawl-signals-workspace.md) — present the evidence in the workspace.
-7. [299](./299-sprint-2-review.md) — Sprint 2 go/no-go.
+6. [209](./209-check-catalogue-and-availability-model.md) — catalogue + availability model for checks (enabling primitive for the wizard).
+7. [210](./210-audit-wizard-and-check-selection.md) — optional wizard to select which checks run; consent surface reused by Sprint 3 experiments. **Priority UX follow-on to the 111 dashboard — can be pulled ahead of the crawl-signal work post-gate.**
+8. [205](./205-crawl-signals-workspace.md) — present the evidence in the workspace.
+9. [299](./299-sprint-2-review.md) — Sprint 2 go/no-go.
 
 ## Then — Sprint 3: bounded experiments
 
@@ -35,7 +38,8 @@ tickets are archived in [completed/](./completed/).
 1. [401](./401-session-browser-and-historical-comparison.md).
 2. [402](./402-markdown-and-json-export.md) and [403](./403-error-states-privacy-controls-and-data-retention.md).
 3. [404](./404-quality-gates-and-release-packaging.md).
-4. [499](./499-sprint-4-review-and-release-go-no-go.md).
+4. [405](./405-user-defined-theme-editor.md) — user-defined colour themes on the existing CSS-variable token layer; lives in the 403 settings surface. Sprint-agnostic — pullable earlier if prioritised.
+5. [499](./499-sprint-4-review-and-release-go-no-go.md).
 
 ## Ordering rules
 
