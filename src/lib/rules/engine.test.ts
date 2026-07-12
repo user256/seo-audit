@@ -139,6 +139,7 @@ describe('evaluatePageSnapshot', () => {
     expect(ids).toContain('title-missing');
     expect(ids).toContain('language-missing');
     expect(ids).toContain('images-missing-alt');
+    expect(ids).toContain('images-empty-alt-advisory');
   });
 
   it('triggers off-page canonical', () => {

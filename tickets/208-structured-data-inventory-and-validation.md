@@ -1,0 +1,45 @@
+# Ticket 208: Structured Data Inventory and Validation
+
+**Sprint:** 2 — Crawl and Index Signals  
+**Status:** Not started  
+**Owner:** unassigned  
+**Estimate:** M
+
+## Context
+
+The current collector safely retains JSON-LD text and can detect invalid JSON,
+but a syntactically valid JSON document is not necessarily valid structured
+data. The specification promises structured-data analysis, while the present
+rules provide no inventory of types, graph nodes, or schema-level warnings.
+
+## Goal
+
+Turn complete captured JSON-LD into a bounded structured-data inventory with
+clear, non-search-feature-specific validation findings.
+
+## Acceptance criteria
+
+- [ ] For complete JSON-LD only, parse object/array/`@graph` payloads into a
+  bounded inventory of node count, `@type`, `@id`, and parse/limit status;
+  truncated entries remain explicitly unevaluated.
+- [ ] Add deterministic findings for a non-object top-level value, missing or
+  malformed `@context` where required by the chosen validation policy, missing
+  `@type` on graph nodes, and duplicate `@id` values within one captured graph.
+- [ ] Clearly distinguish generic JSON-LD/schema observations from eligibility
+  for Google rich results; do not claim rich-result validity.
+- [ ] Preserve the raw JSON-LD evidence policy and enforce node/depth/string
+  limits shared with Ticket 107.
+- [ ] Tests cover object, array, `@graph`, mixed types, duplicate IDs, absent
+  context/type, deeply nested input, and truncated source.
+
+## Out of scope
+
+- Full Schema.org vocabulary validation or Rich Results Test parity.
+- Remote context retrieval or executing JSON-LD.
+
+## Dependencies
+
+- **Blocks:** 205, 402
+- **Blocked by:** 107, 103
+- **External:** generic JSON-LD validation policy/source-reference decision
+

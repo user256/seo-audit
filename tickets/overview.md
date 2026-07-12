@@ -8,10 +8,11 @@ findings. It is an interactive inspector, not a site crawler.
 
 # Current Product Shape
 
-The repository currently contains the project specification, ticket workflow,
-toolchain (100), permission shell (101), and local audit session contract (102).
-The first release must establish a safe, local-first inspection loop before
-adding site-wide checks.
+The repository contains the project specification, ticket workflow, and a
+working Sprint 1 extension: the MV3 shell, origin permission flow, local audit
+sessions, DOM collection/rules, Markdown report editor, and side-panel
+workspace. The audit review found remedial hardening required before Sprint 1
+can pass its go/no-go gate.
 
 The product will provide:
 
@@ -36,7 +37,7 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | In progress | Sprint review / go-no-go (199) |
+| **Sprint 1 — Inspect one page** | In progress | Remediate collection, report, and verification gaps before 199 |
 | **Sprint 2 — Crawl/index signals** | Planned | Add robots, headers, and sitemap inspection on the settled page contract |
 | **Sprint 3 — Comparisons and site checks** | Planned | Add bounded rendering and URL-variant experiments |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
@@ -45,9 +46,12 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
+1. [Ticket 108: Report Editor Isolation and Recovery](./108-report-editor-isolation-and-recovery.md)
+2. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
+3. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
-**Recommended next pick:** **199** — Sprint 1 review gate before Sprint 2.
+**Recommended next pick:** **108** — isolate the Markdown report editor and
+recover autosave failures before the Sprint 1 gate.
 
 ---
 
@@ -82,6 +86,8 @@ useful from the side panel.
 
 **Tickets:**
 
+- [ ] [Ticket 108: Report Editor Isolation and Recovery](./108-report-editor-isolation-and-recovery.md)
+- [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
 **Exit criteria:**
@@ -106,9 +112,12 @@ be discovered, crawled, and indexed.
 
 **Tickets:**
 
+- [ ] [Ticket 206: Network Capture and Safe Fetch Foundation](./206-network-capture-and-safe-fetch-foundation.md)
 - [ ] [Ticket 201: Response Metadata and Redirect Capture](./201-response-metadata-and-redirect-capture.md)
 - [ ] [Ticket 202: Robots.txt Fetch, Parser, and Evaluator](./202-robots-txt-fetch-parser-and-evaluator.md)
 - [ ] [Ticket 203: XML Sitemap and Hreflang Parser](./203-xml-sitemap-and-hreflang-parser.md)
+- [ ] [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
+- [ ] [Ticket 208: Structured Data Inventory and Validation](./208-structured-data-inventory-and-validation.md)
 - [ ] [Ticket 204: Indexability Reconciliation Rules](./204-indexability-reconciliation-rules.md)
 - [ ] [Ticket 205: Crawl Signals Workspace](./205-crawl-signals-workspace.md)
 - [ ] [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md)

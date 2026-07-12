@@ -1,5 +1,5 @@
 /**
- * Page-world DOM collector (Ticket 103).
+ * Page-world DOM collector (Tickets 103 + 107).
  *
  * `collectDomFactsInPage` is intentionally self-contained (no imports) so it can
  * be passed to chrome.scripting.executeScript. Helpers used only in the
@@ -7,6 +7,30 @@
  */
 
 export const DEFAULT_MAX_JSON_LD_CHARS = 50_000;
+
+export type DomCollectLimits = {
+  maxStringChars: number;
+  maxMetaItems: number;
+  maxAlternateItems: number;
+  maxJsonLdChars: number;
+  maxJsonLdScripts: number;
+  maxHeadingSamplesPerLevel: number;
+};
+
+export const DEFAULT_DOM_COLLECT_LIMITS: DomCollectLimits = {
+  maxStringChars: 2_000,
+  maxMetaItems: 40,
+  maxAlternateItems: 50,
+  maxJsonLdChars: DEFAULT_MAX_JSON_LD_CHARS,
+  maxJsonLdScripts: 25,
+  maxHeadingSamplesPerLevel: 5,
+};
+
+export type FieldLimits = {
+  truncated: true;
+  reason: string;
+  omittedCount?: number;
+};
 
 export type FieldState =
   | { state: 'absent' }
@@ -17,12 +41,14 @@ export type FieldState =
       raw?: string;
       selector: string;
       count?: number;
+      limits?: FieldLimits;
     }
   | {
       state: 'duplicate';
       values: unknown[];
       selectors: string[];
       count: number;
+      limits?: FieldLimits;
     }
   | { state: 'malformed'; raw: string; selector: string; detail: string }
   | { state: 'inaccessible'; detail: string };
@@ -60,9 +86,20 @@ export type DomFacts = {
  * Safe to inject via chrome.scripting.executeScript({ func: collectDomFactsInPage }).
  */
 export function collectDomFactsInPage(
-  maxJsonLdChars: number = DEFAULT_MAX_JSON_LD_CHARS,
+  limits: DomCollectLimits | number = DEFAULT_DOM_COLLECT_LIMITS,
 ): DomFacts {
+  // Back-compat: Ticket 103 callers passed maxJsonLdChars as a bare number.
+  const caps: DomCollectLimits =
+    typeof limits === 'number'
+      ? { ...DEFAULT_DOM_COLLECT_LIMITS, maxJsonLdChars: limits }
+      : { ...DEFAULT_DOM_COLLECT_LIMITS, ...limits };
+
   const collectedAt = new Date().toISOString();
+
+  const clip = (text: string): { text: string; truncated: boolean } => {
+    if (text.length <= caps.maxStringChars) return { text, truncated: false };
+    return { text: text.slice(0, caps.maxStringChars), truncated: true };
+  };
 
   const safe = <T>(label: string, fn: () => T): T | FieldState => {
     try {
@@ -77,8 +114,8 @@ export function collectDomFactsInPage(
     const nodes = Array.from(document.querySelectorAll(selector));
     if (nodes.length === 0) return { state: 'absent' };
     const values = nodes.map((n) => {
-      const raw = (n.getAttribute('content') ?? '').trim();
-      return { raw, selector };
+      const clipped = clip((n.getAttribute('content') ?? '').trim());
+      return { raw: clipped.text, selector, truncated: clipped.truncated };
     });
     if (values.length > 1) {
       return {
@@ -86,31 +123,71 @@ export function collectDomFactsInPage(
         values: values.map((v) => v.raw),
         selectors: values.map((v) => v.selector),
         count: values.length,
+        limits: values.some((v) => v.truncated)
+          ? {
+              truncated: true,
+              reason: `String clipped to ${caps.maxStringChars} characters`,
+            }
+          : undefined,
       };
     }
     const only = values[0]!;
-    if (only.raw === '') return { state: 'empty', raw: '', selector };
-    return { state: 'present', value: only.raw, raw: only.raw, selector, count: 1 };
+    if (only.raw === '' && !only.truncated) return { state: 'empty', raw: '', selector };
+    return {
+      state: 'present',
+      value: only.raw,
+      raw: only.raw,
+      selector,
+      count: 1,
+      limits: only.truncated
+        ? {
+            truncated: true,
+            reason: `String clipped to ${caps.maxStringChars} characters`,
+          }
+        : undefined,
+    };
   };
 
   const title = safe('title', (): FieldState => {
     const nodes = Array.from(document.querySelectorAll('title'));
     if (nodes.length === 0) return { state: 'absent' };
-    const values = nodes.map((n, i) => ({
-      raw: (n.textContent ?? '').trim(),
-      selector: `title:nth-of-type(${i + 1})`,
-    }));
+    const values = nodes.map((n, i) => {
+      const clipped = clip((n.textContent ?? '').trim());
+      return {
+        raw: clipped.text,
+        selector: `title:nth-of-type(${i + 1})`,
+        truncated: clipped.truncated,
+      };
+    });
     if (values.length > 1) {
       return {
         state: 'duplicate',
         values: values.map((v) => v.raw),
         selectors: values.map((v) => v.selector),
         count: values.length,
+        limits: values.some((v) => v.truncated)
+          ? {
+              truncated: true,
+              reason: `String clipped to ${caps.maxStringChars} characters`,
+            }
+          : undefined,
       };
     }
     const only = values[0]!;
-    if (only.raw === '') return { state: 'empty', raw: '', selector: 'title' };
-    return { state: 'present', value: only.raw, raw: only.raw, selector: 'title', count: 1 };
+    if (only.raw === '' && !only.truncated) return { state: 'empty', raw: '', selector: 'title' };
+    return {
+      state: 'present',
+      value: only.raw,
+      raw: only.raw,
+      selector: 'title',
+      count: 1,
+      limits: only.truncated
+        ? {
+            truncated: true,
+            reason: `String clipped to ${caps.maxStringChars} characters`,
+          }
+        : undefined,
+    };
   });
 
   const metaDescription = safe('metaDescription', () => metaContent('meta[name="description" i]'));
@@ -122,31 +199,44 @@ export function collectDomFactsInPage(
     if (nodes.length === 0) return { state: 'absent' };
     const values = nodes.map((n, i) => {
       const name = (n.getAttribute('name') ?? 'robots').toLowerCase();
-      const content = (n.getAttribute('content') ?? '').trim();
+      const clipped = clip((n.getAttribute('content') ?? '').trim());
       return {
         name,
-        content,
+        content: clipped.text,
         selector: `meta[name="${name}" i]:nth-of-type(${i + 1})`,
+        truncated: clipped.truncated,
       };
     });
     if (values.length > 1) {
       return {
         state: 'duplicate',
-        values,
+        values: values.map(({ name, content, selector }) => ({ name, content, selector })),
         selectors: values.map((v) => v.selector),
         count: values.length,
+        limits: values.some((v) => v.truncated)
+          ? {
+              truncated: true,
+              reason: `String clipped to ${caps.maxStringChars} characters`,
+            }
+          : undefined,
       };
     }
     const only = values[0]!;
-    if (only.content === '') {
+    if (only.content === '' && !only.truncated) {
       return { state: 'empty', raw: '', selector: only.selector };
     }
     return {
       state: 'present',
-      value: only,
+      value: { name: only.name, content: only.content, selector: only.selector },
       raw: only.content,
       selector: only.selector,
       count: 1,
+      limits: only.truncated
+        ? {
+            truncated: true,
+            reason: `String clipped to ${caps.maxStringChars} characters`,
+          }
+        : undefined,
     };
   });
 
@@ -204,7 +294,7 @@ export function collectDomFactsInPage(
   const alternates = safe('alternates', (): FieldState => {
     const nodes = Array.from(document.querySelectorAll('link[rel="alternate" i][hreflang]'));
     if (nodes.length === 0) return { state: 'absent' };
-    const values = nodes.map((n, i) => {
+    const all = nodes.map((n, i) => {
       const href = n.getAttribute('href') ?? '';
       const hreflang = n.getAttribute('hreflang') ?? '';
       const resolved = resolveUrl(href);
@@ -216,11 +306,21 @@ export function collectDomFactsInPage(
         detail: resolved.detail,
       };
     });
+    const omitted = Math.max(0, all.length - caps.maxAlternateItems);
+    const values = all.slice(0, caps.maxAlternateItems);
     return {
       state: 'present',
       value: values,
       selector: 'link[rel="alternate" i][hreflang]',
-      count: values.length,
+      count: all.length,
+      limits:
+        omitted > 0
+          ? {
+              truncated: true,
+              reason: `Alternate list clipped to ${caps.maxAlternateItems} items`,
+              omittedCount: omitted,
+            }
+          : undefined,
     };
   });
 
@@ -228,15 +328,34 @@ export function collectDomFactsInPage(
     const selector = `meta[${attr}^="${prefix}" i]`;
     const nodes = Array.from(document.querySelectorAll(selector));
     if (nodes.length === 0) return { state: 'absent' };
-    const values = nodes.map((n) => ({
-      key: n.getAttribute(attr) ?? '',
-      content: (n.getAttribute('content') ?? '').trim(),
-    }));
+    const all = nodes.map((n) => {
+      const keyClipped = clip(n.getAttribute(attr) ?? '');
+      const contentClipped = clip((n.getAttribute('content') ?? '').trim());
+      return {
+        key: keyClipped.text,
+        content: contentClipped.text,
+        truncated: keyClipped.truncated || contentClipped.truncated,
+      };
+    });
+    const omitted = Math.max(0, all.length - caps.maxMetaItems);
+    const values = all.slice(0, caps.maxMetaItems).map(({ key, content }) => ({ key, content }));
+    const stringTruncated = all.some((v) => v.truncated);
+    const reasons: string[] = [];
+    if (omitted > 0) reasons.push(`Item list clipped to ${caps.maxMetaItems} entries`);
+    if (stringTruncated) reasons.push(`String clipped to ${caps.maxStringChars} characters`);
     return {
       state: 'present',
       value: values,
       selector,
-      count: values.length,
+      count: all.length,
+      limits:
+        reasons.length > 0
+          ? {
+              truncated: true,
+              reason: reasons.join('; '),
+              omittedCount: omitted > 0 ? omitted : undefined,
+            }
+          : undefined,
     };
   };
 
@@ -246,9 +365,23 @@ export function collectDomFactsInPage(
   const language = safe('language', (): FieldState => {
     const html = document.documentElement;
     if (!html) return { state: 'absent' };
-    const raw = (html.getAttribute('lang') ?? '').trim();
-    if (raw === '') return { state: 'empty', raw: '', selector: 'html[lang]' };
-    return { state: 'present', value: raw, raw, selector: 'html[lang]', count: 1 };
+    const clipped = clip((html.getAttribute('lang') ?? '').trim());
+    if (clipped.text === '' && !clipped.truncated) {
+      return { state: 'empty', raw: '', selector: 'html[lang]' };
+    }
+    return {
+      state: 'present',
+      value: clipped.text,
+      raw: clipped.text,
+      selector: 'html[lang]',
+      count: 1,
+      limits: clipped.truncated
+        ? {
+            truncated: true,
+            reason: `String clipped to ${caps.maxStringChars} characters`,
+          }
+        : undefined,
+    };
   });
 
   const viewport = safe('viewport', () => metaContent('meta[name="viewport" i]'));
@@ -263,14 +396,14 @@ export function collectDomFactsInPage(
       h6: 0,
     };
     const samples: { level: string; text: string }[] = [];
+    let anyTruncated = false;
     for (const level of Object.keys(levels)) {
       const nodes = Array.from(document.querySelectorAll(level));
       levels[level] = nodes.length;
-      for (const n of nodes.slice(0, 5)) {
-        samples.push({
-          level,
-          text: (n.textContent ?? '').trim().slice(0, 120),
-        });
+      for (const n of nodes.slice(0, caps.maxHeadingSamplesPerLevel)) {
+        const clipped = clip((n.textContent ?? '').trim());
+        if (clipped.truncated) anyTruncated = true;
+        samples.push({ level, text: clipped.text });
       }
     }
     return {
@@ -278,6 +411,12 @@ export function collectDomFactsInPage(
       value: { levels, samples },
       selector: 'h1–h6',
       count: Object.values(levels).reduce((a, b) => a + b, 0),
+      limits: anyTruncated
+        ? {
+            truncated: true,
+            reason: `String clipped to ${caps.maxStringChars} characters`,
+          }
+        : undefined,
     };
   });
 
@@ -338,12 +477,16 @@ export function collectDomFactsInPage(
     const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json" i]'));
     if (scripts.length === 0) return { state: 'absent' };
 
-    let remaining = maxJsonLdChars;
+    const limitedScripts = scripts.slice(0, caps.maxJsonLdScripts);
+    const omittedScripts = Math.max(0, scripts.length - limitedScripts.length);
+    let remaining = caps.maxJsonLdChars;
     const entries: JsonLdEntry[] = [];
-    for (let i = 0; i < scripts.length; i += 1) {
-      const script = scripts[i]!;
+
+    for (let i = 0; i < limitedScripts.length; i += 1) {
+      const script = limitedScripts[i]!;
       const selector = `script[type="application/ld+json" i]:nth-of-type(${i + 1})`;
       const full = script.textContent ?? '';
+
       if (remaining <= 0) {
         entries.push({
           index: i,
@@ -351,31 +494,48 @@ export function collectDomFactsInPage(
           raw: '',
           truncated: true,
           parseStatus: 'truncated',
-          parseDetail: 'JSON-LD budget exhausted',
+          parseDetail: 'JSON-LD budget exhausted; script body was not captured or parsed',
         });
         continue;
       }
+
       const truncated = full.length > remaining;
       const raw = full.slice(0, remaining);
       remaining -= raw.length;
+
+      // Incomplete captures must not be parsed — a sliced string can look like
+      // invalid JSON and would falsely emit jsonld-malformed.
+      if (truncated) {
+        entries.push({
+          index: i,
+          selector,
+          raw,
+          truncated: true,
+          parseStatus: 'truncated',
+          parseDetail: 'JSON-LD exceeded capture budget; raw text is incomplete and was not parsed',
+        });
+        continue;
+      }
+
       const trimmed = raw.trim();
       if (trimmed === '') {
         entries.push({
           index: i,
           selector,
           raw,
-          truncated,
+          truncated: false,
           parseStatus: 'empty',
         });
         continue;
       }
+
       try {
         JSON.parse(trimmed);
         entries.push({
           index: i,
           selector,
           raw,
-          truncated,
+          truncated: false,
           parseStatus: 'ok',
         });
       } catch (err) {
@@ -384,17 +544,34 @@ export function collectDomFactsInPage(
           index: i,
           selector,
           raw,
-          truncated,
+          truncated: false,
           parseStatus: 'invalid-json',
           parseDetail: detail,
         });
       }
     }
+
+    const reasons: string[] = [];
+    if (omittedScripts > 0) {
+      reasons.push(`JSON-LD script list clipped to ${caps.maxJsonLdScripts} entries`);
+    }
+    if (entries.some((e) => e.truncated)) {
+      reasons.push(`JSON-LD raw text clipped to ${caps.maxJsonLdChars} characters`);
+    }
+
     return {
       state: 'present',
       value: entries,
       selector: 'script[type="application/ld+json" i]',
-      count: entries.length,
+      count: scripts.length,
+      limits:
+        reasons.length > 0
+          ? {
+              truncated: true,
+              reason: reasons.join('; '),
+              omittedCount: omittedScripts > 0 ? omittedScripts : undefined,
+            }
+          : undefined,
     };
   });
 

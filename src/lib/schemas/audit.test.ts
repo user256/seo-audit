@@ -76,4 +76,44 @@ describe('audit schemas', () => {
       expect(result.issues?.join(' ')).toMatch(/schemaVersion/i);
     }
   });
+
+  it('migrates representative schemaVersion-1 sessions to the current contract', () => {
+    const v1 = {
+      schemaVersion: 1,
+      id: 'sess-v1',
+      createdAt: '2026-07-12T12:00:00.000Z',
+      updatedAt: '2026-07-12T12:00:00.000Z',
+      tabUrl: 'https://example.com/a',
+      finalUrl: 'https://example.com/a',
+      captureTime: '2026-07-12T12:00:00.000Z',
+      extensionVersion: '0.1.0',
+      featureAvailability: { domCollector: true, headerCapture: 'unavailable' },
+      snapshots: [
+        {
+          id: 'snap-1',
+          url: 'https://example.com/a',
+          capturedAt: '2026-07-12T12:00:00.000Z',
+          evidence: [
+            {
+              id: 'e1',
+              kind: 'dom',
+              source: 'title',
+              value: { state: 'present', value: 'Hello', selector: 'title', count: 1 },
+              capturedAt: '2026-07-12T12:00:00.000Z',
+            },
+          ],
+        },
+      ],
+      findings: [],
+      captureErrors: [],
+      reportMarkdown: 'notes',
+    };
+    const result = parseAuditSession(v1);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.schemaVersion).toBe(AUDIT_SCHEMA_VERSION);
+      expect(result.value.snapshots[0]?.captureLimits?.applied.maxStringChars).toBeGreaterThan(0);
+      expect(result.value.reportMarkdown).toBe('notes');
+    }
+  });
 });
