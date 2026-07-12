@@ -1,8 +1,8 @@
 # Ticket 209: Check Catalogue and Availability Model
 
 **Sprint:** 2 — Crawl and Index Signals
-**Status:** Not started
-**Owner:** unassigned
+**Status:** Complete
+**Owner:** agent/ticket-209-check-catalogue
 **Estimate:** M
 
 ## Context
@@ -23,19 +23,19 @@ are runnable under the current access and captured-evidence state.
 
 ## Acceptance criteria
 
-- [ ] Extend the check descriptor with `label`, `description`, `category`,
+- [x] Extend the check descriptor with `label`, `description`, `category`,
   `requiredSources` (evidence sources it consumes), `cost` (`dom` | `network` |
   `experiment`), `optIn` (boolean, default false), and a stable `sourceRef`,
   without breaking existing `Finding`/`ruleId` output.
-- [ ] A single `CHECK_CATALOGUE` is the one registry the audit runner and UI both
+- [x] A single `CHECK_CATALOGUE` is the one registry the audit runner and UI both
   read; the existing `PAGE_RULES` are migrated into it with no change to emitted
   findings (golden tests stay green).
-- [ ] An `availability(ctx)` resolver returns `available` / `needs-access` /
+- [x] An `availability(ctx)` resolver returns `available` / `needs-access` /
   `unavailable` per check with a reason, reusing the same access + evidence state
   the dashboard already models — never inventing a pass for an absent source.
-- [ ] The audit runner accepts an optional set of check IDs; passing none runs
+- [x] The audit runner accepts an optional set of check IDs; passing none runs
   the full default (non-opt-in) set, preserving today’s one-click behaviour.
-- [ ] Unit tests cover catalogue completeness (every rule is registered),
+- [x] Unit tests cover catalogue completeness (every rule is registered),
   availability for granted/ungranted and present/absent evidence, and that a
   selected-subset run emits exactly the expected findings.
 

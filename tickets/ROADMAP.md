@@ -21,7 +21,7 @@ tickets are archived in [completed/](./completed/).
 3. [203](./203-xml-sitemap-and-hreflang-parser.md) — sitemap parsing, after 202.
 4. [207](./207-hreflang-directive-validation.md) and [208](./208-structured-data-inventory-and-validation.md) — directive and structured-data validation.
 5. [204](./204-indexability-reconciliation-rules.md) — reconcile all captured signals.
-6. [209](./209-check-catalogue-and-availability-model.md) — catalogue + availability model for checks (enabling primitive for the wizard).
+6. [209](./completed/209-check-catalogue-and-availability-model.md) — catalogue + availability model for checks (enabling primitive for the wizard). **Completed by `agent/ticket-209-check-catalogue`.**
 7. [210](./210-audit-wizard-and-check-selection.md) — optional wizard to select which checks run; consent surface reused by Sprint 3 experiments. **Priority UX follow-on to the 111 dashboard — can be pulled ahead of the crawl-signal work post-gate.**
 8. [205](./205-crawl-signals-workspace.md) — present the evidence in the workspace.
 9. [299](./299-sprint-2-review.md) — Sprint 2 go/no-go.

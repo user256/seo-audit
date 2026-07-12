@@ -494,16 +494,5 @@ export const imagesEmptyAltAdvisory: Rule = {
   },
 };
 
-/** Stable rule registry — order is deterministic for snapshots. */
-export const PAGE_RULES: Rule[] = [
-  titleMissingOrDuplicate,
-  titleLengthAdvisory,
-  descriptionMissingOrDuplicate,
-  canonicalRules,
-  robotsMetaDirectives,
-  hreflangInvalidUrl,
-  jsonLdMalformed,
-  languageMissing,
-  imagesMissingAlt,
-  imagesEmptyAltAdvisory,
-];
+/** @deprecated Import the single registry from check-catalogue or engine instead. */
+export { PAGE_RULES } from './check-catalogue';
