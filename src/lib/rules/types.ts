@@ -14,6 +14,36 @@ export type Rule = {
   run: (ctx: RuleContext) => Finding[];
 };
 
+export type CheckAvailabilityStatus = 'available' | 'needs-access' | 'unavailable';
+
+export type CheckAvailability = {
+  status: CheckAvailabilityStatus;
+  reason: string;
+};
+
+/** The access and evidence state shared by the workspace and check catalogue. */
+export type CheckAvailabilityContext = {
+  /** Per-origin access is granted for a fresh capture. Persisted evidence remains usable without it. */
+  accessGranted: boolean;
+  evidenceBySource: ReadonlyMap<string, Evidence>;
+};
+
+/**
+ * A rule plus the declarative information required to explain and select it.
+ * `id` remains the stable check identifier; emitted Finding.ruleId values are
+ * deliberately left to the underlying rule implementation.
+ */
+export type CheckDescriptor = Rule & {
+  label: string;
+  description: string;
+  category: string;
+  requiredSources: readonly string[];
+  cost: 'dom' | 'network' | 'experiment';
+  optIn: boolean;
+  sourceRef: string;
+  availability: (ctx: CheckAvailabilityContext) => CheckAvailability;
+};
+
 export type PageSummary = {
   totalFindings: number;
   bySeverity: Record<Severity, number>;

@@ -13,3 +13,8 @@
 - [x] [Ticket 111: SEO Dashboard and Audit Phases](./111-seo-dashboard-and-audit-phases.md)
 - [x] [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md)
 - [x] [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md)
+
+# Sprint 2: Crawl and Index Signals
+
+**Tickets:**
+- [x] [Ticket 209: Check Catalogue and Availability Model](./209-check-catalogue-and-availability-model.md)

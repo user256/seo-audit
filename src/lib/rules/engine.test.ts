@@ -120,6 +120,14 @@ describe('evaluatePageSnapshot', () => {
     expect(findings.some((f) => f.ruleId === 'canonical-multiple')).toBe(true);
   });
 
+  it('runs exactly the selected check subset', () => {
+    const snapshot = snapshotFromFixture(FIXTURE_DUPLICATE_CANONICAL, 'https://example.com/page');
+    const { findings } = evaluatePageSnapshot(snapshot, {
+      checkIds: new Set(['canonical-rules']),
+    });
+    expect(findings.map((finding) => finding.ruleId)).toEqual(['canonical-multiple']);
+  });
+
   it('triggers robots noindex/nofollow from multiple meta robots', () => {
     const snapshot = snapshotFromFixture(FIXTURE_MULTIPLE_ROBOTS, 'https://example.com/page');
     const { findings } = evaluatePageSnapshot(snapshot);

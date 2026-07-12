@@ -16,6 +16,26 @@ they appear as capture notes / unknown indexability in the page summary.
 Rules only evaluate evidence they received. Inaccessible fields produce no finding
 from that rule (the collector already recorded the access failure as evidence state).
 
+## Check catalogue and availability
+
+`CHECK_CATALOGUE` is the single registry for the runner and selection UI. Each
+check has a stable ID, plain-language label/description, category, source
+reference, required evidence sources, cost (`dom`, `network`, or `experiment`),
+and an opt-in flag. Current DOM checks are defaults; future network and
+experiment checks can declare opt-in without changing the runner.
+
+`resolveCheckAvailability({ accessGranted, evidenceBySource })` reports one of:
+
+- `available` when all required evidence rows can be used;
+- `needs-access` when a required row is absent and fresh per-origin access has
+  not been granted;
+- `unavailable` when access exists but a source has not been captured, or a
+  captured field is explicitly inaccessible.
+
+An evidence row whose field state is `absent` is still available to a rule: it
+is evidence that the page element was missing. A missing evidence row never
+becomes a pass.
+
 ## Rule IDs
 
 | Rule ID                 | Category          | Severity | Trigger                                     |
@@ -52,5 +72,7 @@ import { evaluatePageSnapshot } from './src/lib/rules/engine';
 const { findings, summary } = evaluatePageSnapshot(pageSnapshot, {
   featureAvailability: session.featureAvailability,
   captureErrors: session.captureErrors,
+  // Omit checkIds for the full default set.
+  checkIds: new Set(['title-missing-or-duplicate']),
 });
 ```
