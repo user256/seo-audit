@@ -46,12 +46,11 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 108: Report Editor Isolation and Recovery](./108-report-editor-isolation-and-recovery.md)
-2. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
-3. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
+1. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
+2. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
-**Recommended next pick:** **108** — isolate the Markdown report editor and
-recover autosave failures before the Sprint 1 gate.
+**Recommended next pick:** **109** — reconcile docs and verification before the
+Sprint 1 go/no-go gate.
 
 ---
 
@@ -86,7 +85,6 @@ useful from the side panel.
 
 **Tickets:**
 
-- [ ] [Ticket 108: Report Editor Isolation and Recovery](./108-report-editor-isolation-and-recovery.md)
 - [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 

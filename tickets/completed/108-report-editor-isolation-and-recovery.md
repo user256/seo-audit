@@ -1,7 +1,7 @@
 # Ticket 108: Report Editor Isolation and Recovery
 
 **Sprint:** 1 — Inspect One Page  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** M
 
@@ -22,18 +22,18 @@ and renders within the stated local-only preview boundary.
 
 ## Acceptance criteria
 
-- [ ] Bind every editor controller/autosave operation to an immutable session
+- [x] Bind every editor controller/autosave operation to an immutable session
   ID; before replacing sessions, flush or cancel the previous controller and
   prove no old Markdown can be saved to the new session.
-- [ ] Catch and display save failures without unhandled promise rejections;
+- [x] Catch and display save failures without unhandled promise rejections;
   later edits retry successfully, saved/unsaved state remains truthful, and
   close/navigation has an explicit flush-or-warning policy.
-- [ ] Define a Markdown preview allowlist. Raw HTML and image output are removed
+- [x] Define a Markdown preview allowlist. Raw HTML and image output are removed
   (or rendered inert), and the sanitiser prevents remote image/network loads as
   well as scripts, forms, styles, unsafe links, and event attributes.
-- [ ] Preserve safe ordinary Markdown, table/code rendering, and external text
+- [x] Preserve safe ordinary Markdown, table/code rendering, and external text
   links with `target="_blank" rel="noopener noreferrer"`.
-- [ ] Add controller-level tests for rejected-then-successful autosaves,
+- [x] Add controller-level tests for rejected-then-successful autosaves,
   session switch during a debounce window, source/preview switching after a
   failed save, raw HTML, Markdown images, data URLs, and safe links.
 
@@ -59,4 +59,18 @@ save may outlive that ownership.
 - 2026-07-12 — Filed by the post-Sprint-1 audit. A rejected debounced promise
   currently poisons the serial save chain, while the save callback resolves the
   session ID from mutable workspace state.
+- 2026-07-12 — Autosave gate recovers after rejection. Controllers bind an
+  immutable `sessionId`; session switches flush-then-destroy the prior editor.
+  Preview uses an explicit tag/attr allowlist with images and raw HTML hosts
+  removed.
 
+---
+
+## Definition of done
+
+This ticket is closeable when:
+
+1. All acceptance criteria above are checked.
+2. Changes are merged to the main branch (or the sprint's working branch).
+3. The corresponding bullet in `tickets/overview.md` is changed from `- [ ]` to `- [x]`.
+4. Any follow-up work discovered during implementation is filed as a new ticket — not silently absorbed.

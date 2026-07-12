@@ -47,6 +47,26 @@ describe('createDebouncedSaver', () => {
     expect(save).toHaveBeenCalledTimes(1);
     expect(save).toHaveBeenCalledWith('b');
   });
+
+  it('recovers after a rejected save so later edits still flush', async () => {
+    vi.useFakeTimers();
+    const save = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('disk full'))
+      .mockResolvedValueOnce(undefined);
+    const saver = createDebouncedSaver(save, 50);
+
+    saver.schedule('fail-me');
+    await vi.advanceTimersByTimeAsync(50);
+    await Promise.resolve();
+    expect(save).toHaveBeenCalledTimes(1);
+
+    saver.schedule('retry-me');
+    await vi.advanceTimersByTimeAsync(50);
+    await saver.flush();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save).toHaveBeenLastCalledWith('retry-me');
+  });
 });
 
 describe('renderSafeMarkdownPreview', () => {
@@ -55,9 +75,13 @@ describe('renderSafeMarkdownPreview', () => {
     expect(renderSafeMarkdownPreview('   ')).toBe('');
   });
 
-  it('renders headings and forces safe link attributes', () => {
-    const html = renderSafeMarkdownPreview('# Hello\n\n[x](https://example.com)');
+  it('renders headings, tables, code, and forces safe link attributes', () => {
+    const html = renderSafeMarkdownPreview(
+      '# Hello\n\n[x](https://example.com)\n\n| a | b |\n| - | - |\n| 1 | 2 |\n\n`code`\n\n```\nblock\n```',
+    );
     expect(html).toContain('<h1');
+    expect(html).toContain('<table');
+    expect(html).toContain('<code');
     expect(html).toContain('href="https://example.com"');
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener noreferrer"');
@@ -72,5 +96,17 @@ describe('renderSafeMarkdownPreview', () => {
     expect(html.toLowerCase()).not.toContain('<form');
     expect(html.toLowerCase()).not.toContain('<style');
     expect(html.toLowerCase()).not.toContain('javascript:');
+  });
+
+  it('removes Markdown images, raw HTML, and data-URL loads', () => {
+    const html = renderSafeMarkdownPreview(
+      `![remote](https://evil.example/x.png)\n\n<img src="https://evil.example/y.png">\n\n[data](data:text/html,hi)\n\n<div onclick="alert(1)">raw</div>`,
+    );
+    const lower = html.toLowerCase();
+    expect(lower).not.toContain('<img');
+    expect(lower).not.toContain('evil.example');
+    expect(lower).not.toContain('data:');
+    expect(lower).not.toContain('onclick');
+    expect(lower).not.toContain('<div');
   });
 });
