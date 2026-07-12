@@ -64,6 +64,83 @@ describe('collectDomForActiveTab', () => {
     if (result.ok) {
       const loaded = await repo.get(result.sessionId);
       expect(loaded.status).toBe('ok');
+      expect(result.snapshot.captureLimits).toBeTruthy();
+    }
+  });
+
+  it('records a navigation-race CaptureError when the tab URL changes mid-collection', async () => {
+    let queryCount = 0;
+    Object.assign(globalThis, {
+      chrome: createChromeStub({
+        tabs: {
+          query: async () => {
+            queryCount += 1;
+            const url =
+              queryCount === 1 ? 'https://example.com/shop/item' : 'https://example.com/shop/other';
+            return [{ id: 4, url }];
+          },
+        },
+        permissions: {
+          contains: async () => true,
+        },
+        scripting: {
+          executeScript: async () => [{ result: collectDomFactsInPage() }],
+        },
+      }),
+    });
+
+    const result = await collectDomForActiveTab(new SessionRepository(new IDBFactory()));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.captureError?.code).toBe('navigation-race');
+    }
+  });
+
+  it('records a navigation-race CaptureError when document URL diverges from the tab', async () => {
+    Object.assign(globalThis, {
+      chrome: createChromeStub({
+        tabs: {
+          query: async () => [{ id: 4, url: 'https://example.com/shop/item' }],
+        },
+        permissions: {
+          contains: async () => true,
+        },
+        scripting: {
+          executeScript: async () => {
+            const facts = collectDomFactsInPage();
+            facts.documentUrl = 'https://example.com/elsewhere';
+            return [{ result: facts }];
+          },
+        },
+      }),
+    });
+
+    const result = await collectDomForActiveTab(new SessionRepository(new IDBFactory()));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.captureError?.code).toBe('navigation-race');
+    }
+  });
+
+  it('rejects malformed collector payloads with dom-evidence-invalid', async () => {
+    Object.assign(globalThis, {
+      chrome: createChromeStub({
+        tabs: {
+          query: async () => [{ id: 4, url: 'https://example.com/shop/item' }],
+        },
+        permissions: {
+          contains: async () => true,
+        },
+        scripting: {
+          executeScript: async () => [{ result: { not: 'dom-facts' } }],
+        },
+      }),
+    });
+
+    const result = await collectDomForActiveTab(new SessionRepository(new IDBFactory()));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.captureError?.code).toBe('dom-evidence-invalid');
     }
   });
 });

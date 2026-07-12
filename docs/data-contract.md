@@ -1,7 +1,8 @@
 # Audit data contract
 
-Versioned local audit records for SEO Audit Workbench (Ticket 102). Runtime
-validation uses Zod; JSON Schema is derived for future exports (Ticket 402).
+Versioned local audit records for SEO Audit Workbench (Tickets 102 + 107).
+Runtime validation uses Zod; JSON Schema is derived for future exports
+(Ticket 402).
 
 ## Versions
 
@@ -9,17 +10,45 @@ validation uses Zod; JSON Schema is derived for future exports (Ticket 402).
 | --------------------------------------------------- | ---------------------------------------------- |
 | `AUDIT_SCHEMA_VERSION` (`src/lib/schemas/audit.ts`) | Shape of each persisted `AuditSession` record. |
 | IndexedDB `DB_VERSION` (`src/lib/storage/db.ts`)    | Object-store layout (stores/indexes).          |
+| `DOM_EVIDENCE_SCHEMA_VERSION` (`dom-evidence.ts`)   | Sprint 1 DOM field/payload shapes.             |
 
 Bump `AUDIT_SCHEMA_VERSION` when adding/removing/renaming session fields. Bump
 `DB_VERSION` only when creating stores or indexes. Record migrations run on
 read: validate → accept, migrate (when a migrator exists), or **quarantine**.
+
+Current session version is **2**. Schema version **1** sessions from Tickets
+102–106 are migrated in place on load (`migrateAuditSessionV1ToV2`): snapshots
+receive documented `captureLimits` defaults and remain readable historical
+records rather than being quarantined solely because Ticket 107 landed.
+
+## DOM capture limits (Ticket 107)
+
+Documented in `src/lib/schemas/dom-limits.ts` and attached to each new
+`PageSnapshot.captureLimits`:
+
+| Cap                         | Default   |
+| --------------------------- | --------- |
+| `maxStringChars`            | 2 000     |
+| `maxMetaItems` (OG/Twitter) | 40        |
+| `maxAlternateItems`         | 50        |
+| `maxJsonLdChars`            | 50 000    |
+| `maxJsonLdScripts`          | 25        |
+| `maxHeadingSamplesPerLevel` | 5         |
+| `maxSnapshotChars`          | 400 000   |
+| `maxSessionChars`           | 1 500 000 |
+
+When a cap is hit, the field records `limits: { truncated, reason, omittedCount? }`
+and a `capture.limits` evidence row summarises which sources were clipped.
+JSON-LD that is incomplete because of the character budget uses
+`parseStatus: "truncated"` and must not emit `jsonld-malformed`.
 
 ## Core types
 
 ### `Evidence`
 
 Browser-captured fact. Compact `value` only — **do not** store full HTML
-bodies, cookies, request bodies, or credentials by default.
+bodies, cookies, request bodies, or credentials by default. Sprint 1 DOM field
+shapes validate via `parseDomFacts` / `FieldStateSchema` before save.
 
 ### `Finding`
 
@@ -29,12 +58,13 @@ Derived rule result: `severity`, `category`, `affectedUrl`, `description`,
 
 ### `CaptureError`
 
-Unavailable or failed capture (`permission-denied`, fetch failure, etc.).
-Shown in the UI as an explanation, never as a pass/fail finding.
+Unavailable or failed capture (`permission-denied`, `navigation-race`,
+`dom-evidence-invalid`, fetch failure, etc.). Shown in the UI as an
+explanation, never as a pass/fail finding.
 
 ### `PageSnapshot`
 
-One capture of a URL plus its evidence list.
+One capture of a URL plus its evidence list and optional `captureLimits`.
 
 ### `AuditSession`
 
@@ -49,6 +79,7 @@ Session envelope: `tabUrl`, `finalUrl`, `captureTime`, `extensionVersion`,
 - `save` / `get` / `list` / `delete`
 - Invalid or schema-mismatched rows move to the `quarantine` store with a
   human-readable `reason` so the side panel can explain them without crashing.
+- Version-1 sessions are rewritten to version 2 on successful `get`.
 
 ## Privacy invariants
 

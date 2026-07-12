@@ -37,6 +37,5 @@ Run and retain a user-approved set of URL-variant redirect tests.
 ## Dependencies
 
 - **Blocks:** 399, 401, 402
-- **Blocked by:** 102, 201, 299
+- **Blocked by:** 102, 201, 206, 299
 - **External:** permission for each requested origin
-

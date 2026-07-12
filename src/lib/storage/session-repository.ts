@@ -84,6 +84,15 @@ export class SessionRepository {
 
       const parsed = parseAuditSession(raw);
       if (parsed.ok) {
+        const wasV1 =
+          raw &&
+          typeof raw === 'object' &&
+          'schemaVersion' in raw &&
+          (raw as { schemaVersion: unknown }).schemaVersion === 1;
+        if (wasV1) {
+          // Persist the migrated shape so historical audits remain readable in place.
+          tx.objectStore(SESSIONS_STORE).put(parsed.value);
+        }
         await txDone(tx);
         return { status: 'ok', session: parsed.value };
       }

@@ -39,6 +39,5 @@ sitemap hreflang annotations relevant to the current audit.
 ## Dependencies
 
 - **Blocks:** 204, 205
-- **Blocked by:** 102, 202
+- **Blocked by:** 102, 202, 206
 - **External:** permission request for a user-selected external sitemap origin
-

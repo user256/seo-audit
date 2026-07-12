@@ -53,7 +53,7 @@ describe('SessionRepository', () => {
     const tx = db.transaction('sessions', 'readwrite');
     tx.objectStore('sessions').put({
       id: 'broken-1',
-      schemaVersion: 1,
+      schemaVersion: 2,
       // missing required fields
       tabUrl: 'https://example.com/',
     });
@@ -72,6 +72,51 @@ describe('SessionRepository', () => {
 
     const quarantine = await repo.listQuarantine();
     expect(quarantine.some((q) => q.id === 'broken-1')).toBe(true);
+  });
+
+  it('migrates schemaVersion-1 sessions in place on get', async () => {
+    const db = await openAuditDb(factory);
+    const tx = db.transaction('sessions', 'readwrite');
+    tx.objectStore('sessions').put({
+      schemaVersion: 1,
+      id: 'legacy-1',
+      createdAt: '2026-07-12T12:00:00.000Z',
+      updatedAt: '2026-07-12T12:00:00.000Z',
+      tabUrl: 'https://example.com/legacy',
+      finalUrl: 'https://example.com/legacy',
+      captureTime: '2026-07-12T12:00:00.000Z',
+      extensionVersion: '0.1.0',
+      featureAvailability: { domCollector: true },
+      snapshots: [
+        {
+          id: 'snap-legacy',
+          url: 'https://example.com/legacy',
+          capturedAt: '2026-07-12T12:00:00.000Z',
+          evidence: [],
+        },
+      ],
+      findings: [],
+      captureErrors: [],
+      reportMarkdown: '',
+    });
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+
+    const loaded = await repo.get('legacy-1');
+    expect(loaded.status).toBe('ok');
+    if (loaded.status === 'ok') {
+      expect(loaded.session.schemaVersion).toBe(2);
+      expect(loaded.session.snapshots[0]?.captureLimits).toBeTruthy();
+    }
+
+    const again = await repo.get('legacy-1');
+    expect(again.status).toBe('ok');
+    if (again.status === 'ok') {
+      expect(again.session.schemaVersion).toBe(2);
+    }
   });
 
   it('creates object stores via migration from version 0', async () => {

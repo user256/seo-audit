@@ -1,4 +1,10 @@
 import type { Evidence, PageSnapshot } from '../lib/schemas/audit';
+import { DOM_EVIDENCE_SCHEMA_VERSION } from '../lib/schemas/dom-evidence';
+import {
+  captureLimitsRecord,
+  DEFAULT_DOM_COLLECT_LIMITS,
+  type DomCollectLimits,
+} from '../lib/schemas/dom-limits';
 import type { DomFacts, FieldState } from './dom-collector';
 
 function evidenceId(prefix: string, index: number): string {
@@ -20,8 +26,12 @@ function fieldToEvidence(
   };
 }
 
-/** Convert collector output into a Ticket 102 PageSnapshot. */
-export function domFactsToPageSnapshot(facts: DomFacts, snapshotId: string): PageSnapshot {
+/** Convert collector output into a Ticket 102/107 PageSnapshot. */
+export function domFactsToPageSnapshot(
+  facts: DomFacts,
+  snapshotId: string,
+  limits: DomCollectLimits = DEFAULT_DOM_COLLECT_LIMITS,
+): PageSnapshot {
   const capturedAt = facts.collectedAt;
   const evidence: Evidence[] = [
     {
@@ -69,10 +79,43 @@ export function domFactsToPageSnapshot(facts: DomFacts, snapshotId: string): Pag
     ),
   ];
 
+  const truncatedFields = evidence
+    .filter((e) => {
+      const v = e.value as { limits?: { truncated?: boolean; reason?: string } } | undefined;
+      return v && typeof v === 'object' && v.limits?.truncated === true;
+    })
+    .map((e) => {
+      const v = e.value as { limits: { reason: string; omittedCount?: number } };
+      return {
+        source: e.source,
+        reason: v.limits.reason,
+        omittedCount: v.limits.omittedCount,
+      };
+    });
+
+  if (truncatedFields.length > 0) {
+    evidence.push({
+      id: evidenceId('limits', 0),
+      kind: 'dom',
+      source: 'capture.limits',
+      value: {
+        truncated: true as const,
+        fields: truncatedFields,
+      },
+      capturedAt,
+    });
+  }
+
+  const record = captureLimitsRecord(limits);
+
   return {
     id: snapshotId,
     url: facts.documentUrl,
     capturedAt,
     evidence,
+    captureLimits: {
+      ...record,
+      domEvidenceSchemaVersion: DOM_EVIDENCE_SCHEMA_VERSION,
+    },
   };
 }

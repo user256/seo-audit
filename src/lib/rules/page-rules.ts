@@ -10,6 +10,24 @@ const LANG_SOURCE = 'html[lang]';
 const IMAGES_SOURCE = 'img';
 const JSONLD_SOURCE = 'script[type=application/ld+json]';
 
+/** Split robots content into directive tokens (comma / whitespace; includes `none`). */
+export function parseRobotsDirectiveTokens(content: string): string[] {
+  return content
+    .toLowerCase()
+    .split(/[,;\s]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+}
+
+export function isHttpOrHttpsUrl(absolute: string): boolean {
+  try {
+    const protocol = new URL(absolute).protocol;
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 const REF = {
   title: 'https://developers.google.com/search/docs/appearance/title-link',
   description: 'https://developers.google.com/search/docs/appearance/snippet',
@@ -199,30 +217,46 @@ export const canonicalRules: Rule = {
       );
     }
 
-    if (field.state === 'present' && ctx.pageOrigin) {
+    if (field.state === 'present') {
       const value = field.value as { absolute?: string } | undefined;
       const absolute = value?.absolute;
       if (absolute) {
-        try {
-          const canonOrigin = new URL(absolute).origin;
-          if (canonOrigin !== ctx.pageOrigin) {
-            findings.push(
-              makeFinding({
-                ruleId: 'canonical-off-page',
-                severity: 'warning',
-                category: 'indexability',
-                affectedUrl: ctx.pageUrl,
-                description: `Canonical resolves off-origin to ${absolute}.`,
-                evidenceIds: [evidence.id],
-                recommendation:
-                  'Confirm cross-domain canonicals are intentional; otherwise point to the preferred same-site URL.',
-                sourceRef: REF.canonical,
-                capturedAt: ctx.capturedAt,
-              }),
-            );
+        if (!isHttpOrHttpsUrl(absolute)) {
+          findings.push(
+            makeFinding({
+              ruleId: 'canonical-non-http',
+              severity: 'error',
+              category: 'indexability',
+              affectedUrl: ctx.pageUrl,
+              description: `Canonical resolves to a non-HTTP(S) URL (${absolute}).`,
+              evidenceIds: [evidence.id],
+              recommendation: 'Use an http:// or https:// canonical target for SEO checks.',
+              sourceRef: REF.canonical,
+              capturedAt: ctx.capturedAt,
+            }),
+          );
+        } else if (ctx.pageOrigin) {
+          try {
+            const canonOrigin = new URL(absolute).origin;
+            if (canonOrigin !== ctx.pageOrigin) {
+              findings.push(
+                makeFinding({
+                  ruleId: 'canonical-off-page',
+                  severity: 'warning',
+                  category: 'indexability',
+                  affectedUrl: ctx.pageUrl,
+                  description: `Canonical resolves off-origin to ${absolute}.`,
+                  evidenceIds: [evidence.id],
+                  recommendation:
+                    'Confirm cross-domain canonicals are intentional; otherwise point to the preferred same-site URL.',
+                  sourceRef: REF.canonical,
+                  capturedAt: ctx.capturedAt,
+                }),
+              );
+            }
+          } catch {
+            // ignore — malformed handled above
           }
-        } catch {
-          // ignore — malformed handled above
         }
       }
     }
@@ -255,34 +289,41 @@ export const robotsMetaDirectives: Rule = {
       }
     }
 
-    const joined = contents.join(',').toLowerCase();
-    if (joined.includes('noindex')) {
+    const tokens = contents.flatMap(parseRobotsDirectiveTokens);
+    const hasNone = tokens.includes('none');
+    const hasNoindex = hasNone || tokens.includes('noindex');
+    const hasNofollow = hasNone || tokens.includes('nofollow');
+
+    if (hasNoindex) {
       findings.push(
         makeFinding({
           ruleId: 'robots-noindex',
           severity: 'warning',
           category: 'indexability',
           affectedUrl: ctx.pageUrl,
-          description:
-            'Meta robots includes noindex (DOM signal only; headers/robots.txt not evaluated).',
+          description: hasNone
+            ? 'Meta robots includes none (equivalent to noindex, nofollow; DOM signal only; headers/robots.txt not evaluated).'
+            : 'Meta robots includes noindex (DOM signal only; headers/robots.txt not evaluated).',
           evidenceIds: [evidence.id],
-          recommendation: 'Remove noindex if the page should appear in search results.',
+          recommendation: 'Remove noindex/none if the page should appear in search results.',
           sourceRef: REF.robots,
           capturedAt: ctx.capturedAt,
         }),
       );
     }
-    if (joined.includes('nofollow')) {
+    if (hasNofollow) {
       findings.push(
         makeFinding({
           ruleId: 'robots-nofollow',
           severity: 'info',
           category: 'indexability',
           affectedUrl: ctx.pageUrl,
-          description: 'Meta robots includes nofollow (DOM signal only).',
+          description: hasNone
+            ? 'Meta robots includes none (equivalent to noindex, nofollow; DOM signal only).'
+            : 'Meta robots includes nofollow (DOM signal only).',
           evidenceIds: [evidence.id],
           recommendation:
-            'Use nofollow only when you intentionally want to avoid passing signals via links.',
+            'Use nofollow/none only when you intentionally want to avoid passing signals via links.',
           sourceRef: REF.robots,
           capturedAt: ctx.capturedAt,
         }),
@@ -315,7 +356,22 @@ export const hreflangInvalidUrl: Rule = {
             description: `hreflang “${item.hreflang}” has an unresolvable href “${item.href}”.`,
             evidenceIds: [evidence.id],
             recommendation:
-              'Provide resolvable absolute or relative URLs for alternate hreflang links.',
+              'Provide resolvable absolute or relative HTTP(S) URLs for alternate hreflang links.',
+            sourceRef: REF.hreflang,
+            capturedAt: ctx.capturedAt,
+          }),
+        );
+      } else if (!isHttpOrHttpsUrl(item.absolute)) {
+        findings.push(
+          makeFinding({
+            id: `hreflang-non-http-${item.hreflang || 'unknown'}-${evidence.id}`,
+            ruleId: 'hreflang-non-http',
+            severity: 'error',
+            category: 'international',
+            affectedUrl: ctx.pageUrl,
+            description: `hreflang “${item.hreflang}” resolves to a non-HTTP(S) URL (${item.absolute}).`,
+            evidenceIds: [evidence.id],
+            recommendation: 'Use http:// or https:// targets for hreflang alternate links.',
             sourceRef: REF.hreflang,
             capturedAt: ctx.capturedAt,
           }),
@@ -389,7 +445,7 @@ export const imagesMissingAlt: Rule = {
       emptyAlt?: number;
       total?: number;
     };
-    const missing = (value.missingAlt ?? 0) + (value.emptyAlt ?? 0);
+    const missing = value.missingAlt ?? 0;
     if (missing === 0) return [];
     return [
       makeFinding({
@@ -397,10 +453,40 @@ export const imagesMissingAlt: Rule = {
         severity: 'warning',
         category: 'accessibility-seo',
         affectedUrl: ctx.pageUrl,
-        description: `${missing} of ${value.total ?? 0} images lack meaningful alt text (missing or empty alt).`,
+        description: `${missing} of ${value.total ?? 0} images omit the alt attribute.`,
         evidenceIds: [evidence.id],
         recommendation:
-          'Provide descriptive alt text for informative images; use empty alt only for decorative images.',
+          'Add an alt attribute on every <img>. Use descriptive text for informative images; use empty alt only when decorative.',
+        sourceRef: REF.alt,
+        capturedAt: ctx.capturedAt,
+      }),
+    ];
+  },
+};
+
+export const imagesEmptyAltAdvisory: Rule = {
+  id: 'images-empty-alt-advisory',
+  run(ctx) {
+    const evidence = ctx.evidenceBySource.get(IMAGES_SOURCE);
+    const field = fieldFromEvidence(evidence);
+    if (!field || field.state !== 'present' || !evidence) return [];
+    const value = field.value as {
+      missingAlt?: number;
+      emptyAlt?: number;
+      total?: number;
+    };
+    const empty = value.emptyAlt ?? 0;
+    if (empty === 0) return [];
+    return [
+      makeFinding({
+        ruleId: 'images-empty-alt-advisory',
+        severity: 'info',
+        category: 'accessibility-seo',
+        affectedUrl: ctx.pageUrl,
+        description: `${empty} of ${value.total ?? 0} images use an empty alt attribute (often intentional for decorative images).`,
+        evidenceIds: [evidence.id],
+        recommendation:
+          'Confirm empty alt is reserved for decorative images; informative images need descriptive alt text.',
         sourceRef: REF.alt,
         capturedAt: ctx.capturedAt,
       }),
@@ -419,4 +505,5 @@ export const PAGE_RULES: Rule[] = [
   jsonLdMalformed,
   languageMissing,
   imagesMissingAlt,
+  imagesEmptyAltAdvisory,
 ];

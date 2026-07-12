@@ -40,7 +40,7 @@ SEO-relevant response headers under the granted host permission.
 ## Dependencies
 
 - **Blocks:** 204, 205, 301, 302
-- **Blocked by:** 102, 199
+- **Blocked by:** 102, 199, 206
 - **External:** Chrome API capability verification
 
 ## Approach
@@ -48,4 +48,3 @@ SEO-relevant response headers under the granted host permission.
 Do not silently fall back to a side-panel `fetch`: it cannot see the browser
 navigation’s headers or redirect chain. Select and test the browser API before
 committing to UI work.
-

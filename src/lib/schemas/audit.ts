@@ -1,7 +1,9 @@
 import { z } from 'zod';
+import { DOM_EVIDENCE_SCHEMA_VERSION } from './dom-evidence';
+import { DOM_LIMITS } from './dom-limits';
 
 /** Bump when the persisted shape changes; see docs/data-contract.md. */
-export const AUDIT_SCHEMA_VERSION = 1 as const;
+export const AUDIT_SCHEMA_VERSION = 2 as const;
 
 export const SeveritySchema = z.enum(['info', 'warning', 'error', 'critical']);
 export type Severity = z.infer<typeof SeveritySchema>;
@@ -61,11 +63,29 @@ export const CaptureErrorSchema = z.object({
 });
 export type CaptureError = z.infer<typeof CaptureErrorSchema>;
 
+export const CaptureLimitsSchema = z.object({
+  schemaVersion: z.literal(1),
+  applied: z.object({
+    maxStringChars: z.number().int().positive(),
+    maxMetaItems: z.number().int().positive(),
+    maxAlternateItems: z.number().int().positive(),
+    maxJsonLdChars: z.number().int().positive(),
+    maxJsonLdScripts: z.number().int().positive(),
+    maxHeadingSamplesPerLevel: z.number().int().positive(),
+  }),
+  maxSnapshotChars: z.number().int().positive(),
+  maxSessionChars: z.number().int().positive(),
+  domEvidenceSchemaVersion: z.literal(DOM_EVIDENCE_SCHEMA_VERSION).optional(),
+});
+export type CaptureLimits = z.infer<typeof CaptureLimitsSchema>;
+
 export const PageSnapshotSchema = z.object({
   id: z.string().min(1),
   url: z.string().min(1),
   capturedAt: z.string().datetime(),
   evidence: z.array(EvidenceSchema),
+  /** Caps applied during DOM capture (Ticket 107). Optional for migrated v1 rows. */
+  captureLimits: CaptureLimitsSchema.optional(),
 });
 export type PageSnapshot = z.infer<typeof PageSnapshotSchema>;
 
@@ -106,8 +126,55 @@ export type ParseResult<T> =
   | { ok: true; value: T }
   | { ok: false; error: string; issues?: string[] };
 
+/**
+ * Lift a Ticket 102/106 schemaVersion-1 session into the current contract.
+ * Historical DOM evidence stays readable; captureLimits are filled with documented defaults.
+ */
+export function migrateAuditSessionV1ToV2(input: unknown): unknown {
+  if (!input || typeof input !== 'object') return input;
+  const raw = input as Record<string, unknown>;
+  if (raw.schemaVersion !== 1) return input;
+
+  const snapshots = Array.isArray(raw.snapshots)
+    ? raw.snapshots.map((snap) => {
+        if (!snap || typeof snap !== 'object') return snap;
+        const s = snap as Record<string, unknown>;
+        if (s.captureLimits) return s;
+        return {
+          ...s,
+          captureLimits: {
+            schemaVersion: 1,
+            applied: {
+              maxStringChars: DOM_LIMITS.maxStringChars,
+              maxMetaItems: DOM_LIMITS.maxMetaItems,
+              maxAlternateItems: DOM_LIMITS.maxAlternateItems,
+              maxJsonLdChars: DOM_LIMITS.maxJsonLdChars,
+              maxJsonLdScripts: DOM_LIMITS.maxJsonLdScripts,
+              maxHeadingSamplesPerLevel: DOM_LIMITS.maxHeadingSamplesPerLevel,
+            },
+            maxSnapshotChars: DOM_LIMITS.maxSnapshotChars,
+            maxSessionChars: DOM_LIMITS.maxSessionChars,
+            domEvidenceSchemaVersion: DOM_EVIDENCE_SCHEMA_VERSION,
+          },
+        };
+      })
+    : raw.snapshots;
+
+  return {
+    ...raw,
+    schemaVersion: AUDIT_SCHEMA_VERSION,
+    snapshots,
+    reportMarkdown: typeof raw.reportMarkdown === 'string' ? raw.reportMarkdown : '',
+  };
+}
+
 export function parseAuditSession(input: unknown): ParseResult<AuditSession> {
-  const result = AuditSessionSchema.safeParse(input);
+  const candidate =
+    input && typeof input === 'object' && (input as { schemaVersion?: unknown }).schemaVersion === 1
+      ? migrateAuditSessionV1ToV2(input)
+      : input;
+
+  const result = AuditSessionSchema.safeParse(candidate);
   if (result.success) {
     return { ok: true, value: result.data };
   }

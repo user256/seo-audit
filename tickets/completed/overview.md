@@ -8,4 +8,5 @@
 - [x] [Ticket 104: Findings Engine and Page Summary](./104-findings-engine-and-page-summary.md)
 - [x] [Ticket 105: Markdown Report Editor and Safe Preview](./105-markdown-report-editor-and-safe-preview.md)
 - [x] [Ticket 106: Audit Workspace and Accessibility Baseline](./106-audit-workspace-and-accessibility-baseline.md)
+- [x] [Ticket 107: Bounded and Truthful DOM Evidence](./107-bounded-and-truthful-dom-evidence.md)
 

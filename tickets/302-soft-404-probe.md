@@ -37,6 +37,5 @@ Perform a conservative, user-started soft-404 comparison for an audited URL.
 ## Dependencies
 
 - **Blocks:** 399, 402
-- **Blocked by:** 102, 201, 299
+- **Blocked by:** 102, 201, 206, 299
 - **External:** user confirmation for each network probe
-
