@@ -1,7 +1,7 @@
 # Ticket 112: Structured Audit Report View
 
 **Sprint:** 1 — Inspect One Page (remediation)
-**Status:** Not started
+**Status:** Complete
 **Owner:** unassigned
 **Estimate:** L
 
@@ -30,25 +30,25 @@ session — with the user's Markdown notes as one section, not the whole report.
 
 ## Acceptance criteria
 
-- [ ] The report view renders a composed document from the saved session:
+- [x] The report view renders a composed document from the saved session:
   audit header (target URL, final URL, capture time, extension version), a
   "checks run / skipped (and why)" list, a severity + category summary, and the
   page-facts snapshot (title, description, canonical, robots, headings, links,
   images) drawn from the existing dashboard model.
-- [ ] Each finding renders as its own report section: severity, description,
+- [x] Each finding renders as its own report section: severity, description,
   evidence (from the evidence store, bounded), recommendation, and the
   best-practice source link — reusing the finding/evidence schemas, not
   re-deriving them.
-- [ ] The user's Markdown notes remain editable and are woven into the report as
+- [x] The user's Markdown notes remain editable and are woven into the report as
   a clearly-labelled "Analyst notes" section; Markdown stays the only persisted
   report text and preview HTML stays transient and sanitised (Ticket 105/108
   invariants hold).
-- [ ] Unavailable/oversized/`CaptureError` inputs render as explicit "not
+- [x] Unavailable/oversized/`CaptureError` inputs render as explicit "not
   captured" report rows — never as passes or blanks — so a partial audit reads
   honestly.
-- [ ] The composed report is the single in-memory representation the Ticket 402
+- [x] The composed report is the single in-memory representation the Ticket 402
   Markdown/JSON export serialises, so panel and export cannot drift.
-- [ ] Tests cover report composition for a clean session, a session with mixed
+- [x] Tests cover report composition for a clean session, a session with mixed
   severities, and a partial/`CaptureError` session; snapshots are deterministic.
 
 ## Out of scope
@@ -78,6 +78,9 @@ Ticket 402 serialises, so there is one source of truth for "what the report says
 - 2026-07-12 — Filed after user review: "the plugin is essentially running a
   single check and then Open report just shows a text box as opposed to any
   reporting." Report must compose findings/evidence/summary, not just collect notes.
+- 2026-07-12 — `buildAuditReport(session)` is the deterministic in-memory
+  report contract. The panel previews its Markdown projection and persists only
+  analyst notes, preserving the report-editor isolation invariant.
 
 ---
 

@@ -6,7 +6,9 @@ import {
   type SeoDashboardModel,
 } from '../lib/dashboard/model';
 import type { Evidence } from '../lib/schemas/audit';
+import type { AuditSession } from '../lib/schemas/audit';
 import { requestOriginAccess } from '../lib/tab-access';
+import { buildAuditReport } from '../lib/report/audit-report';
 import { renderSeoDashboard } from './dashboard-view';
 import { renderFindingsPanel } from './findings-view';
 import { mountReportEditor, type ReportEditorController } from './report-editor';
@@ -168,11 +170,12 @@ async function send<T extends ExtensionResponse>(message: ExtensionRequest): Pro
   return chrome.runtime.sendMessage(message) as Promise<T>;
 }
 
-async function ensureReportEditor(sessionId: string, initialMarkdown: string): Promise<void> {
-  reportSessionLabel.textContent = `Session ${sessionId} — Markdown is saved locally; preview HTML is not stored.`;
+async function ensureReportEditor(session: AuditSession): Promise<void> {
+  const { id: sessionId, reportMarkdown } = session;
+  reportSessionLabel.textContent = `Session ${sessionId} — Preview composes the saved audit; only analyst notes are editable and saved locally.`;
 
   if (reportEditor && reportEditor.sessionId === sessionId) {
-    reportEditor.setMarkdown(initialMarkdown);
+    reportEditor.setMarkdown(reportMarkdown ?? '');
     return;
   }
 
@@ -202,7 +205,8 @@ async function ensureReportEditor(sessionId: string, initialMarkdown: string): P
     },
     {
       sessionId,
-      initialMarkdown,
+      initialMarkdown: reportMarkdown ?? '',
+      report: buildAuditReport(session),
       onAutosave: async (boundSessionId, markdown) => {
         const response = await send<ExtensionResponse>({
           type: 'SAVE_REPORT_MARKDOWN',
@@ -334,10 +338,7 @@ async function collectDom(): Promise<void> {
       sessionId: response.result.sessionId,
     });
     if (loaded.type === 'SESSION_LOADED' && loaded.result.status === 'ok') {
-      await ensureReportEditor(
-        loaded.result.session.id,
-        loaded.result.session.reportMarkdown ?? '',
-      );
+      await ensureReportEditor(loaded.result.session);
     }
     renderWorkspace();
   } finally {
@@ -360,7 +361,7 @@ collectBtn.addEventListener('click', () => {
 openReportBtn.addEventListener('click', () => {
   viewingReport = true;
   renderWorkspace();
-  (document.querySelector('#report-markdown') as HTMLTextAreaElement | null)?.focus();
+  reportEditor?.showPreview();
 });
 backToFindingsBtn.addEventListener('click', () => {
   viewingReport = false;
