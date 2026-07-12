@@ -2,14 +2,15 @@ import { defineManifest } from '@crxjs/vite-plugin';
 import packageJson from './package.json';
 
 /**
- * Placeholder MV3 manifest for the toolchain bootstrap (Ticket 100).
- * Ticket 101 replaces this with the real permission boundary and shell.
+ * MV3 shell + permission boundary (Ticket 101).
+ * Host access is optional and requested per active origin at user action —
+ * never declared as a required blanket host permission.
  */
 export default defineManifest({
   manifest_version: 3,
   name: 'SEO Audit Workbench',
   description:
-    'Local-first technical SEO inspector for the active browser tab (placeholder shell).',
+    'Local-first technical SEO inspector for the active browser tab. Access is requested per origin.',
   version: packageJson.version,
   action: {
     default_title: 'SEO Audit Workbench',
@@ -21,5 +22,8 @@ export default defineManifest({
   side_panel: {
     default_path: 'src/sidepanel/index.html',
   },
-  permissions: ['sidePanel'],
+  permissions: ['storage', 'activeTab', 'sidePanel', 'scripting', 'tabs'],
+  // optional_host_permissions reserved for documentation; runtime requests use
+  // chrome.permissions.request with an exact https://host/* or http://host/* pattern.
+  optional_host_permissions: ['http://*/*', 'https://*/*'],
 });

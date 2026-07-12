@@ -8,11 +8,30 @@
   </head>
   <body>
     <main>
-      <h1>SEO Audit Workbench</h1>
-      <p>
-        Toolchain placeholder. Ticket 101 replaces this with the audit workspace shell and
-        permission boundary.
-      </p>
+      <header>
+        <h1>SEO Audit Workbench</h1>
+        <p class="lede">Inspect the active tab. Access is granted one origin at a time.</p>
+      </header>
+
+      <section aria-labelledby="tab-heading">
+        <h2 id="tab-heading">Active tab</h2>
+        <dl class="facts">
+          <div>
+            <dt>URL</dt>
+            <dd id="tab-url">Loading…</dd>
+          </div>
+          <div>
+            <dt>Access</dt>
+            <dd id="access-state">Loading…</dd>
+          </div>
+        </dl>
+        <p id="status-message" class="status" role="status"></p>
+        <div class="actions">
+          <button type="button" id="allow-site" hidden>Allow this site</button>
+          <button type="button" id="refresh" class="secondary">Refresh</button>
+          <button type="button" id="ping" class="secondary" hidden>Test page access</button>
+        </div>
+      </section>
     </main>
     <script type="module" src="./sidepanel.ts"></script>
   </body>
