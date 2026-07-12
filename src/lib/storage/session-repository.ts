@@ -193,5 +193,6 @@ export function createEmptySession(input: {
     snapshots: [],
     findings: [],
     captureErrors: [],
+    reportMarkdown: '',
   };
 }

@@ -43,8 +43,8 @@ and the ticket workflow. **Ticket 100** stands up the toolchain and **Ticket
 
 ## Status
 
-Sprint 1 (“Inspect One Page”) is active. Tickets 100–104 are done; next pick is
-**Ticket 105 (Markdown Report Editor and Safe Preview)**. Track progress in
+Sprint 1 (“Inspect One Page”) is active. Tickets 100–105 are done; next pick is
+**Ticket 106 (Audit Workspace and Accessibility Baseline)**. Track progress in
 [`tickets/overview.md`](./tickets/overview.md).
 
 ---

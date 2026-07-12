@@ -112,3 +112,85 @@ button.secondary {
 button[hidden] {
   display: none;
 }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+#report-section[hidden] {
+  display: none;
+}
+
+.report-modes {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.report-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.report-toolbar button {
+  background: #fff;
+  color: #1a1a1a;
+  border-color: var(--border);
+  padding: 0.3rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+#report-markdown {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 12rem;
+  font: inherit;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 0.85rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  resize: vertical;
+  background: #fff;
+  color: inherit;
+}
+
+.report-preview {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  padding: 0.75rem 1rem;
+  min-height: 12rem;
+}
+
+.report-preview-body :first-child {
+  margin-top: 0;
+}
+
+.report-preview-body a {
+  color: var(--accent);
+}
+
+.report-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: baseline;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.report-meta .status {
+  margin: 0;
+}

@@ -88,6 +88,8 @@ export const AuditSessionSchema = z.object({
   snapshots: z.array(PageSnapshotSchema),
   findings: z.array(FindingSchema),
   captureErrors: z.array(CaptureErrorSchema),
+  /** Markdown source for the session report (Ticket 105). Preview HTML is never persisted. */
+  reportMarkdown: z.string().default(''),
 });
 export type AuditSession = z.infer<typeof AuditSessionSchema>;
 

@@ -1,5 +1,6 @@
 import type { ExtensionRequest, ExtensionResponse } from '../background/messages';
 import { requestOriginAccess, type ActiveTabSnapshot } from '../lib/tab-access';
+import { mountReportEditor, type ReportEditorController } from './report-editor';
 import { viewFromSnapshot } from './view-state';
 
 const tabUrlEl = document.querySelector('#tab-url')!;
@@ -10,8 +11,12 @@ const allowBtn = document.querySelector('#allow-site') as HTMLButtonElement;
 const collectBtn = document.querySelector('#collect-dom') as HTMLButtonElement;
 const refreshBtn = document.querySelector('#refresh') as HTMLButtonElement;
 const pingBtn = document.querySelector('#ping') as HTMLButtonElement;
+const reportSection = document.querySelector('#report-section') as HTMLElement;
+const reportSessionLabel = document.querySelector('#report-session-label')!;
 
 let snapshot: ActiveTabSnapshot | null = null;
+let activeSessionId: string | null = null;
+let reportEditor: ReportEditorController | null = null;
 
 function setStatus(text: string, kind: 'plain' | 'ok' | 'error' = 'plain'): void {
   statusEl.textContent = text;
@@ -32,6 +37,45 @@ function applyView(next: ActiveTabSnapshot): void {
 
 async function send<T extends ExtensionResponse>(message: ExtensionRequest): Promise<T> {
   return chrome.runtime.sendMessage(message) as Promise<T>;
+}
+
+function ensureReportEditor(sessionId: string, initialMarkdown: string): void {
+  activeSessionId = sessionId;
+  reportSection.hidden = false;
+  reportSessionLabel.textContent = `Session ${sessionId} — Markdown is saved locally; preview HTML is not stored.`;
+
+  if (reportEditor) {
+    reportEditor.setMarkdown(initialMarkdown);
+    return;
+  }
+
+  reportEditor = mountReportEditor(
+    {
+      textarea: document.querySelector('#report-markdown') as HTMLTextAreaElement,
+      preview: document.querySelector('#report-preview') as HTMLElement,
+      wordCount: document.querySelector('#report-word-count') as HTMLElement,
+      sourcePanel: document.querySelector('#report-source-panel') as HTMLElement,
+      previewPanel: document.querySelector('#report-preview-panel') as HTMLElement,
+      modeSourceBtn: document.querySelector('#report-mode-source') as HTMLButtonElement,
+      modePreviewBtn: document.querySelector('#report-mode-preview') as HTMLButtonElement,
+      toolbar: document.querySelector('#report-toolbar') as HTMLElement,
+      status: document.querySelector('#report-status') as HTMLElement,
+    },
+    {
+      initialMarkdown,
+      onAutosave: async (markdown) => {
+        if (!activeSessionId) return;
+        const response = await send<ExtensionResponse>({
+          type: 'SAVE_REPORT_MARKDOWN',
+          sessionId: activeSessionId,
+          markdown,
+        });
+        if (response.type === 'ERROR') {
+          throw new Error(response.message);
+        }
+      },
+    },
+  );
 }
 
 async function refresh(): Promise<void> {
@@ -55,7 +99,6 @@ async function allowSite(): Promise<void> {
   allowBtn.disabled = true;
   setStatus(`Requesting access to ${snapshot.origin}…`);
   try {
-    // Must run in the side-panel (user gesture), not the service worker.
     const granted = await requestOriginAccess(snapshot.pattern);
     if (!granted) {
       setStatus('Permission was not granted.', 'error');
@@ -126,6 +169,14 @@ async function collectDom(): Promise<void> {
     );
     collectSummaryEl.hidden = false;
     collectSummaryEl.textContent = `Snapshot URL: ${response.result.snapshot.url}. ${response.result.summary.indexability.reason}`;
+
+    const loaded = await send<ExtensionResponse>({
+      type: 'LOAD_SESSION',
+      sessionId: response.result.sessionId,
+    });
+    if (loaded.type === 'SESSION_LOADED' && loaded.result.status === 'ok') {
+      ensureReportEditor(loaded.result.session.id, loaded.result.session.reportMarkdown ?? '');
+    }
   } finally {
     collectBtn.disabled = false;
   }

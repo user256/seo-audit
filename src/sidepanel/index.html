@@ -34,6 +34,49 @@
           <p id="collect-summary" class="status" hidden></p>
         </div>
       </section>
+
+      <section id="report-section" aria-labelledby="report-heading" hidden>
+        <h2 id="report-heading">Audit report</h2>
+        <p class="lede" id="report-session-label"></p>
+        <div class="report-modes" role="group" aria-label="Report view mode">
+          <button type="button" id="report-mode-source" aria-pressed="true">Source</button>
+          <button type="button" id="report-mode-preview" class="secondary" aria-pressed="false">
+            Preview
+          </button>
+        </div>
+        <div
+          id="report-toolbar"
+          class="report-toolbar"
+          role="toolbar"
+          aria-label="Markdown formatting"
+        >
+          <button type="button" data-format="heading" title="Heading">H2</button>
+          <button type="button" data-format="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
+          <button type="button" data-format="italic" title="Italic (Ctrl+I)"><em>I</em></button>
+          <button type="button" data-format="inlineCode" title="Inline code">Code</button>
+          <button type="button" data-format="blockCode" title="Code block">Block</button>
+          <button type="button" data-format="ul" title="Bullet list">UL</button>
+          <button type="button" data-format="ol" title="Numbered list">OL</button>
+          <button type="button" data-format="link" title="Link (Ctrl+K)">Link</button>
+          <button type="button" data-format="table" title="Table">Table</button>
+        </div>
+        <div id="report-source-panel">
+          <label class="sr-only" for="report-markdown">Report Markdown source</label>
+          <textarea
+            id="report-markdown"
+            rows="12"
+            spellcheck="true"
+            placeholder="Write audit notes in Markdown…"
+          ></textarea>
+        </div>
+        <div id="report-preview-panel" class="report-preview" hidden>
+          <div id="report-preview" class="report-preview-body"></div>
+        </div>
+        <div class="report-meta">
+          <span id="report-word-count">0 words</span>
+          <span id="report-status" class="status" role="status"></span>
+        </div>
+      </section>
     </main>
     <script type="module" src="./sidepanel.ts"></script>
   </body>
