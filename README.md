@@ -43,13 +43,13 @@ and the ticket workflow. **Ticket 100** stands up the toolchain and **Ticket
 
 ## Status
 
-Pre-implementation. Sprint 1 (“Inspect One Page”) is the active sprint; the
-recommended next pick is **Ticket 100 (Toolchain and CI Bootstrap)**. Track
-progress in [`tickets/overview.md`](./tickets/overview.md).
+Sprint 1 (“Inspect One Page”) is active. Toolchain bootstrap (Ticket 100) is in
+place; next pick is **Ticket 101 (Extension Shell and Permission Boundary)**.
+Track progress in [`tickets/overview.md`](./tickets/overview.md).
 
 ---
 
-## Getting started (once Ticket 100 lands)
+## Getting started
 
 ```bash
 npm install
@@ -99,7 +99,7 @@ ticket:
 - **Least privilege.** Page/network access is requested per-origin at the user's
   action, not declared as blanket `<all_urls>` host access.
 - **Honest about limits.** “JavaScript off” and Googlebot-style rendering are
-  *comparison experiments*, not a promise to reproduce Google Search. Every
+  _comparison experiments_, not a promise to reproduce Google Search. Every
   feature that reloads a page, changes a setting, or attaches a debugger requires
   a user action and an explanation first.
 
@@ -155,4 +155,4 @@ See `python process_tickets.py --help` for full options.
 
 `private.md` is gitignored — machine-specific paths, the exact commands you run,
 environment quirks. Do not put secrets there; real secrets go in `.env` (also
-gitignored). `private.md` documents the *shape* of `.env`, not its values.
+gitignored). `private.md` documents the _shape_ of `.env`, not its values.

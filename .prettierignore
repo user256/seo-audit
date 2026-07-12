@@ -1,0 +1,9 @@
+dist
+coverage
+node_modules
+*.zip
+package-lock.json
+tickets/
+*.md
+!docs/**/*.md
+!README.md
