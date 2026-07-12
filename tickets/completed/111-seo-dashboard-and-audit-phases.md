@@ -37,8 +37,8 @@ product shows page facts out of the gate, not only defect findings.
   inventory from the DOM without requiring Start audit; Start audit still runs
   rules, saves the session, and shows findings beneath the dashboard.
 - [x] Unavailable signals are visually distinct from “pass” / “0 findings”;
-  unit tests cover dashboard rendering for pre-access, glance-with-inventory,
-  and clipboard payload formatting.
+  model and clipboard-payload tests cover the shipped output. Direct dashboard
+  rendering/clipboard control coverage is tracked separately in Ticket 113.
 
 ## Out of scope
 
@@ -67,6 +67,9 @@ wires capture into the same slots.
 - 2026-07-12 — Shipped Page glance dashboard + `GLANCE_DOM_INVENTORY`. Also fixed
   executeScript free-variable bug (`DEFAULT_DOM_COLLECT_LIMITS`) that returned
   null facts. Status/redirect rows remain placeholders until Ticket 201.
+- 2026-07-12 — PR #11 review found no runtime regression, but direct
+  `renderSeoDashboard` and clipboard-button tests were absent. Ticket 113 owns
+  that narrow verification remediation and blocks the Sprint 1 review gate.
 
 ---
 
