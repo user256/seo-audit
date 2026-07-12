@@ -7,6 +7,7 @@ export type SidePanelView = {
   statusKind: 'plain' | 'ok' | 'error';
   showAllow: boolean;
   showPing: boolean;
+  showCollect: boolean;
 };
 
 export function viewFromSnapshot(snapshot: ActiveTabSnapshot): SidePanelView {
@@ -18,6 +19,7 @@ export function viewFromSnapshot(snapshot: ActiveTabSnapshot): SidePanelView {
       statusKind: 'error',
       showAllow: false,
       showPing: false,
+      showCollect: false,
     };
   }
 
@@ -29,6 +31,7 @@ export function viewFromSnapshot(snapshot: ActiveTabSnapshot): SidePanelView {
       statusKind: 'error',
       showAllow: false,
       showPing: false,
+      showCollect: false,
     };
   }
 
@@ -36,10 +39,11 @@ export function viewFromSnapshot(snapshot: ActiveTabSnapshot): SidePanelView {
     urlLabel: snapshot.url,
     accessLabel: snapshot.granted ? `Granted for ${snapshot.origin}` : 'Not granted',
     status: snapshot.granted
-      ? 'Origin access is granted. You can test page injection or run an audit (Ticket 103+).'
+      ? 'Origin access is granted. Collect a DOM snapshot or test page injection.'
       : 'Click “Allow this site” to grant access for this origin only.',
     statusKind: snapshot.granted ? 'ok' : 'plain',
     showAllow: !snapshot.granted,
     showPing: snapshot.granted,
+    showCollect: snapshot.granted,
   };
 }

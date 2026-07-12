@@ -1,8 +1,10 @@
+import { collectDomForActiveTab, type CollectDomResult } from '../lib/collect-dom';
 import { getActiveTabSnapshot, pingActiveTab, type ActiveTabSnapshot } from '../lib/tab-access';
 
 export type ExtensionRequest =
   | { type: 'GET_ACTIVE_TAB_SNAPSHOT' }
-  | { type: 'PING_ACTIVE_TAB'; tabId: number };
+  | { type: 'PING_ACTIVE_TAB'; tabId: number }
+  | { type: 'COLLECT_DOM_SNAPSHOT' };
 
 export type ExtensionResponse =
   | { type: 'ACTIVE_TAB_SNAPSHOT'; snapshot: ActiveTabSnapshot }
@@ -10,6 +12,7 @@ export type ExtensionResponse =
       type: 'PING_RESULT';
       result: Awaited<ReturnType<typeof pingActiveTab>>;
     }
+  | { type: 'COLLECT_DOM_RESULT'; result: CollectDomResult }
   | { type: 'ERROR'; message: string };
 
 export async function handleExtensionRequest(
@@ -25,6 +28,11 @@ export async function handleExtensionRequest(
       return {
         type: 'PING_RESULT',
         result: await pingActiveTab(message.tabId),
+      };
+    case 'COLLECT_DOM_SNAPSHOT':
+      return {
+        type: 'COLLECT_DOM_RESULT',
+        result: await collectDomForActiveTab(),
       };
     default: {
       const _exhaustive: never = message;
