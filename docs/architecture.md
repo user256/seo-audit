@@ -40,7 +40,9 @@ entry on the relevant ticket.
 These are load-bearing for Ticket 404 packaging and the product privacy promise:
 
 1. **Static, self-contained `dist/`.** The built extension must not fetch remote
-   scripts, stylesheets, or fonts. Everything ships inside the package.
+   scripts, stylesheets, or fonts. Everything ships inside the package. Load
+   **`dist/`** via Chrome “Load unpacked” — there is no ZIP artefact until
+   Ticket 404.
 2. **Pinned dependencies.** `package-lock.json` is committed; CI uses `npm ci`.
 3. **No network at build for runtime assets.** Bundled vendor code (Markdown
    renderer, DOM sanitizer in Ticket 105) is installed from npm and emitted into

@@ -27,8 +27,9 @@ origins.
   file, and other unsupported URLs are explained without requesting access.
 - [x] The service worker, side-panel page, and no-op content-script injection
   round trip are covered by unit tests with Chrome APIs mocked.
-- [x] `npm run lint`, `npm test`, and `npm run build` pass; the generated
-  archive loads as an unpacked extension in Chrome.
+- [x] `npm run lint`, `npm test`, and `npm run build` pass; the built `dist/`
+  directory loads as an unpacked extension in Chrome (ZIP packaging is
+  Ticket 404 — there is no generated archive yet).
 
 ## Out of scope
 

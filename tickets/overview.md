@@ -46,11 +46,9 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
-2. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
+1. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
-**Recommended next pick:** **109** — reconcile docs and verification before the
-Sprint 1 go/no-go gate.
+**Recommended next pick:** **199** — Sprint 1 review gate before Sprint 2.
 
 ---
 
@@ -85,7 +83,6 @@ useful from the side panel.
 
 **Tickets:**
 
-- [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
 **Exit criteria:**
