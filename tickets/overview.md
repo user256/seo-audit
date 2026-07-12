@@ -92,7 +92,6 @@ useful from the side panel.
 **Tickets:**
 
 - [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
-- [ ] [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md)
 - [ ] [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md)
 - [ ] [Ticket 114: DOM Evidence Save-Boundary Enforcement](./114-dom-evidence-save-boundary-enforcement.md)
 - [ ] [Ticket 115: Long-URL DOM Capture Bounds](./115-long-url-dom-capture-bounds.md)
