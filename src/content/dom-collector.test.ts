@@ -249,6 +249,7 @@ describe('collectDomFactsInPage', () => {
     const snapshot = domFactsToPageSnapshot(facts, 'snap-jsonld');
     const { findings } = evaluatePageSnapshot(snapshot);
     expect(findings.some((f) => f.ruleId === 'jsonld-malformed')).toBe(false);
+    expect(findings.some((f) => f.ruleId === 'jsonld-unevaluated')).toBe(true);
   });
 
   it('is self-contained for executeScript (no free module bindings in body)', () => {

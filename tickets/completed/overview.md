@@ -17,5 +17,6 @@
 # Sprint 2: Crawl and Index Signals
 
 **Tickets:**
+- [x] [Ticket 208: Structured Data Inventory and Validation](./208-structured-data-inventory-and-validation.md)
 - [x] [Ticket 209: Check Catalogue and Availability Model](./209-check-catalogue-and-availability-model.md)
 - [x] [Ticket 210: Audit Wizard and Check Selection](./210-audit-wizard-and-check-selection.md)

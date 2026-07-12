@@ -44,6 +44,17 @@ and a `capture.limits` evidence row summarises which sources were clipped.
 JSON-LD that is incomplete because of the character budget uses
 `parseStatus: "truncated"` and must not emit `jsonld-malformed`.
 
+Ticket 208 evaluates only complete `parseStatus: "ok"` JSON-LD source text.
+Its derived inventory is bounded to 200 object nodes and depth 20, and its
+`@type`/`@id` values reuse `maxStringChars` (2,000). A limited inventory remains
+an explicitly partial observation; truncated source remains unevaluated.
+
+Duplicate title, description, robots, viewport, and canonical values are capped
+at `maxMetaItems`; Open Graph and Twitter entries use that same cap. Canonical
+and hreflang `href`, resolved URL, and `hreflang` strings use `maxStringChars`.
+The retained prefix, original `count`, and `limits.omittedCount` make these
+partial captures explicit rather than suggesting complete coverage.
+
 ## Core types
 
 ### `Evidence`

@@ -124,7 +124,6 @@ be discovered, crawled, and indexed.
 - [ ] [Ticket 202: Robots.txt Fetch, Parser, and Evaluator](./202-robots-txt-fetch-parser-and-evaluator.md)
 - [ ] [Ticket 203: XML Sitemap and Hreflang Parser](./203-xml-sitemap-and-hreflang-parser.md)
 - [ ] [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
-- [ ] [Ticket 208: Structured Data Inventory and Validation](./208-structured-data-inventory-and-validation.md)
 - [ ] [Ticket 204: Indexability Reconciliation Rules](./204-indexability-reconciliation-rules.md)
 - [ ] [Ticket 205: Crawl Signals Workspace](./205-crawl-signals-workspace.md)
 - [ ] [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md)
