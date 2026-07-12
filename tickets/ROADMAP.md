@@ -11,8 +11,10 @@ tickets are archived in [completed/](./completed/).
 
 1. [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md) — in review; blocks 199.
 2. [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md) — add direct dashboard rendering/clipboard UI tests; blocks 199.
-3. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally** until a fresh Chrome 114+ profile completes the documented smoke checklist.
-4. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — run only after 109, 112, and 113 are complete.
+3. [Ticket 114: DOM Evidence Save-Boundary Enforcement](./114-dom-evidence-save-boundary-enforcement.md) — remove the current-schema validation bypass; blocks 199 and 208.
+4. [Ticket 115: Long-URL DOM Capture Bounds](./115-long-url-dom-capture-bounds.md) — make valid long document/base URLs bounded without breaking race detection; blocks 199.
+5. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally** until a fresh Chrome 114+ profile completes the documented smoke checklist.
+6. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — run only after 109 and 112–115 are complete.
 
 ## Next — Sprint 2: Crawl and index signals
 

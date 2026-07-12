@@ -47,15 +47,16 @@ Constraints that shape the plan:
 # Current Priority Lane
 
 1. [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md) — in review; "Open report" must compose findings/evidence/summary, not show a blank notes box
-2. [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md) — in review
-3. [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md) — PR #11 remediation; blocks the Sprint 1 review gate
-4. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — blocked on an external fresh-Chrome smoke run
-5. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
+2. [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md) — PR #11 remediation; blocks the Sprint 1 review gate
+3. [Ticket 114: DOM Evidence Save-Boundary Enforcement](./114-dom-evidence-save-boundary-enforcement.md) — PR #17 remediation; blocks the Sprint 1 review gate and Ticket 208
+4. [Ticket 115: Long-URL DOM Capture Bounds](./115-long-url-dom-capture-bounds.md) — PR #17 remediation; blocks the Sprint 1 review gate
+5. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — blocked on an external fresh-Chrome smoke run
+6. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
-**Recommended next pick:** **110 / 112** — both implementation PRs are in
-review. Then complete the small Ticket 113 dashboard-render test remediation and
-the external Ticket 109 smoke evidence before Ticket 199. Live HTTP
-status/redirects still wait on Ticket 201.
+**Recommended next pick:** **112** — its reviewed report implementation is
+ready to merge. Then complete the small Tickets 113–115 remediations and the
+external Ticket 109 smoke evidence before Ticket 199. Live HTTP status/redirects
+still wait on Ticket 201.
 
 ---
 
@@ -93,6 +94,8 @@ useful from the side panel.
 - [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
 - [ ] [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md)
 - [ ] [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md)
+- [ ] [Ticket 114: DOM Evidence Save-Boundary Enforcement](./114-dom-evidence-save-boundary-enforcement.md)
+- [ ] [Ticket 115: Long-URL DOM Capture Bounds](./115-long-url-dom-capture-bounds.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
 **Exit criteria:**

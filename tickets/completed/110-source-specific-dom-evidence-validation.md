@@ -54,6 +54,10 @@ bounded before it can be transformed, evaluated, or saved.
   session save. Duplicate title/meta/robots/canonical lists use `maxMetaItems`;
   canonical/alternate URLs and hreflang strings use `maxStringChars`, with
   retained-prefix truncation evidence. Historical v1 sessions remain readable.
+- 2026-07-12 — PR #17 review found two narrow follow-ups: current-schema save
+  validation can be bypassed via the optional version marker (Ticket 114), and
+  valid URLs over the generic cap can fail collection (Ticket 115). Both block
+  the Sprint 1 review gate rather than being silently absorbed here.
 
 ---
 
