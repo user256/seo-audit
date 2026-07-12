@@ -1,6 +1,6 @@
 # Delivery Roadmap
 
-**Last reconciled:** 2026-07-12  
+**Last reconciled:** 2026-07-13
 **Authoritative ticket register:** [overview.md](./overview.md)
 
 This is the dependency-ordered delivery view. Ticket files remain the source
@@ -9,19 +9,19 @@ tickets are archived in [completed/](./completed/).
 
 ## Now — finish the Sprint 1 gate
 
-1. [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md) — in review; blocks 199.
-2. [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md) — add direct dashboard rendering/clipboard UI tests; blocks 199.
+1. [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md) — blocks 199.
 3. [Ticket 114: DOM Evidence Save-Boundary Enforcement](./114-dom-evidence-save-boundary-enforcement.md) — remove the current-schema validation bypass; blocks 199 and 208.
 4. [Ticket 115: Long-URL DOM Capture Bounds](./115-long-url-dom-capture-bounds.md) — make valid long document/base URLs bounded without breaking race detection; blocks 199.
-5. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally** until a fresh Chrome 114+ profile completes the documented smoke checklist.
-6. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — run only after 109 and 112–115 are complete.
+4. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally**.
+5. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — run only after 109 and 113–115 are complete.
 
 ## Next — Sprint 2: Crawl and index signals
 
 1. [206](./206-network-capture-and-safe-fetch-foundation.md) — shared safe network boundary.
 2. [201](./201-response-metadata-and-redirect-capture.md) and [202](./202-robots-txt-fetch-parser-and-evaluator.md) — navigation evidence and robots evaluation.
 3. [203](./203-xml-sitemap-and-hreflang-parser.md) — sitemap parsing, after 202.
-4. [207](./207-hreflang-directive-validation.md) and [208](./208-structured-data-inventory-and-validation.md) — directive and structured-data validation. **208 completed by agent/ticket-208-structured-data.**
+4. [211](./211-register-structured-data-check.md) — register the completed Ticket 208 rule in the catalogue; current mainline tests expose the dormant runner integration.
+5. [207](./207-hreflang-directive-validation.md) — directive validation.
 5. [204](./204-indexability-reconciliation-rules.md) — reconcile all captured signals.
 6. [209](./completed/209-check-catalogue-and-availability-model.md) — catalogue + availability model for checks (enabling primitive for the wizard). **Completed by `agent/ticket-209-check-catalogue`.**
 7. [210](./completed/210-audit-wizard-and-check-selection.md) — optional wizard to select which checks run; consent surface reused by Sprint 3 experiments. **Completed by `agent/ticket-210-audit-wizard`.**

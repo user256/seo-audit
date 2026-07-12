@@ -1,38 +1,25 @@
 # Repository Delivery State
 
-**Recorded:** 2026-07-12  
-**Branch:** `main`  
-**Baseline:** `8de0e666a2183c028a5bfb97eed712def4d0c2c8` before this state-record update
+**Recorded:** 2026-07-13
+**Branch:** `main`
 
 ## Pull-request triage
 
-- Open pull requests: none.
-- PRs merged in this repository: #1–#10.
-- PR #110 does not exist in this repository and was excluded from action as
-  requested.
-- Result: no PR was merged, rejected, or required a remediation ticket in this
-  review.
+- Merged after review: #11 (111), #17 (110), #18 (112), #19 (209), #20 (210), and #21 (208).
+- Original stacked PRs #12–#16 were superseded when GitHub closed PRs targeting the deleted base branch.
+- Remediation tickets pushed to `main`: 113, 114, 115, and 211.
 
 ## Verified mainline quality gate
 
 | Check | Result |
 |---|---|
-| `npm test` | Pass — 19 files, 81 tests |
-| `npm run lint` | Pass |
-| `npm run build` | Pass |
-| `npm run package:check` | Pass — MV3 manifest stub check |
+| `npm test` | Fail — two Ticket 208 structural-data assertions; rule is absent from `CHECK_CATALOGUE` (Ticket 211). |
+| `npm run lint` | Not reached after failed test command. |
+| `npm run build` | Not reached after failed test command. |
+| `npm run package:check` | Not reached after failed test command. |
 
 ## Delivery position
 
-- Tickets 100–108: implemented and archived as done.
-- Ticket 109: **blocked** on a fresh Chrome 114+ manual smoke run; automated evidence is current.
-- Ticket 110: **not started**; required source-specific DOM evidence validation.
-- Ticket 199: **not started**; Sprint 1 review gate, blocked by 109 and 110.
-- Sprints 2–4: not started. Their dependency order is maintained in
-  [ROADMAP.md](./ROADMAP.md).
-
-## Workspace hygiene
-
-- `main` matched `origin/main` when this review began.
-- The worktree list contained only the primary checkout; no leftover worktrees
-  required removal.
+- Tickets 110–112, 208–210, and 111 are merged and archived.
+- Ticket 109 remains blocked on the fresh Chrome 114+ smoke record.
+- Tickets 113–115 block Sprint 1 review; Ticket 211 is the active mainline-correctness fix.
