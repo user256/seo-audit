@@ -13,7 +13,7 @@ export type ExtensionRequest =
   | { type: 'GET_ACTIVE_TAB_SNAPSHOT' }
   | { type: 'PING_ACTIVE_TAB'; tabId: number }
   | { type: 'GLANCE_DOM_INVENTORY' }
-  | { type: 'COLLECT_DOM_SNAPSHOT' }
+  | { type: 'COLLECT_DOM_SNAPSHOT'; selectedCheckIds?: string[] }
   | { type: 'LOAD_SESSION'; sessionId: string }
   | { type: 'SAVE_REPORT_MARKDOWN'; sessionId: string; markdown: string };
 
@@ -57,7 +57,10 @@ export async function handleExtensionRequest(
     case 'COLLECT_DOM_SNAPSHOT':
       return {
         type: 'COLLECT_DOM_RESULT',
-        result: await collectDomForActiveTab(repo),
+        result: await collectDomForActiveTab(
+          repo,
+          message.selectedCheckIds ? new Set(message.selectedCheckIds) : undefined,
+        ),
       };
     case 'LOAD_SESSION': {
       const loaded = await repo.get(message.sessionId);

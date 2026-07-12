@@ -7,7 +7,7 @@ import {
 import { DOM_LIMITS } from './dom-limits';
 
 /** Bump when the persisted shape changes; see docs/data-contract.md. */
-export const AUDIT_SCHEMA_VERSION = 2 as const;
+export const AUDIT_SCHEMA_VERSION = 3 as const;
 
 export const SeveritySchema = z.enum(['info', 'warning', 'error', 'critical']);
 export type Severity = z.infer<typeof SeveritySchema>;
@@ -122,6 +122,20 @@ export const FeatureAvailabilitySchema = z.record(
 );
 export type FeatureAvailability = z.infer<typeof FeatureAvailabilitySchema>;
 
+/** A durable description of audit coverage, including every omitted check. */
+export const AuditCheckSelectionSchema = z.object({
+  selectedCheckIds: z.array(z.string().min(1)),
+  skippedChecks: z.array(
+    z.object({
+      checkId: z.string().min(1),
+      reason: z.string().min(1),
+    }),
+  ),
+  /** Used only for sessions created before check selection was recorded. */
+  recordingNote: z.string().min(1).optional(),
+});
+export type AuditCheckSelection = z.infer<typeof AuditCheckSelectionSchema>;
+
 export const AuditSessionSchema = z.object({
   schemaVersion: z.literal(AUDIT_SCHEMA_VERSION),
   id: z.string().min(1),
@@ -135,6 +149,8 @@ export const AuditSessionSchema = z.object({
   snapshots: z.array(PageSnapshotSchema),
   findings: z.array(FindingSchema),
   captureErrors: z.array(CaptureErrorSchema),
+  /** Checks that ran and checks intentionally or necessarily skipped (Ticket 210). */
+  checkSelection: AuditCheckSelectionSchema,
   /** Markdown source for the session report (Ticket 105). Preview HTML is never persisted. */
   reportMarkdown: z.string().default(''),
 });
@@ -157,51 +173,59 @@ export type ParseResult<T> =
  * Lift a Ticket 102/106 schemaVersion-1 session into the current contract.
  * Historical DOM evidence stays readable; captureLimits are filled with documented defaults.
  */
-export function migrateAuditSessionV1ToV2(input: unknown): unknown {
+export function migrateAuditSessionToCurrent(input: unknown): unknown {
   if (!input || typeof input !== 'object') return input;
   const raw = input as Record<string, unknown>;
-  if (raw.schemaVersion !== 1) return input;
+  if (raw.schemaVersion !== 1 && raw.schemaVersion !== 2) return input;
 
-  const snapshots = Array.isArray(raw.snapshots)
-    ? raw.snapshots.map((snap) => {
-        if (!snap || typeof snap !== 'object') return snap;
-        const s = snap as Record<string, unknown>;
-        if (s.captureLimits) return s;
-        return {
-          ...s,
-          captureLimits: {
-            schemaVersion: 1,
-            applied: {
-              maxStringChars: DOM_LIMITS.maxStringChars,
-              maxMetaItems: DOM_LIMITS.maxMetaItems,
-              maxAlternateItems: DOM_LIMITS.maxAlternateItems,
-              maxJsonLdChars: DOM_LIMITS.maxJsonLdChars,
-              maxJsonLdScripts: DOM_LIMITS.maxJsonLdScripts,
-              maxHeadingSamplesPerLevel: DOM_LIMITS.maxHeadingSamplesPerLevel,
-              maxLinkInventory: DOM_LIMITS.maxLinkInventory,
-              maxImageInventory: DOM_LIMITS.maxImageInventory,
+  const snapshots =
+    raw.schemaVersion === 1 && Array.isArray(raw.snapshots)
+      ? raw.snapshots.map((snap) => {
+          if (!snap || typeof snap !== 'object') return snap;
+          const s = snap as Record<string, unknown>;
+          if (s.captureLimits) return s;
+          return {
+            ...s,
+            captureLimits: {
+              schemaVersion: 1,
+              applied: {
+                maxStringChars: DOM_LIMITS.maxStringChars,
+                maxMetaItems: DOM_LIMITS.maxMetaItems,
+                maxAlternateItems: DOM_LIMITS.maxAlternateItems,
+                maxJsonLdChars: DOM_LIMITS.maxJsonLdChars,
+                maxJsonLdScripts: DOM_LIMITS.maxJsonLdScripts,
+                maxHeadingSamplesPerLevel: DOM_LIMITS.maxHeadingSamplesPerLevel,
+                maxLinkInventory: DOM_LIMITS.maxLinkInventory,
+                maxImageInventory: DOM_LIMITS.maxImageInventory,
+              },
+              maxSnapshotChars: DOM_LIMITS.maxSnapshotChars,
+              maxSessionChars: DOM_LIMITS.maxSessionChars,
+              domEvidenceSchemaVersion: HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION,
             },
-            maxSnapshotChars: DOM_LIMITS.maxSnapshotChars,
-            maxSessionChars: DOM_LIMITS.maxSessionChars,
-            domEvidenceSchemaVersion: HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION,
-          },
-        };
-      })
-    : raw.snapshots;
+          };
+        })
+      : raw.snapshots;
 
-  return {
+  const v2 = {
     ...raw,
-    schemaVersion: AUDIT_SCHEMA_VERSION,
+    schemaVersion: 2,
     snapshots,
     reportMarkdown: typeof raw.reportMarkdown === 'string' ? raw.reportMarkdown : '',
+  };
+
+  return {
+    ...v2,
+    schemaVersion: AUDIT_SCHEMA_VERSION,
+    checkSelection: {
+      selectedCheckIds: [],
+      skippedChecks: [],
+      recordingNote: 'Check selection was not recorded for this historical audit.',
+    },
   };
 }
 
 export function parseAuditSession(input: unknown): ParseResult<AuditSession> {
-  const candidate =
-    input && typeof input === 'object' && (input as { schemaVersion?: unknown }).schemaVersion === 1
-      ? migrateAuditSessionV1ToV2(input)
-      : input;
+  const candidate = migrateAuditSessionToCurrent(input);
 
   const result = AuditSessionSchema.safeParse(candidate);
   if (result.success) {

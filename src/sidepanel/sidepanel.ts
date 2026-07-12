@@ -5,10 +5,13 @@ import {
   buildPreAccessDashboard,
   type SeoDashboardModel,
 } from '../lib/dashboard/model';
-import type { Evidence } from '../lib/schemas/audit';
-import type { AuditSession } from '../lib/schemas/audit';
-import { requestOriginAccess } from '../lib/tab-access';
+import type { AuditSession, Evidence } from '../lib/schemas/audit';
 import { buildAuditReport } from '../lib/report/audit-report';
+import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
+import { DEFAULT_DOM_COLLECT_LIMITS } from '../lib/schemas/dom-limits';
+import { availabilityFromEvidence, defaultCheckIds } from '../lib/rules/check-selection';
+import { requestOriginAccess } from '../lib/tab-access';
+import { renderCheckSelectionView } from './check-selection-view';
 import { renderSeoDashboard } from './dashboard-view';
 import { renderFindingsPanel } from './findings-view';
 import { mountReportEditor, type ReportEditorController } from './report-editor';
@@ -29,6 +32,13 @@ const phaseEl = document.querySelector('#workspace-phase')!;
 const collectSummaryEl = document.querySelector('#collect-summary') as HTMLElement;
 const allowBtn = document.querySelector('#allow-site') as HTMLButtonElement;
 const collectBtn = document.querySelector('#collect-dom') as HTMLButtonElement;
+const chooseChecksBtn = document.querySelector('#choose-checks') as HTMLButtonElement;
+const startSelectedChecksBtn = document.querySelector(
+  '#start-selected-checks',
+) as HTMLButtonElement;
+const cancelCheckSelectionBtn = document.querySelector(
+  '#cancel-check-selection',
+) as HTMLButtonElement;
 const refreshBtn = document.querySelector('#refresh') as HTMLButtonElement;
 const pingBtn = document.querySelector('#ping') as HTMLButtonElement;
 const openReportBtn = document.querySelector('#open-report') as HTMLButtonElement;
@@ -39,12 +49,17 @@ const findingsSummaryEl = document.querySelector('#findings-summary')!;
 const findingsPanel = document.querySelector('#findings-panel') as HTMLElement;
 const reportSection = document.querySelector('#report-section') as HTMLElement;
 const reportSessionLabel = document.querySelector('#report-session-label')!;
+const checkSelectionSection = document.querySelector('#check-selection-section') as HTMLElement;
+const checkSelectionList = document.querySelector('#check-selection-list') as HTMLElement;
 
 let workspace: WorkspaceModel = initialWorkspace();
 let reportEditor: ReportEditorController | null = null;
 let evidenceById = new Map<string, Evidence>();
 let viewingReport = false;
 let dashboard: SeoDashboardModel | null = null;
+let wizardEvidence: Evidence[] = [];
+let wizardOpen = false;
+let selectedWizardCheckIds = defaultCheckIds();
 
 const PHASE_LABEL: Record<WorkspaceModel['phase'], string> = {
   'unsupported-tab': 'Unsupported tab',
@@ -65,8 +80,10 @@ function setStatus(text: string, kind: 'plain' | 'ok' | 'error' = 'plain'): void
 function renderWorkspace(): void {
   phaseEl.textContent = `State: ${PHASE_LABEL[workspace.phase]}`;
   const tab = workspace.tab;
+  let showCollect = false;
   if (tab) {
     const view = viewFromSnapshot(tab);
+    showCollect = view.showCollect;
     tabUrlEl.textContent = view.urlLabel;
     accessStateEl.textContent = view.accessLabel;
     allowBtn.hidden = !view.showAllow;
@@ -81,6 +98,21 @@ function renderWorkspace(): void {
   }
 
   collectBtn.disabled = workspace.phase === 'collecting';
+  chooseChecksBtn.hidden = !(showCollect && workspace.phase !== 'collecting');
+  checkSelectionSection.hidden = !wizardOpen;
+  if (wizardOpen) {
+    renderCheckSelectionView(checkSelectionList, {
+      availability: availabilityFromEvidence(
+        Boolean(tab?.status === 'ready' && tab.granted),
+        wizardEvidence,
+      ),
+      selectedCheckIds: selectedWizardCheckIds,
+      onSelectionChange: (checkId, selected) => {
+        if (selected) selectedWizardCheckIds.add(checkId);
+        else selectedWizardCheckIds.delete(checkId);
+      },
+    });
+  }
   setStatus(workspace.statusMessage, workspace.statusKind);
 
   const hasSession = Boolean(workspace.sessionId);
@@ -111,6 +143,7 @@ async function loadGlanceDashboard(): Promise<void> {
     return;
   }
   if (!tab.granted) {
+    wizardEvidence = [];
     dashboard = buildPreAccessDashboard(tab.url);
     return;
   }
@@ -120,6 +153,7 @@ async function loadGlanceDashboard(): Promise<void> {
 
   const response = await send<ExtensionResponse>({ type: 'GLANCE_DOM_INVENTORY' });
   if (response.type === 'ERROR') {
+    wizardEvidence = [];
     dashboard = buildGrantedShellDashboard(
       tab.url,
       `Glance failed: ${response.message}. Click Refresh to retry.`,
@@ -132,6 +166,7 @@ async function loadGlanceDashboard(): Promise<void> {
     return;
   }
   if (response.type !== 'GLANCE_DOM_RESULT') {
+    wizardEvidence = [];
     dashboard = buildGrantedShellDashboard(
       tab.url,
       'Glance returned an unexpected response. Reload the extension, then Refresh.',
@@ -144,6 +179,7 @@ async function loadGlanceDashboard(): Promise<void> {
     return;
   }
   if (!response.result.ok) {
+    wizardEvidence = [];
     dashboard = buildGrantedShellDashboard(
       tab.url,
       `Glance failed (${response.result.code}): ${response.result.error}`,
@@ -159,6 +195,11 @@ async function loadGlanceDashboard(): Promise<void> {
     tabUrl: response.result.tabUrl,
     facts: response.result.facts,
   });
+  wizardEvidence = domFactsToPageSnapshot(
+    response.result.facts,
+    'wizard-glance',
+    DEFAULT_DOM_COLLECT_LIMITS,
+  ).evidence;
   workspace = {
     ...workspace,
     statusMessage: 'Page glance updated from the live tab.',
@@ -290,14 +331,17 @@ async function ping(): Promise<void> {
   }
 }
 
-async function collectDom(): Promise<void> {
+async function collectDom(selectedCheckIds?: ReadonlySet<string>): Promise<void> {
   const tab = workspace.tab;
   if (!tab || tab.status !== 'ready' || !tab.granted) return;
   workspace = withCollecting(workspace);
   renderWorkspace();
   collectSummaryEl.hidden = true;
   try {
-    const response = await send<ExtensionResponse>({ type: 'COLLECT_DOM_SNAPSHOT' });
+    const response = await send<ExtensionResponse>({
+      type: 'COLLECT_DOM_SNAPSHOT',
+      ...(selectedCheckIds ? { selectedCheckIds: [...selectedCheckIds] } : {}),
+    });
     if (response.type === 'ERROR') {
       workspace = withCollectFailure(workspace, response.message);
       renderWorkspace();
@@ -328,17 +372,21 @@ async function collectDom(): Promise<void> {
     });
     viewingReport = false;
     collectSummaryEl.hidden = false;
-    collectSummaryEl.textContent = `Audit saved for ${response.result.snapshot.url}`;
+    const loadedSelection = await send<ExtensionResponse>({
+      type: 'LOAD_SESSION',
+      sessionId: response.result.sessionId,
+    });
+    const selectionSummary =
+      loadedSelection.type === 'SESSION_LOADED' && loadedSelection.result.status === 'ok'
+        ? ` · ${loadedSelection.result.session.checkSelection.selectedCheckIds.length} checks run, ${loadedSelection.result.session.checkSelection.skippedChecks.length} skipped`
+        : '';
+    collectSummaryEl.textContent = `Audit saved for ${response.result.snapshot.url}${selectionSummary}`;
 
     // Refresh glance from the same capture so the dashboard stays in sync.
     await loadGlanceDashboard();
 
-    const loaded = await send<ExtensionResponse>({
-      type: 'LOAD_SESSION',
-      sessionId: response.result.sessionId,
-    });
-    if (loaded.type === 'SESSION_LOADED' && loaded.result.status === 'ok') {
-      await ensureReportEditor(loaded.result.session);
+    if (loadedSelection.type === 'SESSION_LOADED' && loadedSelection.result.status === 'ok') {
+      await ensureReportEditor(loadedSelection.result.session);
     }
     renderWorkspace();
   } finally {
@@ -358,10 +406,25 @@ pingBtn.addEventListener('click', () => {
 collectBtn.addEventListener('click', () => {
   void collectDom();
 });
+chooseChecksBtn.addEventListener('click', () => {
+  selectedWizardCheckIds = defaultCheckIds();
+  wizardOpen = true;
+  renderWorkspace();
+  (document.querySelector('#check-selection-heading') as HTMLElement | null)?.focus();
+});
+startSelectedChecksBtn.addEventListener('click', () => {
+  wizardOpen = false;
+  void collectDom(selectedWizardCheckIds);
+});
+cancelCheckSelectionBtn.addEventListener('click', () => {
+  wizardOpen = false;
+  renderWorkspace();
+  chooseChecksBtn.focus();
+});
 openReportBtn.addEventListener('click', () => {
   viewingReport = true;
   renderWorkspace();
-  reportEditor?.showPreview();
+  (document.querySelector('#report-markdown') as HTMLTextAreaElement | null)?.focus();
 });
 backToFindingsBtn.addEventListener('click', () => {
   viewingReport = false;

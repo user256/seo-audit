@@ -68,6 +68,42 @@ describe('collectDomForActiveTab', () => {
     }
   });
 
+  it('runs and records exactly the selected subset of checks', async () => {
+    Object.assign(globalThis, {
+      chrome: createChromeStub({
+        tabs: {
+          query: async () => [{ id: 4, url: 'https://example.com/shop/item' }],
+        },
+        permissions: {
+          contains: async () => true,
+        },
+        scripting: {
+          executeScript: async () => [{ result: collectDomFactsInPage() }],
+        },
+      }),
+    });
+
+    const repo = new SessionRepository(new IDBFactory());
+    const result = await collectDomForActiveTab(repo, new Set(['title-missing-or-duplicate']));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const loaded = await repo.get(result.sessionId);
+      expect(loaded.status).toBe('ok');
+      if (loaded.status === 'ok') {
+        expect(loaded.session.checkSelection.selectedCheckIds).toEqual([
+          'title-missing-or-duplicate',
+        ]);
+        expect(loaded.session.checkSelection.skippedChecks).toContainEqual({
+          checkId: 'canonical-rules',
+          reason: 'Not selected in the audit wizard.',
+        });
+        expect(
+          loaded.session.findings.every((finding) => finding.ruleId.startsWith('title-')),
+        ).toBe(true);
+      }
+    }
+  });
+
   it('records a navigation-race CaptureError when the tab URL changes mid-collection', async () => {
     let queryCount = 0;
     Object.assign(globalThis, {

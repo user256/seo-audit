@@ -84,12 +84,12 @@ export class SessionRepository {
 
       const parsed = parseAuditSession(raw);
       if (parsed.ok) {
-        const wasV1 =
+        const needsMigration =
           raw &&
           typeof raw === 'object' &&
           'schemaVersion' in raw &&
-          (raw as { schemaVersion: unknown }).schemaVersion === 1;
-        if (wasV1) {
+          (raw as { schemaVersion: unknown }).schemaVersion !== AUDIT_SCHEMA_VERSION;
+        if (needsMigration) {
           // Persist the migrated shape so historical audits remain readable in place.
           tx.objectStore(SESSIONS_STORE).put(parsed.value);
         }
@@ -202,6 +202,10 @@ export function createEmptySession(input: {
     snapshots: [],
     findings: [],
     captureErrors: [],
+    checkSelection: {
+      selectedCheckIds: [],
+      skippedChecks: [],
+    },
     reportMarkdown: '',
   };
 }
