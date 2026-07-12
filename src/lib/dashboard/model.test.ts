@@ -91,4 +91,14 @@ describe('SEO dashboard model', () => {
     expect(model.inventoryLoaded).toBe(false);
     expect(model.status.availability).not.toBe('needs-access');
   });
+
+  it('formats clipboard payloads for links and images', () => {
+    const model = buildGlanceDashboard({
+      tabUrl: 'https://example.com/page',
+      facts: sampleFacts(),
+    });
+    expect(formatLinksForClipboard(model.links!)).toContain('https://example.com/a');
+    expect(formatImagesForClipboard(model.images!)).toContain('(no alt attribute)');
+    expect(formatImagesForClipboard(model.images!)).toContain('Logo');
+  });
 });
