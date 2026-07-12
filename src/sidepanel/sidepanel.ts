@@ -121,11 +121,11 @@ async function collectDom(): Promise<void> {
       return;
     }
     setStatus(
-      `Saved session ${response.result.sessionId} with ${response.result.evidenceCount} evidence items.`,
+      `Saved session ${response.result.sessionId}: ${response.result.summary.totalFindings} findings (${response.result.evidenceCount} evidence items). Indexability: ${response.result.summary.indexability.status}.`,
       'ok',
     );
     collectSummaryEl.hidden = false;
-    collectSummaryEl.textContent = `Snapshot URL: ${response.result.snapshot.url}`;
+    collectSummaryEl.textContent = `Snapshot URL: ${response.result.snapshot.url}. ${response.result.summary.indexability.reason}`;
   } finally {
     collectBtn.disabled = false;
   }

@@ -36,7 +36,7 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | In progress | Findings engine + page summary (104); report editor and workspace follow |
+| **Sprint 1 — Inspect one page** | In progress | Markdown report editor (105); workspace accessibility baseline follows |
 | **Sprint 2 — Crawl/index signals** | Planned | Add robots, headers, and sitemap inspection on the settled page contract |
 | **Sprint 3 — Comparisons and site checks** | Planned | Add bounded rendering and URL-variant experiments |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
@@ -45,12 +45,11 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 104: Findings Engine and Page Summary](./104-findings-engine-and-page-summary.md)
-2. [Ticket 105: Markdown Report Editor and Safe Preview](./105-markdown-report-editor-and-safe-preview.md)
-3. [Ticket 106: Audit Workspace and Accessibility Baseline](./106-audit-workspace-and-accessibility-baseline.md)
-4. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
+1. [Ticket 105: Markdown Report Editor and Safe Preview](./105-markdown-report-editor-and-safe-preview.md)
+2. [Ticket 106: Audit Workspace and Accessibility Baseline](./106-audit-workspace-and-accessibility-baseline.md)
+3. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
-**Recommended next pick:** **104** — derive findings from captured DOM evidence.
+**Recommended next pick:** **105** — local Markdown report editor with safe preview.
 
 ---
 
@@ -85,7 +84,6 @@ useful from the side panel.
 
 **Tickets:**
 
-- [ ] [Ticket 104: Findings Engine and Page Summary](./104-findings-engine-and-page-summary.md)
 - [ ] [Ticket 105: Markdown Report Editor and Safe Preview](./105-markdown-report-editor-and-safe-preview.md)
 - [ ] [Ticket 106: Audit Workspace and Accessibility Baseline](./106-audit-workspace-and-accessibility-baseline.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)

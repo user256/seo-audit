@@ -1,8 +1,8 @@
 # Ticket 104: Findings Engine and Page Summary
 
-**Sprint:** 1 — Inspect One Page  
-**Status:** Not started  
-**Owner:** unassigned  
+**Sprint:** 1 — Inspect One Page
+**Status:** Done
+**Owner:** unassigned
 **Estimate:** M
 
 ## Context
@@ -17,18 +17,18 @@ Turn an active-page snapshot into explainable, deterministic page findings.
 
 ## Acceptance criteria
 
-- [ ] Implement pure, individually addressable rules for missing/duplicate
+- [x] Implement pure, individually addressable rules for missing/duplicate
   title, title length advisory, missing/duplicate description, missing or
   multiple canonical, canonical resolving off-page, noindex/nofollow robots,
   invalid hreflang URL, malformed JSON-LD, missing language, and images without
   meaningful `alt` text.
-- [ ] Each rule returns zero or more schema-valid findings with evidence,
+- [x] Each rule returns zero or more schema-valid findings with evidence,
   severity rationale, recommendation, and a stable source/best-practice link.
-- [ ] The summary shows finding counts by severity and category and never
+- [x] The summary shows finding counts by severity and category and never
   reports “indexable” when headers or robots data were not captured.
-- [ ] Fixture tests cover a clean document, each triggered rule, and at least
+- [x] Fixture tests cover a clean document, each triggered rule, and at least
   two conflicting signals; snapshots are deterministic.
-- [ ] Rule IDs and severity policy are documented in `docs/rules.md`.
+- [x] Rule IDs and severity policy are documented in `docs/rules.md`.
 
 ## Out of scope
 
@@ -46,4 +46,17 @@ Turn an active-page snapshot into explainable, deterministic page findings.
 
 - 2026-07-12 — “Missing data” belongs in capture status, not in a severity
   score. Rules only evaluate evidence they received.
+- 2026-07-12 — `evaluatePageSnapshot` runs after DOM collect and persists
+  findings on the session. Summary indexability is `unknown` /
+  `signals-partial` only — never a positive “indexable” claim in Sprint 1.
 
+---
+
+## Definition of done
+
+This ticket is closeable when:
+
+1. All acceptance criteria above are checked.
+2. Changes are merged to the main branch (or the sprint's working branch).
+3. The corresponding bullet in `tickets/overview.md` is changed from `- [ ]` to `- [x]`.
+4. Any follow-up work discovered during implementation is filed as a new ticket — not silently absorbed.

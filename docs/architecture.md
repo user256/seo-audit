@@ -6,14 +6,16 @@ entry on the relevant ticket.
 
 ## Chosen stack
 
-| Concern             | Choice                                                            | Why                                                                            |
-| ------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Language            | TypeScript (`strict: true`)                                       | Catch contract mistakes at compile time; matches Zod schemas in 102.           |
-| Bundler             | Vite 6 + `@crxjs/vite-plugin`                                     | Manifest-aware MV3 build, HMR in `dev`, static self-contained `dist/`.         |
-| Schema / validation | Zod (runtime) → JSON Schema via `zod-to-json-schema` (Ticket 402) | TypeScript-native validation for audit contracts. See `docs/data-contract.md`. |
-| Tests               | Vitest + `fake-indexeddb` + shared `chrome` stub                  | Unit tests without a real browser; IndexedDB and Chrome APIs mockable.         |
-| Lint / format       | ESLint (typescript-eslint flat config) + Prettier                 | Single agreed style; `npm run lint` fails on violations.                       |
-| CI                  | GitHub Actions (`lint` → `test` → `build` → `package:check`)      | Clean-checkout gate on every push/PR.                                          |
+| Concern             | Choice                                                            | Why                                                                                                                 |
+| ------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Language            | TypeScript (`strict: true`)                                       | Catch contract mistakes at compile time; matches Zod schemas in 102.                                                |
+| Bundler             | Vite 6 + `@crxjs/vite-plugin`                                     | Manifest-aware MV3 build, HMR in `dev`, static self-contained `dist/`.                                              |
+| Schema / validation | Zod (runtime) → JSON Schema via `zod-to-json-schema` (Ticket 402) | TypeScript-native validation for audit contracts. See [`docs/data-contract.md`](./data-contract.md) for schemas and |
+
+[`docs/rules.md`](./rules.md) for finding rule IDs.
+| Tests | Vitest + `fake-indexeddb` + shared `chrome` stub | Unit tests without a real browser; IndexedDB and Chrome APIs mockable. |
+| Lint / format | ESLint (typescript-eslint flat config) + Prettier | Single agreed style; `npm run lint` fails on violations. |
+| CI | GitHub Actions (`lint` → `test` → `build` → `package:check`) | Clean-checkout gate on every push/PR. |
 
 ## Directory layout
 

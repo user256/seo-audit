@@ -4,7 +4,8 @@ import {
   type DomFacts,
 } from '../content/dom-collector';
 import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
-import type { AuditSession, CaptureError, PageSnapshot } from './schemas/audit';
+import { evaluatePageSnapshot, type PageSummary } from './rules/engine';
+import type { AuditSession, CaptureError, Finding, PageSnapshot } from './schemas/audit';
 import { createEmptySession, SessionRepository } from './storage/session-repository';
 import { getActiveTabSnapshot } from './tab-access';
 
@@ -14,6 +15,8 @@ export type CollectDomResult =
       sessionId: string;
       snapshot: PageSnapshot;
       evidenceCount: number;
+      findings: Finding[];
+      summary: PageSummary;
     }
   | { ok: false; error: string; captureError?: CaptureError };
 
@@ -57,19 +60,24 @@ export async function collectDomForActiveTab(
 
     const snapshot = domFactsToPageSnapshot(facts, newId('snap'));
     const extensionVersion = chrome.runtime.getManifest().version;
+    const featureAvailability = {
+      domCollector: true as const,
+      headerCapture: 'unavailable' as const,
+      robotsFetch: 'unavailable' as const,
+    };
+    const { findings, summary } = evaluatePageSnapshot(snapshot, {
+      featureAvailability,
+    });
     const session: AuditSession = createEmptySession({
       id: newId('sess'),
       tabUrl: tab.url,
       finalUrl: facts.documentUrl || tab.url,
       extensionVersion,
-      featureAvailability: {
-        domCollector: true,
-        headerCapture: 'unavailable',
-        robotsFetch: 'unavailable',
-      },
+      featureAvailability,
       captureTime: facts.collectedAt,
     });
     session.snapshots = [snapshot];
+    session.findings = findings;
 
     const saved = await repo.save(session);
     return {
@@ -77,6 +85,8 @@ export async function collectDomForActiveTab(
       sessionId: saved.id,
       snapshot,
       evidenceCount: snapshot.evidence.length,
+      findings,
+      summary,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
