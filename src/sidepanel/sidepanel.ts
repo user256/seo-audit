@@ -1,6 +1,13 @@
 import type { ExtensionRequest, ExtensionResponse } from '../background/messages';
+import {
+  buildGlanceDashboard,
+  buildGrantedShellDashboard,
+  buildPreAccessDashboard,
+  type SeoDashboardModel,
+} from '../lib/dashboard/model';
 import type { Evidence } from '../lib/schemas/audit';
 import { requestOriginAccess } from '../lib/tab-access';
+import { renderSeoDashboard } from './dashboard-view';
 import { renderFindingsPanel } from './findings-view';
 import { mountReportEditor, type ReportEditorController } from './report-editor';
 import { viewFromSnapshot } from './view-state';
@@ -24,6 +31,7 @@ const refreshBtn = document.querySelector('#refresh') as HTMLButtonElement;
 const pingBtn = document.querySelector('#ping') as HTMLButtonElement;
 const openReportBtn = document.querySelector('#open-report') as HTMLButtonElement;
 const backToFindingsBtn = document.querySelector('#back-to-findings') as HTMLButtonElement;
+const dashboardSection = document.querySelector('#dashboard-section') as HTMLElement;
 const findingsSection = document.querySelector('#findings-section') as HTMLElement;
 const findingsSummaryEl = document.querySelector('#findings-summary')!;
 const findingsPanel = document.querySelector('#findings-panel') as HTMLElement;
@@ -34,6 +42,7 @@ let workspace: WorkspaceModel = initialWorkspace();
 let reportEditor: ReportEditorController | null = null;
 let evidenceById = new Map<string, Evidence>();
 let viewingReport = false;
+let dashboard: SeoDashboardModel | null = null;
 
 const PHASE_LABEL: Record<WorkspaceModel['phase'], string> = {
   'unsupported-tab': 'Unsupported tab',
@@ -73,6 +82,12 @@ function renderWorkspace(): void {
   setStatus(workspace.statusMessage, workspace.statusKind);
 
   const hasSession = Boolean(workspace.sessionId);
+  const showDashboard = Boolean(dashboard) && !viewingReport;
+  dashboardSection.hidden = !showDashboard;
+  if (showDashboard && dashboard) {
+    renderSeoDashboard(dashboardSection, dashboard);
+  }
+
   findingsSection.hidden = !hasSession || viewingReport;
   reportSection.hidden = !hasSession || !viewingReport;
   openReportBtn.hidden = !hasSession || viewingReport;
@@ -85,6 +100,68 @@ function renderWorkspace(): void {
       : '';
     renderFindingsPanel(findingsPanel, workspace.findings, evidenceById);
   }
+}
+
+async function loadGlanceDashboard(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready') {
+    dashboard = null;
+    return;
+  }
+  if (!tab.granted) {
+    dashboard = buildPreAccessDashboard(tab.url);
+    return;
+  }
+
+  // Never show the pre-access “needs site access” shell once granted.
+  dashboard = buildGrantedShellDashboard(tab.url, 'Loading DOM inventory…');
+
+  const response = await send<ExtensionResponse>({ type: 'GLANCE_DOM_INVENTORY' });
+  if (response.type === 'ERROR') {
+    dashboard = buildGrantedShellDashboard(
+      tab.url,
+      `Glance failed: ${response.message}. Click Refresh to retry.`,
+    );
+    workspace = {
+      ...workspace,
+      statusMessage: response.message,
+      statusKind: 'error',
+    };
+    return;
+  }
+  if (response.type !== 'GLANCE_DOM_RESULT') {
+    dashboard = buildGrantedShellDashboard(
+      tab.url,
+      'Glance returned an unexpected response. Reload the extension, then Refresh.',
+    );
+    workspace = {
+      ...workspace,
+      statusMessage: 'Unexpected glance response from the service worker.',
+      statusKind: 'error',
+    };
+    return;
+  }
+  if (!response.result.ok) {
+    dashboard = buildGrantedShellDashboard(
+      tab.url,
+      `Glance failed (${response.result.code}): ${response.result.error}`,
+    );
+    workspace = {
+      ...workspace,
+      statusMessage: response.result.error,
+      statusKind: 'error',
+    };
+    return;
+  }
+  dashboard = buildGlanceDashboard({
+    tabUrl: response.result.tabUrl,
+    facts: response.result.facts,
+  });
+  workspace = {
+    ...workspace,
+    statusMessage: 'Page glance updated from the live tab.',
+    statusKind: 'ok',
+  };
 }
 
 async function send<T extends ExtensionResponse>(message: ExtensionRequest): Promise<T> {
@@ -152,6 +229,7 @@ async function refresh(): Promise<void> {
     return;
   }
   workspace = withTab(workspace, response.snapshot);
+  await loadGlanceDashboard();
   renderWorkspace();
 }
 
@@ -198,6 +276,11 @@ async function ping(): Promise<void> {
       return;
     }
     setStatus(`Page access ok — content script saw ${response.result.href}`, 'ok');
+    await loadGlanceDashboard();
+    renderWorkspace();
+    if (dashboard?.inventoryLoaded) {
+      setStatus(`Page access ok — glance loaded for ${response.result.href}`, 'ok');
+    }
   } finally {
     pingBtn.disabled = false;
   }
@@ -241,7 +324,10 @@ async function collectDom(): Promise<void> {
     });
     viewingReport = false;
     collectSummaryEl.hidden = false;
-    collectSummaryEl.textContent = `Snapshot URL: ${response.result.snapshot.url}`;
+    collectSummaryEl.textContent = `Audit saved for ${response.result.snapshot.url}`;
+
+    // Refresh glance from the same capture so the dashboard stays in sync.
+    await loadGlanceDashboard();
 
     const loaded = await send<ExtensionResponse>({
       type: 'LOAD_SESSION',

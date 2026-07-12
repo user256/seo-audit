@@ -15,6 +15,8 @@ export type DomCollectLimits = {
   maxJsonLdChars: number;
   maxJsonLdScripts: number;
   maxHeadingSamplesPerLevel: number;
+  maxLinkInventory: number;
+  maxImageInventory: number;
 };
 
 export const DEFAULT_DOM_COLLECT_LIMITS: DomCollectLimits = {
@@ -24,6 +26,8 @@ export const DEFAULT_DOM_COLLECT_LIMITS: DomCollectLimits = {
   maxJsonLdChars: DEFAULT_MAX_JSON_LD_CHARS,
   maxJsonLdScripts: 25,
   maxHeadingSamplesPerLevel: 5,
+  maxLinkInventory: 200,
+  maxImageInventory: 100,
 };
 
 export type FieldLimits = {
@@ -78,21 +82,35 @@ export type DomFacts = {
   headings: FieldState;
   links: FieldState;
   images: FieldState;
+  html5: FieldState;
   jsonLd: FieldState;
 };
 
 /**
  * Collect normalised SEO DOM facts from the current page document.
  * Safe to inject via chrome.scripting.executeScript({ func: collectDomFactsInPage }).
+ *
+ * IMPORTANT: this function must not close over module bindings. Chrome serialises
+ * only the function source for `executeScript({ func })`; free variables become
+ * ReferenceErrors in the page and the result comes back as `null`.
  */
-export function collectDomFactsInPage(
-  limits: DomCollectLimits | number = DEFAULT_DOM_COLLECT_LIMITS,
-): DomFacts {
+export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFacts {
+  // Inline defaults — do not reference DEFAULT_DOM_COLLECT_LIMITS here.
+  const fallback: DomCollectLimits = {
+    maxStringChars: 2_000,
+    maxMetaItems: 40,
+    maxAlternateItems: 50,
+    maxJsonLdChars: 50_000,
+    maxJsonLdScripts: 25,
+    maxHeadingSamplesPerLevel: 5,
+    maxLinkInventory: 200,
+    maxImageInventory: 100,
+  };
   // Back-compat: Ticket 103 callers passed maxJsonLdChars as a bare number.
   const caps: DomCollectLimits =
     typeof limits === 'number'
-      ? { ...DEFAULT_DOM_COLLECT_LIMITS, maxJsonLdChars: limits }
-      : { ...DEFAULT_DOM_COLLECT_LIMITS, ...limits };
+      ? { ...fallback, maxJsonLdChars: limits }
+      : { ...fallback, ...(limits ?? {}) };
 
   const collectedAt = new Date().toISOString();
 
@@ -432,26 +450,45 @@ export function collectDomFactsInPage(
         return null;
       }
     })();
+    const inventory: { href: string; absolute: string | null; text: string }[] = [];
     for (const a of anchors) {
       const href = a.getAttribute('href') ?? '';
       if (href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:')) {
         other += 1;
-        continue;
+      } else {
+        try {
+          const abs = new URL(href, document.baseURI);
+          if (pageOrigin && abs.origin === pageOrigin) internal += 1;
+          else if (abs.protocol === 'http:' || abs.protocol === 'https:') external += 1;
+          else other += 1;
+        } catch {
+          other += 1;
+        }
       }
-      try {
-        const abs = new URL(href, document.baseURI);
-        if (pageOrigin && abs.origin === pageOrigin) internal += 1;
-        else if (abs.protocol === 'http:' || abs.protocol === 'https:') external += 1;
-        else other += 1;
-      } catch {
-        other += 1;
+      if (inventory.length < caps.maxLinkInventory) {
+        const resolved = resolveUrl(href);
+        const textClipped = clip((a.textContent ?? '').trim());
+        inventory.push({
+          href,
+          absolute: resolved.absolute,
+          text: textClipped.text,
+        });
       }
     }
+    const omitted = Math.max(0, anchors.length - inventory.length);
     return {
       state: 'present',
-      value: { total: anchors.length, internal, external, other },
+      value: { total: anchors.length, internal, external, other, inventory },
       selector: 'a[href]',
       count: anchors.length,
+      limits:
+        omitted > 0
+          ? {
+              truncated: true,
+              reason: `Link inventory clipped to ${caps.maxLinkInventory} rows`,
+              omittedCount: omitted,
+            }
+          : undefined,
     };
   });
 
@@ -460,16 +497,69 @@ export function collectDomFactsInPage(
     let withAlt = 0;
     let emptyAlt = 0;
     let missingAlt = 0;
+    const inventory: {
+      src: string;
+      alt: string | null;
+      altState: 'missing' | 'empty' | 'present';
+    }[] = [];
     for (const img of imgs) {
-      if (!img.hasAttribute('alt')) missingAlt += 1;
-      else if ((img.getAttribute('alt') ?? '').trim() === '') emptyAlt += 1;
-      else withAlt += 1;
+      let altState: 'missing' | 'empty' | 'present';
+      let alt: string | null;
+      if (!img.hasAttribute('alt')) {
+        missingAlt += 1;
+        altState = 'missing';
+        alt = null;
+      } else if ((img.getAttribute('alt') ?? '').trim() === '') {
+        emptyAlt += 1;
+        altState = 'empty';
+        alt = '';
+      } else {
+        withAlt += 1;
+        altState = 'present';
+        alt = clip(img.getAttribute('alt') ?? '').text;
+      }
+      if (inventory.length < caps.maxImageInventory) {
+        inventory.push({
+          src: clip(img.getAttribute('src') ?? '').text,
+          alt,
+          altState,
+        });
+      }
     }
+    const omitted = Math.max(0, imgs.length - inventory.length);
     return {
       state: 'present',
-      value: { total: imgs.length, withAlt, emptyAlt, missingAlt },
+      value: { total: imgs.length, withAlt, emptyAlt, missingAlt, inventory },
       selector: 'img',
       count: imgs.length,
+      limits:
+        omitted > 0
+          ? {
+              truncated: true,
+              reason: `Image inventory clipped to ${caps.maxImageInventory} rows`,
+              omittedCount: omitted,
+            }
+          : undefined,
+    };
+  });
+
+  const html5 = safe('html5', (): FieldState => {
+    const tags = ['main', 'nav', 'header', 'footer', 'article', 'section', 'aside'] as const;
+    const counts: Record<string, number> = {};
+    for (const tag of tags) {
+      counts[tag] = document.querySelectorAll(tag).length;
+    }
+    const doctype = document.doctype ? `<!DOCTYPE ${document.doctype.name}>` : null;
+    return {
+      state: 'present',
+      value: {
+        doctype,
+        counts,
+        hasMain: (counts.main ?? 0) > 0,
+        landmarkTotal: Object.values(counts).reduce((a, b) => a + b, 0),
+      },
+      selector: 'main,nav,header,footer,article,section,aside',
+      count: Object.values(counts).reduce((a, b) => a + b, 0),
     };
   });
 
@@ -598,6 +688,7 @@ export function collectDomFactsInPage(
     headings: asField(headings as FieldState),
     links: asField(links as FieldState),
     images: asField(images as FieldState),
+    html5: asField(html5 as FieldState),
     jsonLd: asField(jsonLd as FieldState),
   };
 }

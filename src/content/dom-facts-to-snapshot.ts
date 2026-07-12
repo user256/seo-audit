@@ -71,6 +71,7 @@ export function domFactsToPageSnapshot(
     fieldToEvidence(evidenceId('headings', 0), 'h1-h6', facts.headings, capturedAt),
     fieldToEvidence(evidenceId('links', 0), 'a[href]', facts.links, capturedAt),
     fieldToEvidence(evidenceId('images', 0), 'img', facts.images, capturedAt),
+    fieldToEvidence(evidenceId('html5', 0), 'html5-landmarks', facts.html5, capturedAt),
     fieldToEvidence(
       evidenceId('jsonld', 0),
       'script[type=application/ld+json]',

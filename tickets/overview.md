@@ -16,7 +16,7 @@ can pass its go/no-go gate.
 
 The product will provide:
 
-- a side-panel audit workspace for the active tab;
+- a side-panel **SEO dashboard** for the active tab (glance inventory before deep tests);
 - structured page findings backed by captured browser evidence;
 - local audit sessions and Markdown/JSON exports;
 - a Markdown report editor with source/preview modes.
@@ -46,13 +46,15 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md)
-2. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — blocked on an external fresh-Chrome smoke run
-3. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
+1. [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md) — "Open report" must compose findings/evidence/summary, not show a blank notes box
+2. [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md)
+3. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — blocked on an external fresh-Chrome smoke run
+4. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
-**Recommended next pick:** **110** — enforce the source-specific evidence
-contract before the Sprint 1 review gate. Then complete the browser-only
-evidence in 109 and run 199.
+**Recommended next pick:** **112** — the report view is the fatal gap (Open report
+is an empty text box); then 110 schema hardening and smoke/199. Both 110 and 112
+block the 199 go/no-go. Dashboard glance (111) is in review — live HTTP
+status/redirects still wait on Ticket 201.
 
 ---
 
@@ -89,6 +91,7 @@ useful from the side panel.
 
 - [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
 - [ ] [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md)
+- [ ] [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
 **Exit criteria:**
@@ -120,6 +123,8 @@ be discovered, crawled, and indexed.
 - [ ] [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
 - [ ] [Ticket 208: Structured Data Inventory and Validation](./208-structured-data-inventory-and-validation.md)
 - [ ] [Ticket 204: Indexability Reconciliation Rules](./204-indexability-reconciliation-rules.md)
+- [ ] [Ticket 209: Check Catalogue and Availability Model](./209-check-catalogue-and-availability-model.md)
+- [ ] [Ticket 210: Audit Wizard and Check Selection](./210-audit-wizard-and-check-selection.md)
 - [ ] [Ticket 205: Crawl Signals Workspace](./205-crawl-signals-workspace.md)
 - [ ] [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md)
 
@@ -176,6 +181,7 @@ cloaking detection claims, guarantees about Google’s renderer.
 - [ ] [Ticket 402: Markdown and JSON Export](./402-markdown-and-json-export.md)
 - [ ] [Ticket 403: Error States, Privacy Controls, and Data Retention](./403-error-states-privacy-controls-and-data-retention.md)
 - [ ] [Ticket 404: Quality Gates and Release Packaging](./404-quality-gates-and-release-packaging.md)
+- [ ] [Ticket 405: User-Defined Theme Editor](./405-user-defined-theme-editor.md)
 - [ ] [Ticket 499: Sprint 4 Review and Release Go/No-Go](./499-sprint-4-review-and-release-go-no-go.md)
 
 **Exit criteria:**
