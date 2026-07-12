@@ -144,14 +144,15 @@ export function renderSeoDashboard(container: HTMLElement, model: SeoDashboardMo
         `Links: ${model.links.total} (internal ${model.links.internal}, external ${model.links.external}, other ${model.links.other})`,
       ),
     );
-    const copyLinks = el('button', 'secondary', 'Copy all links') as HTMLButtonElement;
+    const copyLinks = el('button', 'secondary', 'Copy links (CSV)') as HTMLButtonElement;
     copyLinks.type = 'button';
     copyLinks.addEventListener('click', () => {
-      void navigator.clipboard.writeText(formatLinksForClipboard(model.links!)).then(
+      const source = model.documentUrl ?? model.tabUrl;
+      void navigator.clipboard.writeText(formatLinksForClipboard(model.links!, source)).then(
         () => {
           copyLinks.textContent = 'Copied links';
           setTimeout(() => {
-            copyLinks.textContent = 'Copy all links';
+            copyLinks.textContent = 'Copy links (CSV)';
           }, 1500);
         },
         () => {
@@ -171,14 +172,15 @@ export function renderSeoDashboard(container: HTMLElement, model: SeoDashboardMo
         `Images: ${model.images.total} (alt present ${model.images.withAlt}, empty ${model.images.emptyAlt}, missing ${model.images.missingAlt})`,
       ),
     );
-    const copyImages = el('button', 'secondary', 'Copy images + alt') as HTMLButtonElement;
+    const copyImages = el('button', 'secondary', 'Copy images (CSV)') as HTMLButtonElement;
     copyImages.type = 'button';
     copyImages.addEventListener('click', () => {
-      void navigator.clipboard.writeText(formatImagesForClipboard(model.images!)).then(
+      const source = model.documentUrl ?? model.tabUrl;
+      void navigator.clipboard.writeText(formatImagesForClipboard(model.images!, source)).then(
         () => {
           copyImages.textContent = 'Copied images';
           setTimeout(() => {
-            copyImages.textContent = 'Copy images + alt';
+            copyImages.textContent = 'Copy images (CSV)';
           }, 1500);
         },
         () => {

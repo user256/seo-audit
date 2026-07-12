@@ -92,13 +92,36 @@ describe('SEO dashboard model', () => {
     expect(model.status.availability).not.toBe('needs-access');
   });
 
-  it('formats clipboard payloads for links and images', () => {
+  it('formats link and image clipboard payloads as CSV with a source column', () => {
     const model = buildGlanceDashboard({
       tabUrl: 'https://example.com/page',
       facts: sampleFacts(),
     });
-    expect(formatLinksForClipboard(model.links!)).toContain('https://example.com/a');
-    expect(formatImagesForClipboard(model.images!)).toContain('(no alt attribute)');
-    expect(formatImagesForClipboard(model.images!)).toContain('Logo');
+    const source = model.documentUrl!;
+
+    const linksCsv = formatLinksForClipboard(model.links!, source);
+    expect(linksCsv.split('\r\n')[0]).toBe('link,anchor,type,source');
+    // Authored '/a' resolves to absolute but is typed relative; source is the page URL.
+    expect(linksCsv).toContain('https://example.com/a,A,relative,https://example.com/page');
+    expect(linksCsv).toContain('https://other.test/,B,absolute,https://example.com/page');
+
+    const imagesCsv = formatImagesForClipboard(model.images!, source);
+    expect(imagesCsv.split('\r\n')[0]).toBe('image,alt-attrib,type,source');
+    expect(imagesCsv).toContain('/a.png,(missing),relative,https://example.com/page');
+    expect(imagesCsv).toContain('/b.png,Logo,relative,https://example.com/page');
+  });
+
+  it('escapes CSV cells containing commas, quotes, and newlines', () => {
+    const csv = formatLinksForClipboard(
+      {
+        total: 1,
+        internal: 1,
+        external: 0,
+        other: 0,
+        inventory: [{ href: '/x', absolute: 'https://e.com/x', text: 'Hi, "there"\nrow2' }],
+      },
+      'https://e.com/',
+    );
+    expect(csv).toContain('"Hi, ""there""\nrow2"');
   });
 });

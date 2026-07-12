@@ -231,23 +231,60 @@ export function buildGlanceDashboard(input: {
   };
 }
 
-export function formatLinksForClipboard(links: NonNullable<SeoDashboardModel['links']>): string {
-  return links.inventory
-    .map((row) => row.absolute ?? row.href)
-    .filter(Boolean)
-    .join('\n');
+export type UrlKind = 'relative' | 'absolute';
+
+/**
+ * Classify a raw href/src attribute as relative or absolute. Anything with a URL
+ * scheme (`https:`, `mailto:`, `data:`, …) or a protocol-relative `//host` prefix
+ * is absolute; everything else (`/path`, `./x`, `#hash`, `?q`) is relative.
+ */
+export function classifyUrl(raw: string): UrlKind {
+  const value = raw.trim();
+  if (value.startsWith('//')) return 'absolute';
+  return /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value) ? 'absolute' : 'relative';
 }
 
-export function formatImagesForClipboard(images: NonNullable<SeoDashboardModel['images']>): string {
-  return images.inventory
-    .map((row) => {
-      const alt =
-        row.altState === 'missing'
-          ? '(no alt attribute)'
-          : row.alt === ''
-            ? '(empty alt)'
-            : row.alt;
-      return `${row.src}\t${alt}`;
-    })
-    .join('\n');
+/** RFC 4180 cell: quote when it contains a comma, quote, CR, or LF; double internal quotes. */
+function csvCell(value: string): string {
+  return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
+function toCsv(header: string[], rows: string[][]): string {
+  return [header, ...rows].map((cells) => cells.map(csvCell).join(',')).join('\r\n');
+}
+
+/** CSV: link (resolved), anchor text, relative/absolute (of the authored href), source page. */
+export function formatLinksForClipboard(
+  links: NonNullable<SeoDashboardModel['links']>,
+  source: string,
+): string {
+  return toCsv(
+    ['link', 'anchor', 'type', 'source'],
+    links.inventory.map((row) => [
+      row.absolute ?? row.href,
+      row.text,
+      classifyUrl(row.href),
+      source,
+    ]),
+  );
+}
+
+/** CSV: image src, alt attribute (missing/empty distinguished), relative/absolute, source page. */
+export function formatImagesForClipboard(
+  images: NonNullable<SeoDashboardModel['images']>,
+  source: string,
+): string {
+  return toCsv(
+    ['image', 'alt-attrib', 'type', 'source'],
+    images.inventory.map((row) => [
+      row.src,
+      row.altState === 'missing'
+        ? '(missing)'
+        : row.altState === 'empty'
+          ? '(empty)'
+          : (row.alt ?? ''),
+      classifyUrl(row.src),
+      source,
+    ]),
+  );
 }
