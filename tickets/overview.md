@@ -37,7 +37,7 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | In progress | Remediate collection, report, and verification gaps before 199 |
+| **Sprint 1 — Inspect one page** | Blocked | Run the remaining fresh-Chrome smoke evidence after Ticket 110's schema hardening |
 | **Sprint 2 — Crawl/index signals** | Planned | Add robots, headers, and sitemap inspection on the settled page contract |
 | **Sprint 3 — Comparisons and site checks** | Planned | Add bounded rendering and URL-variant experiments |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
@@ -46,12 +46,13 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
-2. [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md)
+1. [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md)
+2. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — blocked on an external fresh-Chrome smoke run
 3. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
 **Recommended next pick:** **110** — enforce the source-specific evidence
-contract before the Sprint 1 review gate.
+contract before the Sprint 1 review gate. Then complete the browser-only
+evidence in 109 and run 199.
 
 ---
 

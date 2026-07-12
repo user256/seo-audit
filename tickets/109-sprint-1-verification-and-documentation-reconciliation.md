@@ -1,7 +1,7 @@
 # Ticket 109: Sprint 1 Verification and Documentation Reconciliation
 
 **Sprint:** 1 — Inspect One Page  
-**Status:** In progress  
+**Status:** Blocked  
 **Owner:** unassigned  
 **Estimate:** S
 
@@ -61,6 +61,11 @@ and browser behaviour.
 - 2026-07-12 — PR review confirmed that the browser checklist is an unexecuted
   operator script, not evidence. The ticket remains open until a fresh Chrome
   114+ profile completes and records it.
+- 2026-07-12 — Repository review reran the automated gate on `main`: 81 tests,
+  lint, TypeScript/Vite build, and the manifest packaging check pass. The only
+  remaining work is the external fresh-profile Chrome smoke run and recording
+  its results; keep this ticket blocked rather than implying implementation is
+  still active.
 
 ---
 
