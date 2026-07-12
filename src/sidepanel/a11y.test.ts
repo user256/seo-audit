@@ -1,7 +1,25 @@
 import axe from 'axe-core';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { contrastRatio, WCAG_AA_NORMAL_TEXT } from '../lib/contrast';
 import { renderFindingsPanel } from './findings-view';
 import type { Finding } from '../lib/schemas/audit';
+
+/**
+ * Token pairs shipped in sidepanel.css. Measured here because axe colour-contrast
+ * cannot run under JSDOM (HTMLCanvasElement.getContext is unimplemented).
+ */
+export const THEME_CONTRAST_SAMPLES = {
+  light: {
+    fgOnBg: { fg: '#1a1a1a', bg: '#f7f7f5' },
+    mutedOnBg: { fg: '#555555', bg: '#f7f7f5' },
+    accentTextOnAccent: { fg: '#ffffff', bg: '#0b5fff' },
+  },
+  dark: {
+    fgOnBg: { fg: '#eceef2', bg: '#12141a' },
+    mutedOnBg: { fg: '#b0b6c2', bg: '#12141a' },
+    accentTextOnAccent: { fg: '#0b1220', bg: '#6ea8ff' },
+  },
+} as const;
 
 const WORKSPACE_FIXTURE = `
 <main id="workspace-main">
@@ -52,16 +70,33 @@ describe('workspace accessibility', () => {
     renderFindingsPanel(document.querySelector('#findings-panel')!, [finding], new Map());
   });
 
-  it('has no serious or critical axe violations on the workspace fixture', async () => {
+  it('has no serious or critical axe violations (excluding colour-contrast under JSDOM)', async () => {
     const results = await axe.run(document, {
       runOnly: {
         type: 'tag',
         values: ['wcag2a', 'wcag2aa'],
+      },
+      // JSDOM cannot measure contrast (canvas getContext missing). Token ratios
+      // are asserted separately below — do not treat axe colour-contrast as evidence.
+      rules: {
+        'color-contrast': { enabled: false },
       },
     });
     const serious = results.violations.filter(
       (v) => v.impact === 'serious' || v.impact === 'critical',
     );
     expect(serious, JSON.stringify(serious, null, 2)).toEqual([]);
+  });
+
+  it('documents WCAG AA contrast for light and dark body tokens', () => {
+    for (const [theme, samples] of Object.entries(THEME_CONTRAST_SAMPLES)) {
+      for (const [name, pair] of Object.entries(samples)) {
+        const ratio = contrastRatio(pair.fg, pair.bg);
+        expect(
+          ratio,
+          `${theme}.${name} ${pair.fg} on ${pair.bg} = ${ratio.toFixed(2)}`,
+        ).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
+      }
+    }
   });
 });

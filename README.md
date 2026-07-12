@@ -35,17 +35,19 @@ roadmap.
 └── dist/                  ← built, loadable extension (gitignored)
 ```
 
-The extension code does not exist yet — the repository currently holds the spec
-and the ticket workflow. **Ticket 100** stands up the toolchain and **Ticket
-101** creates the extension shell.
+The extension source lives under `src/`. **`npm run build` emits a loadable
+unpacked extension in `dist/`** — that is what you select in
+`chrome://extensions` → Load unpacked. A versioned ZIP package is **not**
+produced yet; that is Ticket 404 work. `npm run package:check` only verifies
+that `dist/manifest.json` is Manifest V3.
 
 ---
 
 ## Status
 
-Sprint 1 (“Inspect One Page”) implementation tickets 100–106 are done; next pick
-is **Ticket 199 (Sprint 1 Review and Go/No-Go)**. Track progress in
-[`tickets/overview.md`](./tickets/overview.md).
+Sprint 1 (“Inspect One Page”) remediation tickets **107–109** harden evidence,
+report isolation, and verification before **Ticket 199 (Sprint 1 Review and
+Go/No-Go)**. Track progress in [`tickets/overview.md`](./tickets/overview.md).
 
 ---
 
@@ -77,10 +79,13 @@ npm run dev        # rebuilds on change; reload the extension in chrome://extens
 npm run lint            # ESLint + Prettier
 npm test                # unit tests (Vitest) with coverage
 npm run build           # type-check + bundle
-npm run package:check   # verify the packaged ZIP contents (Ticket 404)
+npm run package:check   # stub: asserts dist/ has an MV3 manifest (ZIP = Ticket 404)
 ```
 
 These are the gates every ticket must keep green, and CI runs them on every push.
+
+Manual Chrome smoke for Sprint 1 is recorded in
+[`docs/sprint-1-smoke.md`](./docs/sprint-1-smoke.md).
 
 ---
 

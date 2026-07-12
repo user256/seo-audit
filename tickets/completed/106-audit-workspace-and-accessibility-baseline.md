@@ -25,7 +25,8 @@ single-page audit.
 - [x] Controls are keyboard-operable, have accessible names, visible focus,
   labelled severity/status colours, and status changes announced politely.
 - [x] Narrow-panel layout is usable at 320 CSS px with no clipped primary
-  actions; light and dark themes meet WCAG AA contrast for body text.
+  actions; light and dark body tokens meet WCAG AA contrast (measured in
+  `src/sidepanel/a11y.test.ts` — axe colour-contrast is disabled under JSDOM).
 - [x] Automated accessibility checks plus a manual keyboard smoke checklist are
   included in the test/release documentation.
 

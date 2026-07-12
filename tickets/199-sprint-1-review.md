@@ -34,3 +34,9 @@ Make an evidence-backed decision to begin crawl/index features.
 - **Blocks:** 201–205
 - **Blocked by:** 101–109
 - **External:** two representative public test sites
+
+## Notes / decisions log
+
+- 2026-07-12 — Verification evidence prepared by Ticket 109 in
+  `docs/sprint-1-smoke.md` (automated gates recorded; browser checklist is this
+  ticket’s demonstration script).
