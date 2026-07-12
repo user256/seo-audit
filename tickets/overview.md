@@ -91,7 +91,6 @@ useful from the side panel.
 **Tickets:**
 
 - [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
-- [ ] [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md)
 - [ ] [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md)
 - [ ] [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
