@@ -5,7 +5,9 @@ import { viewFromSnapshot } from './view-state';
 const tabUrlEl = document.querySelector('#tab-url')!;
 const accessStateEl = document.querySelector('#access-state')!;
 const statusEl = document.querySelector('#status-message')!;
+const collectSummaryEl = document.querySelector('#collect-summary') as HTMLElement;
 const allowBtn = document.querySelector('#allow-site') as HTMLButtonElement;
+const collectBtn = document.querySelector('#collect-dom') as HTMLButtonElement;
 const refreshBtn = document.querySelector('#refresh') as HTMLButtonElement;
 const pingBtn = document.querySelector('#ping') as HTMLButtonElement;
 
@@ -24,6 +26,7 @@ function applyView(next: ActiveTabSnapshot): void {
   accessStateEl.textContent = view.accessLabel;
   allowBtn.hidden = !view.showAllow;
   pingBtn.hidden = !view.showPing;
+  collectBtn.hidden = !view.showCollect;
   setStatus(view.status, view.statusKind);
 }
 
@@ -96,6 +99,38 @@ async function ping(): Promise<void> {
   }
 }
 
+async function collectDom(): Promise<void> {
+  if (!snapshot || snapshot.status !== 'ready' || !snapshot.granted) {
+    return;
+  }
+  collectBtn.disabled = true;
+  collectSummaryEl.hidden = true;
+  setStatus('Collecting DOM snapshot…');
+  try {
+    const response = await send<ExtensionResponse>({ type: 'COLLECT_DOM_SNAPSHOT' });
+    if (response.type === 'ERROR') {
+      setStatus(response.message, 'error');
+      return;
+    }
+    if (response.type !== 'COLLECT_DOM_RESULT') {
+      setStatus('Unexpected collect response.', 'error');
+      return;
+    }
+    if (!response.result.ok) {
+      setStatus(response.result.error, 'error');
+      return;
+    }
+    setStatus(
+      `Saved session ${response.result.sessionId} with ${response.result.evidenceCount} evidence items.`,
+      'ok',
+    );
+    collectSummaryEl.hidden = false;
+    collectSummaryEl.textContent = `Snapshot URL: ${response.result.snapshot.url}`;
+  } finally {
+    collectBtn.disabled = false;
+  }
+}
+
 allowBtn.addEventListener('click', () => {
   void allowSite();
 });
@@ -104,6 +139,9 @@ refreshBtn.addEventListener('click', () => {
 });
 pingBtn.addEventListener('click', () => {
   void ping();
+});
+collectBtn.addEventListener('click', () => {
+  void collectDom();
 });
 
 void refresh();

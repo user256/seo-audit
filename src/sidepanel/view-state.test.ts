@@ -15,6 +15,7 @@ describe('viewFromSnapshot', () => {
     ).toMatchObject({
       showAllow: true,
       showPing: false,
+      showCollect: false,
       accessLabel: 'Not granted',
     });
   });
@@ -29,6 +30,7 @@ describe('viewFromSnapshot', () => {
     ).toMatchObject({
       showAllow: false,
       showPing: false,
+      showCollect: false,
       statusKind: 'error',
     });
   });
