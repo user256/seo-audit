@@ -38,23 +38,29 @@ becomes a pass.
 
 ## Rule IDs
 
-| Rule ID                 | Category          | Severity | Trigger                                     |
-| ----------------------- | ----------------- | -------- | ------------------------------------------- |
-| `title-missing`         | metadata          | error    | Title absent or empty                       |
-| `title-duplicate`       | metadata          | error    | Multiple title values                       |
-| `title-length`          | metadata          | info     | Title outside 10–60 character advisory band |
-| `description-missing`   | metadata          | warning  | Meta description absent or empty            |
-| `description-duplicate` | metadata          | warning  | Multiple meta descriptions                  |
-| `canonical-missing`     | indexability      | warning  | Canonical absent or empty                   |
-| `canonical-multiple`    | indexability      | error    | More than one canonical                     |
-| `canonical-malformed`   | indexability      | error    | Canonical href does not resolve             |
-| `canonical-off-page`    | indexability      | warning  | Canonical origin ≠ page origin              |
-| `robots-noindex`        | indexability      | warning  | Meta robots includes noindex (DOM only)     |
-| `robots-nofollow`       | indexability      | info     | Meta robots includes nofollow (DOM only)    |
-| `hreflang-invalid-url`  | international     | error    | Alternate hreflang href does not resolve    |
-| `jsonld-malformed`      | structured-data   | warning  | JSON-LD script fails `JSON.parse`           |
-| `language-missing`      | metadata          | warning  | `html[lang]` absent or empty                |
-| `images-missing-alt`    | accessibility-seo | warning  | Images with missing or empty `alt`          |
+| Rule ID                                               | Category          | Severity | Trigger                                             |
+| ----------------------------------------------------- | ----------------- | -------- | --------------------------------------------------- |
+| `title-missing`                                       | metadata          | error    | Title absent or empty                               |
+| `title-duplicate`                                     | metadata          | error    | Multiple title values                               |
+| `title-length`                                        | metadata          | info     | Title outside 10–60 character advisory band         |
+| `description-missing`                                 | metadata          | warning  | Meta description absent or empty                    |
+| `description-duplicate`                               | metadata          | warning  | Multiple meta descriptions                          |
+| `canonical-missing`                                   | indexability      | warning  | Canonical absent or empty                           |
+| `canonical-multiple`                                  | indexability      | error    | More than one canonical                             |
+| `canonical-malformed`                                 | indexability      | error    | Canonical href does not resolve                     |
+| `canonical-off-page`                                  | indexability      | warning  | Canonical origin ≠ page origin                      |
+| `robots-noindex`                                      | indexability      | warning  | Meta robots includes noindex (DOM only)             |
+| `robots-nofollow`                                     | indexability      | info     | Meta robots includes nofollow (DOM only)            |
+| `hreflang-invalid-url`                                | international     | error    | Alternate hreflang href does not resolve            |
+| `jsonld-malformed`                                    | structured-data   | warning  | JSON-LD script fails `JSON.parse`                   |
+| `jsonld-unevaluated`                                  | structured-data   | info     | JSON-LD capture was truncated                       |
+| `jsonld-top-level-non-object`                         | structured-data   | warning  | Complete JSON-LD is a scalar or mixes scalar roots  |
+| `jsonld-context-missing` / `jsonld-context-malformed` | structured-data   | warning  | Captured graph root lacks a usable local `@context` |
+| `jsonld-node-missing-type`                            | structured-data   | warning  | Root or direct `@graph` node has no `@type`         |
+| `jsonld-duplicate-id`                                 | structured-data   | warning  | `@id` is repeated within one captured graph         |
+| `jsonld-inventory-limited`                            | structured-data   | info     | Node, depth, or string inspection cap reached       |
+| `language-missing`                                    | metadata          | warning  | `html[lang]` absent or empty                        |
+| `images-missing-alt`                                  | accessibility-seo | warning  | Images with missing or empty `alt`                  |
 
 ## Page summary
 
@@ -63,6 +69,17 @@ status is never `indexable` in Sprint 1.** When headers and/or robots.txt were
 not captured, status is `unknown` with an explicit reason. Even if those
 captures exist later, Sprint 1 still reports `signals-partial` until Ticket 204
 reconciliation lands.
+
+## Structured-data policy
+
+Structured-data findings are generic, bounded JSON-LD observations. They do
+not validate Schema.org vocabularies, retrieve remote contexts, execute JSON-LD,
+or claim Google rich-result eligibility. Complete object payloads, top-level
+arrays, and `@graph` members are inventoried; a graph root must declare a
+non-empty string, object, or array of those as `@context`. The validator inspects
+at most 200 object nodes to depth 20 and retains `@type`/`@id` prefixes using the
+shared 2,000-character DOM string cap. Truncated source is explicitly
+unevaluated rather than treated as malformed or valid.
 
 ## API
 

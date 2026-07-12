@@ -140,6 +140,37 @@ describe('evaluatePageSnapshot', () => {
     expect(findings.some((f) => f.ruleId === 'jsonld-malformed')).toBe(true);
   });
 
+  it('reports generic JSON-LD structural observations without claiming rich-result eligibility', () => {
+    const snapshot = snapshotFromFixture(
+      `<!doctype html><html lang="en"><head>
+        <title>Structured data test page</title>
+        <meta name="description" content="JSON-LD validation fixture" />
+        <link rel="canonical" href="https://example.com/structured" />
+        <script type="application/ld+json">{
+          "@context": "https://schema.org",
+          "@graph": [
+            {"@id": "#same"},
+            {"@type": "WebPage", "@id": "#same"}
+          ]
+        }</script>
+        <script type="application/ld+json">42</script>
+        <script type="application/ld+json">{"@type":"Thing"}</script>
+      </head><body></body></html>`,
+      'https://example.com/structured',
+    );
+    const { findings } = evaluatePageSnapshot(snapshot);
+    const structured = findings.filter((finding) => finding.category === 'structured-data');
+    expect(structured.map((finding) => finding.ruleId)).toEqual(
+      expect.arrayContaining([
+        'jsonld-node-missing-type',
+        'jsonld-duplicate-id',
+        'jsonld-top-level-non-object',
+        'jsonld-context-missing',
+      ]),
+    );
+    expect(structured.map((finding) => finding.description).join(' ')).not.toMatch(/rich result/i);
+  });
+
   it('triggers missing language and images without alt on no-head pages', () => {
     const snapshot = snapshotFromFixture(FIXTURE_NO_HEAD, 'https://example.com/bare');
     const { findings } = evaluatePageSnapshot(snapshot);

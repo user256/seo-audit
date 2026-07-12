@@ -21,7 +21,7 @@ tickets are archived in [completed/](./completed/).
 1. [206](./206-network-capture-and-safe-fetch-foundation.md) — shared safe network boundary.
 2. [201](./201-response-metadata-and-redirect-capture.md) and [202](./202-robots-txt-fetch-parser-and-evaluator.md) — navigation evidence and robots evaluation.
 3. [203](./203-xml-sitemap-and-hreflang-parser.md) — sitemap parsing, after 202.
-4. [207](./207-hreflang-directive-validation.md) and [208](./208-structured-data-inventory-and-validation.md) — directive and structured-data validation.
+4. [207](./207-hreflang-directive-validation.md) and [208](./208-structured-data-inventory-and-validation.md) — directive and structured-data validation. **208 completed by agent/ticket-208-structured-data.**
 5. [204](./204-indexability-reconciliation-rules.md) — reconcile all captured signals.
 6. [209](./completed/209-check-catalogue-and-availability-model.md) — catalogue + availability model for checks (enabling primitive for the wizard). **Completed by `agent/ticket-209-check-catalogue`.**
 7. [210](./completed/210-audit-wizard-and-check-selection.md) — optional wizard to select which checks run; consent surface reused by Sprint 3 experiments. **Completed by `agent/ticket-210-audit-wizard`.**

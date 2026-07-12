@@ -1,4 +1,5 @@
 import type { Finding } from '../schemas/audit';
+import { inventoryJsonLdEntries, type JsonLdCapturedEntry } from '../structured-data/inventory';
 import { fieldFromEvidence, makeFinding, type Rule } from './types';
 
 const TITLE_SOURCE = 'title';
@@ -35,8 +36,7 @@ const REF = {
     'https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls',
   robots: 'https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag',
   hreflang: 'https://developers.google.com/search/docs/specialty/international/localized-versions',
-  jsonld:
-    'https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data',
+  jsonld: 'https://www.w3.org/TR/json-ld11/',
   lang: 'https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/lang',
   alt: 'https://developers.google.com/search/docs/appearance/google-images',
 } as const;
@@ -406,6 +406,136 @@ export const jsonLdMalformed: Rule = {
           capturedAt: ctx.capturedAt,
         }),
       );
+  },
+};
+
+/**
+ * Inventory JSON-LD syntax already captured by the DOM collector. These are
+ * generic JSON-LD observations, not Rich Results Test or Schema.org validation.
+ */
+export const jsonLdStructuralValidation: Rule = {
+  id: 'jsonld-structural-validation',
+  run(ctx) {
+    const evidence = ctx.evidenceBySource.get(JSONLD_SOURCE);
+    const field = fieldFromEvidence(evidence);
+    if (!field || field.state !== 'present' || !evidence) return [];
+    const entries = field.value as JsonLdCapturedEntry[] | undefined;
+    if (!Array.isArray(entries)) return [];
+
+    const findings: Finding[] = [];
+    for (const inventory of inventoryJsonLdEntries(entries)) {
+      const entryLabel = `JSON-LD script #${inventory.entryIndex + 1}`;
+      if (inventory.parseStatus === 'truncated') {
+        findings.push(
+          makeFinding({
+            id: `jsonld-unevaluated-${inventory.entryIndex}-${evidence.id}`,
+            ruleId: 'jsonld-unevaluated',
+            severity: 'info',
+            category: 'structured-data',
+            affectedUrl: ctx.pageUrl,
+            description: `${entryLabel} was not structurally evaluated because its captured text is incomplete.`,
+            evidenceIds: [evidence.id],
+            recommendation:
+              'Increase the capture budget and rerun the audit before drawing conclusions.',
+            sourceRef: REF.jsonld,
+            capturedAt: ctx.capturedAt,
+          }),
+        );
+        continue;
+      }
+      if (inventory.status === 'unevaluated') continue;
+      if (inventory.topLevel === 'scalar' || inventory.nonObjectTopLevelCount > 0) {
+        findings.push(
+          makeFinding({
+            id: `jsonld-top-level-non-object-${inventory.entryIndex}-${evidence.id}`,
+            ruleId: 'jsonld-top-level-non-object',
+            severity: 'warning',
+            category: 'structured-data',
+            affectedUrl: ctx.pageUrl,
+            description: `${entryLabel} has a non-object top-level value; JSON-LD node data must be an object or array of objects under this audit policy.`,
+            evidenceIds: [evidence.id],
+            recommendation: 'Use an object, an array of objects, or an object containing @graph.',
+            sourceRef: REF.jsonld,
+            capturedAt: ctx.capturedAt,
+          }),
+        );
+      }
+      if (inventory.status === 'limited') {
+        findings.push(
+          makeFinding({
+            id: `jsonld-inventory-limited-${inventory.entryIndex}-${evidence.id}`,
+            ruleId: 'jsonld-inventory-limited',
+            severity: 'info',
+            category: 'structured-data',
+            affectedUrl: ctx.pageUrl,
+            description: `${entryLabel} reached an inventory safety limit; structural observations may be incomplete.`,
+            evidenceIds: [evidence.id],
+            recommendation:
+              'Simplify the payload or inspect it manually before drawing conclusions.',
+            sourceRef: REF.jsonld,
+            capturedAt: ctx.capturedAt,
+          }),
+        );
+      }
+
+      for (const graph of inventory.graphs) {
+        const graphLabel = `${entryLabel}, graph #${graph.index + 1}`;
+        if (graph.context === 'missing' || graph.context === 'malformed') {
+          findings.push(
+            makeFinding({
+              id: `jsonld-context-${graph.context}-${inventory.entryIndex}-${graph.index}-${evidence.id}`,
+              ruleId: `jsonld-context-${graph.context}`,
+              severity: 'warning',
+              category: 'structured-data',
+              affectedUrl: ctx.pageUrl,
+              description:
+                graph.context === 'missing'
+                  ? `${graphLabel} has no @context. This audit policy requires a declared context on each captured graph root.`
+                  : `${graphLabel} has an @context that is not a non-empty string, object, or array of those values.`,
+              evidenceIds: [evidence.id],
+              recommendation:
+                'Declare a local JSON-LD @context value; this audit does not retrieve or validate remote contexts.',
+              sourceRef: REF.jsonld,
+              capturedAt: ctx.capturedAt,
+            }),
+          );
+        }
+        graph.nodes.forEach((node, nodeIndex) => {
+          if (!node.graphNode || node.types.length > 0) return;
+          findings.push(
+            makeFinding({
+              id: `jsonld-node-missing-type-${inventory.entryIndex}-${graph.index}-${nodeIndex}-${evidence.id}`,
+              ruleId: 'jsonld-node-missing-type',
+              severity: 'warning',
+              category: 'structured-data',
+              affectedUrl: ctx.pageUrl,
+              description: `${graphLabel} node ${nodeIndex + 1} has no @type.`,
+              evidenceIds: [evidence.id],
+              recommendation: 'Add an appropriate @type to each root or @graph node.',
+              sourceRef: REF.jsonld,
+              capturedAt: ctx.capturedAt,
+            }),
+          );
+        });
+        graph.duplicateIds.forEach((id, duplicateIndex) => {
+          findings.push(
+            makeFinding({
+              id: `jsonld-duplicate-id-${inventory.entryIndex}-${graph.index}-${duplicateIndex}-${evidence.id}`,
+              ruleId: 'jsonld-duplicate-id',
+              severity: 'warning',
+              category: 'structured-data',
+              affectedUrl: ctx.pageUrl,
+              description: `${graphLabel} repeats @id “${id}”.`,
+              evidenceIds: [evidence.id],
+              recommendation: 'Keep each @id unique within a captured graph.',
+              sourceRef: REF.jsonld,
+              capturedAt: ctx.capturedAt,
+            }),
+          );
+        });
+      }
+    }
+    return findings;
   },
 };
 
