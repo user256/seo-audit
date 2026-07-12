@@ -1,18 +1,18 @@
 # Ticket 109: Sprint 1 Verification and Documentation Reconciliation
 
 **Sprint:** 1 — Inspect One Page  
-**Status:** Done  
+**Status:** In progress  
 **Owner:** unassigned  
 **Estimate:** S
 
 ## Context
 
 Sprint 1 source and tests exist and the quality commands pass, but several
-claims are stale or unproven. The README still says the extension code does not
-exist; Ticket 101 says a generated archive loads although the current build only
-emits `dist/`; and the axe test logs a JSDOM canvas error, so it does not verify
-colour contrast despite the ticket’s AA claim. The review gate needs accurate
-evidence, not optimistic wording.
+claims were stale or unproven. The README said the extension code did not
+exist; Ticket 101 said a generated archive loads although the current build
+only emits `dist/`; and the axe test logged a JSDOM canvas error, so it did not
+verify colour contrast despite the ticket’s AA claim. The review gate needs
+accurate evidence, not optimistic wording.
 
 ## Goal
 
@@ -24,17 +24,18 @@ and browser behaviour.
 - [x] Update README, architecture docs, and completed-ticket notes so they
   accurately describe the implemented extension, current `dist/` output, and
   the fact that ZIP packaging remains Ticket 404 work.
-- [x] Run and record the Sprint 1 manual Chrome smoke checklist in a fresh
+- [ ] Run and record the Sprint 1 manual Chrome smoke checklist in a fresh
   Chrome 114+ profile, including permission grant/denial, unsupported URL,
   collection, persistence after panel close/reopen, report preview, and an
   attempted page navigation during collection.
-- [x] Make accessibility automation signal-rich: eliminate or explicitly skip
-  the JSDOM canvas/colour-contrast false path, and add deterministic contrast
-  assertions or documented measured values for the shipped light/dark tokens.
+- [x] Make accessibility automation signal-rich: explicitly skip the JSDOM
+  canvas/colour-contrast false path, and add deterministic contrast assertions
+  for the shipped light/dark tokens.
 - [x] Add an integration-level side-panel test for the real report editor DOM
   and workspace state transitions; retain unit tests for pure helpers.
-- [x] Correct any Sprint 1 acceptance checkbox that the evidence disproves and
-  attach the final command/browser results to Ticket 199’s review record.
+- [ ] Attach the final command and completed browser results to Ticket 199’s
+  review record; correct any Sprint 1 acceptance checkbox the evidence
+  disproves.
 
 ## Out of scope
 
@@ -50,15 +51,16 @@ and browser behaviour.
 ## Notes / decisions log
 
 - 2026-07-12 — `npm run lint`, `npm test`, `npm run build`, and
-  `npm run package:check` pass. The test run prints a JSDOM canvas
-  "not implemented" error from axe, and `package:check` correctly reports that
-  it is only a manifest stub.
+  `npm run package:check` pass. `package:check` correctly reports that it is
+  only a manifest stub.
 - 2026-07-12 — Disabled axe `color-contrast` under JSDOM; added
   `src/lib/contrast.ts` AA assertions for light/dark tokens. Authored
-  `docs/sprint-1-smoke.md` with automated gate results; browser rows are the
-  operator script for Ticket 199 (cannot be completed without a human Chrome
-  profile). Corrected README / Ticket 101 “archive” wording to `dist/` load-
-  unpacked. Integration coverage in `workspace-integration.test.ts`.
+  `docs/sprint-1-smoke.md` with automated gate results, corrected README / Ticket
+  101 “archive” wording to `dist/` load-unpacked, and added integration coverage
+  in `workspace-integration.test.ts`.
+- 2026-07-12 — PR review confirmed that the browser checklist is an unexecuted
+  operator script, not evidence. The ticket remains open until a fresh Chrome
+  114+ profile completes and records it.
 
 ---
 

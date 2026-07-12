@@ -40,6 +40,5 @@ clear, non-search-feature-specific validation findings.
 ## Dependencies
 
 - **Blocks:** 205, 402
-- **Blocked by:** 107, 103
+- **Blocked by:** 103, 110
 - **External:** generic JSON-LD validation policy/source-reference decision
-

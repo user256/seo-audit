@@ -46,9 +46,12 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
+1. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
+2. [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md)
+3. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
-**Recommended next pick:** **199** — Sprint 1 review gate before Sprint 2.
+**Recommended next pick:** **110** — enforce the source-specific evidence
+contract before the Sprint 1 review gate.
 
 ---
 
@@ -83,6 +86,8 @@ useful from the side panel.
 
 **Tickets:**
 
+- [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
+- [ ] [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
 **Exit criteria:**

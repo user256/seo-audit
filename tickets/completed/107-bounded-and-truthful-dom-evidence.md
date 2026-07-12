@@ -74,6 +74,9 @@ publisher markup or complete source coverage.
   Missing alt is a warning; empty alt is info-only. Robots directives are
   tokenised; `none` maps to noindex+nofollow. Non-HTTP(S) canonical/hreflang
   targets fail SEO URL checks. Navigation races become `CaptureError`s.
+- 2026-07-12 — Post-merge review found that the collector schema validates the
+  generic field envelope but still leaves individual payload values as
+  `unknown`. Ticket 110 tracks source-specific schemas and boundary tests.
 
 ---
 

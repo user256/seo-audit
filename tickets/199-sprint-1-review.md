@@ -32,11 +32,13 @@ Make an evidence-backed decision to begin crawl/index features.
 ## Dependencies
 
 - **Blocks:** 201–205
-- **Blocked by:** 101–109
+- **Blocked by:** 101–110
 - **External:** two representative public test sites
 
 ## Notes / decisions log
 
 - 2026-07-12 — Verification evidence prepared by Ticket 109 in
   `docs/sprint-1-smoke.md` (automated gates recorded; browser checklist is this
-  ticket’s demonstration script).
+  ticket’s demonstration script). The browser rows remain outstanding.
+- 2026-07-12 — Post-merge review filed Ticket 110 for source-specific DOM
+  evidence validation before this gate can confirm the persisted contract.
