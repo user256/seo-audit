@@ -9,8 +9,9 @@ findings. It is an interactive inspector, not a site crawler.
 # Current Product Shape
 
 The repository currently contains the project specification, ticket workflow,
-and toolchain bootstrap (Ticket 100). The first release must establish a safe,
-local-first inspection loop before adding site-wide checks.
+toolchain (100), permission shell (101), and local audit session contract (102).
+The first release must establish a safe, local-first inspection loop before
+adding site-wide checks.
 
 The product will provide:
 
@@ -35,7 +36,7 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | In progress | Audit data contract + session store (102); collector and findings follow |
+| **Sprint 1 — Inspect one page** | In progress | Active-page DOM collector (103); findings engine and workspace follow |
 | **Sprint 2 — Crawl/index signals** | Planned | Add robots, headers, and sitemap inspection on the settled page contract |
 | **Sprint 3 — Comparisons and site checks** | Planned | Add bounded rendering and URL-variant experiments |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
@@ -44,15 +45,14 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 102: Audit Data Contract and Local Session Store](./102-audit-data-contract-and-local-session-store.md)
-2. [Ticket 103: Active-Page DOM Collector](./103-active-page-dom-collector.md)
-3. [Ticket 104: Findings Engine and Page Summary](./104-findings-engine-and-page-summary.md)
-4. [Ticket 105: Markdown Report Editor and Safe Preview](./105-markdown-report-editor-and-safe-preview.md)
-5. [Ticket 106: Audit Workspace and Accessibility Baseline](./106-audit-workspace-and-accessibility-baseline.md)
-6. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
+1. [Ticket 103: Active-Page DOM Collector](./103-active-page-dom-collector.md)
+2. [Ticket 104: Findings Engine and Page Summary](./104-findings-engine-and-page-summary.md)
+3. [Ticket 105: Markdown Report Editor and Safe Preview](./105-markdown-report-editor-and-safe-preview.md)
+4. [Ticket 106: Audit Workspace and Accessibility Baseline](./106-audit-workspace-and-accessibility-baseline.md)
+5. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
-**Recommended next pick:** **102** — versioned audit schemas and IndexedDB
-session storage on top of the permission shell.
+**Recommended next pick:** **103** — capture DOM evidence for the authorised
+active page into the session contract.
 
 ---
 
@@ -87,7 +87,6 @@ useful from the side panel.
 
 **Tickets:**
 
-- [ ] [Ticket 102: Audit Data Contract and Local Session Store](./102-audit-data-contract-and-local-session-store.md)
 - [ ] [Ticket 103: Active-Page DOM Collector](./103-active-page-dom-collector.md)
 - [ ] [Ticket 104: Findings Engine and Page Summary](./104-findings-engine-and-page-summary.md)
 - [ ] [Ticket 105: Markdown Report Editor and Safe Preview](./105-markdown-report-editor-and-safe-preview.md)

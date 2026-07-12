@@ -1,8 +1,8 @@
 # Ticket 102: Audit Data Contract and Local Session Store
 
-**Sprint:** 1 — Inspect One Page  
-**Status:** Not started  
-**Owner:** unassigned  
+**Sprint:** 1 — Inspect One Page
+**Status:** Done
+**Owner:** unassigned
 **Estimate:** M
 
 ## Context
@@ -18,17 +18,17 @@ independently.
 
 ## Acceptance criteria
 
-- [ ] Define documented schemas/types for `AuditSession`, `PageSnapshot`,
+- [x] Define documented schemas/types for `AuditSession`, `PageSnapshot`,
   `Evidence`, `Finding`, and `CaptureError`; findings include all fields in the
   specification plus a stable `ruleId` and capture timestamp.
-- [ ] Save, retrieve, list, and delete sessions through one repository module
+- [x] Save, retrieve, list, and delete sessions through one repository module
   backed by IndexedDB; a storage migration/version strategy is documented.
-- [ ] A session records browser tab URL, final URL, capture time, extension
+- [x] A session records browser tab URL, final URL, capture time, extension
   version, and feature availability without storing cookies, request bodies, or
   credentials.
-- [ ] Invalid records and schema-version mismatches are quarantined as readable
+- [x] Invalid records and schema-version mismatches are quarantined as readable
   errors rather than crashing the side panel.
-- [ ] Unit tests exercise round trips, migration, and invalid-data handling via
+- [x] Unit tests exercise round trips, migration, and invalid-data handling via
   fake IndexedDB; `npm test` passes.
 
 ## Out of scope
@@ -49,3 +49,21 @@ Keep a compact normalised record in IndexedDB and retain only the evidence
 needed to support each result. Treat unavailable capture sources as explicit
 `CaptureError` records, not null findings.
 
+## Notes / decisions log
+
+- 2026-07-12 — Zod schemas in `src/lib/schemas/audit.ts` (`AUDIT_SCHEMA_VERSION =
+  1`); IndexedDB layout versioned separately (`DB_VERSION = 1`). Documented in
+  `docs/data-contract.md`. Invalid reads move to a `quarantine` store.
+- 2026-07-12 — JSON Schema derived via `zod-to-json-schema` for Ticket 402;
+  runtime validation stays on Zod.
+
+---
+
+## Definition of done
+
+This ticket is closeable when:
+
+1. All acceptance criteria above are checked.
+2. Changes are merged to the main branch (or the sprint's working branch).
+3. The corresponding bullet in `tickets/overview.md` is changed from `- [ ]` to `- [x]`.
+4. Any follow-up work discovered during implementation is filed as a new ticket — not silently absorbed.
