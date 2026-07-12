@@ -7,11 +7,14 @@
     <link rel="stylesheet" href="./sidepanel.css" />
   </head>
   <body>
-    <main>
+    <a class="skip-link" href="#workspace-main">Skip to workspace</a>
+    <main id="workspace-main">
       <header>
         <h1>SEO Audit Workbench</h1>
         <p class="lede">Inspect the active tab. Access is granted one origin at a time.</p>
       </header>
+
+      <p id="workspace-phase" class="phase-badge" aria-live="polite"></p>
 
       <section aria-labelledby="tab-heading">
         <h2 id="tab-heading">Active tab</h2>
@@ -25,14 +28,24 @@
             <dd id="access-state">Loading…</dd>
           </div>
         </dl>
-        <p id="status-message" class="status" role="status"></p>
+        <p id="status-message" class="status" role="status" aria-live="polite"></p>
         <div class="actions">
           <button type="button" id="allow-site" hidden>Allow this site</button>
-          <button type="button" id="collect-dom" hidden>Collect DOM snapshot</button>
+          <button type="button" id="collect-dom" hidden>Start audit</button>
           <button type="button" id="refresh" class="secondary">Refresh</button>
           <button type="button" id="ping" class="secondary" hidden>Test page access</button>
+          <button type="button" id="open-report" class="secondary" hidden>Open report</button>
+          <button type="button" id="back-to-findings" class="secondary" hidden>
+            Back to findings
+          </button>
           <p id="collect-summary" class="status" hidden></p>
         </div>
+      </section>
+
+      <section id="findings-section" aria-labelledby="findings-heading" hidden>
+        <h2 id="findings-heading">Findings</h2>
+        <p id="findings-summary" class="lede"></p>
+        <div id="findings-panel"></div>
       </section>
 
       <section id="report-section" aria-labelledby="report-heading" hidden>
@@ -74,7 +87,7 @@
         </div>
         <div class="report-meta">
           <span id="report-word-count">0 words</span>
-          <span id="report-status" class="status" role="status"></span>
+          <span id="report-status" class="status" role="status" aria-live="polite"></span>
         </div>
       </section>
     </main>

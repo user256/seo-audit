@@ -1,22 +1,49 @@
 import type { ExtensionRequest, ExtensionResponse } from '../background/messages';
-import { requestOriginAccess, type ActiveTabSnapshot } from '../lib/tab-access';
+import type { Evidence } from '../lib/schemas/audit';
+import { requestOriginAccess } from '../lib/tab-access';
+import { renderFindingsPanel } from './findings-view';
 import { mountReportEditor, type ReportEditorController } from './report-editor';
 import { viewFromSnapshot } from './view-state';
+import {
+  initialWorkspace,
+  withCollectFailure,
+  withCollecting,
+  withSavedAudit,
+  withTab,
+  type WorkspaceModel,
+} from './workspace-state';
 
 const tabUrlEl = document.querySelector('#tab-url')!;
 const accessStateEl = document.querySelector('#access-state')!;
 const statusEl = document.querySelector('#status-message')!;
+const phaseEl = document.querySelector('#workspace-phase')!;
 const collectSummaryEl = document.querySelector('#collect-summary') as HTMLElement;
 const allowBtn = document.querySelector('#allow-site') as HTMLButtonElement;
 const collectBtn = document.querySelector('#collect-dom') as HTMLButtonElement;
 const refreshBtn = document.querySelector('#refresh') as HTMLButtonElement;
 const pingBtn = document.querySelector('#ping') as HTMLButtonElement;
+const openReportBtn = document.querySelector('#open-report') as HTMLButtonElement;
+const backToFindingsBtn = document.querySelector('#back-to-findings') as HTMLButtonElement;
+const findingsSection = document.querySelector('#findings-section') as HTMLElement;
+const findingsSummaryEl = document.querySelector('#findings-summary')!;
+const findingsPanel = document.querySelector('#findings-panel') as HTMLElement;
 const reportSection = document.querySelector('#report-section') as HTMLElement;
 const reportSessionLabel = document.querySelector('#report-session-label')!;
 
-let snapshot: ActiveTabSnapshot | null = null;
-let activeSessionId: string | null = null;
+let workspace: WorkspaceModel = initialWorkspace();
 let reportEditor: ReportEditorController | null = null;
+let evidenceById = new Map<string, Evidence>();
+let viewingReport = false;
+
+const PHASE_LABEL: Record<WorkspaceModel['phase'], string> = {
+  'unsupported-tab': 'Unsupported tab',
+  'permission-required': 'Permission required',
+  'ready-to-collect': 'Ready to audit',
+  collecting: 'Collecting…',
+  'collected-with-errors': 'Saved with capture issues',
+  'empty-session': 'No session yet',
+  'saved-audit': 'Saved audit',
+};
 
 function setStatus(text: string, kind: 'plain' | 'ok' | 'error' = 'plain'): void {
   statusEl.textContent = text;
@@ -24,15 +51,40 @@ function setStatus(text: string, kind: 'plain' | 'ok' | 'error' = 'plain'): void
   statusEl.classList.toggle('is-error', kind === 'error');
 }
 
-function applyView(next: ActiveTabSnapshot): void {
-  snapshot = next;
-  const view = viewFromSnapshot(next);
-  tabUrlEl.textContent = view.urlLabel;
-  accessStateEl.textContent = view.accessLabel;
-  allowBtn.hidden = !view.showAllow;
-  pingBtn.hidden = !view.showPing;
-  collectBtn.hidden = !view.showCollect;
-  setStatus(view.status, view.statusKind);
+function renderWorkspace(): void {
+  phaseEl.textContent = `State: ${PHASE_LABEL[workspace.phase]}`;
+  const tab = workspace.tab;
+  if (tab) {
+    const view = viewFromSnapshot(tab);
+    tabUrlEl.textContent = view.urlLabel;
+    accessStateEl.textContent = view.accessLabel;
+    allowBtn.hidden = !view.showAllow;
+    pingBtn.hidden = !view.showPing;
+    collectBtn.hidden = !(view.showCollect && workspace.phase !== 'collecting');
+  } else {
+    tabUrlEl.textContent = '—';
+    accessStateEl.textContent = 'Unavailable';
+    allowBtn.hidden = true;
+    pingBtn.hidden = true;
+    collectBtn.hidden = true;
+  }
+
+  collectBtn.disabled = workspace.phase === 'collecting';
+  setStatus(workspace.statusMessage, workspace.statusKind);
+
+  const hasSession = Boolean(workspace.sessionId);
+  findingsSection.hidden = !hasSession || viewingReport;
+  reportSection.hidden = !hasSession || !viewingReport;
+  openReportBtn.hidden = !hasSession || viewingReport;
+  backToFindingsBtn.hidden = !hasSession || !viewingReport;
+
+  if (hasSession && !viewingReport) {
+    const summary = workspace.summary;
+    findingsSummaryEl.textContent = summary
+      ? `${summary.totalFindings} findings · indexability ${summary.indexability.status}. ${summary.indexability.reason}`
+      : '';
+    renderFindingsPanel(findingsPanel, workspace.findings, evidenceById);
+  }
 }
 
 async function send<T extends ExtensionResponse>(message: ExtensionRequest): Promise<T> {
@@ -40,15 +92,11 @@ async function send<T extends ExtensionResponse>(message: ExtensionRequest): Pro
 }
 
 function ensureReportEditor(sessionId: string, initialMarkdown: string): void {
-  activeSessionId = sessionId;
-  reportSection.hidden = false;
   reportSessionLabel.textContent = `Session ${sessionId} — Markdown is saved locally; preview HTML is not stored.`;
-
   if (reportEditor) {
     reportEditor.setMarkdown(initialMarkdown);
     return;
   }
-
   reportEditor = mountReportEditor(
     {
       textarea: document.querySelector('#report-markdown') as HTMLTextAreaElement,
@@ -64,10 +112,10 @@ function ensureReportEditor(sessionId: string, initialMarkdown: string): void {
     {
       initialMarkdown,
       onAutosave: async (markdown) => {
-        if (!activeSessionId) return;
+        if (!workspace.sessionId) return;
         const response = await send<ExtensionResponse>({
           type: 'SAVE_REPORT_MARKDOWN',
-          sessionId: activeSessionId,
+          sessionId: workspace.sessionId,
           markdown,
         });
         if (response.type === 'ERROR') {
@@ -89,17 +137,17 @@ async function refresh(): Promise<void> {
     setStatus('Unexpected response from the extension service worker.', 'error');
     return;
   }
-  applyView(response.snapshot);
+  workspace = withTab(workspace, response.snapshot);
+  renderWorkspace();
 }
 
 async function allowSite(): Promise<void> {
-  if (!snapshot || snapshot.status !== 'ready') {
-    return;
-  }
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready') return;
   allowBtn.disabled = true;
-  setStatus(`Requesting access to ${snapshot.origin}…`);
+  setStatus(`Requesting access to ${tab.origin}…`);
   try {
-    const granted = await requestOriginAccess(snapshot.pattern);
+    const granted = await requestOriginAccess(tab.pattern);
     if (!granted) {
       setStatus('Permission was not granted.', 'error');
       return;
@@ -114,15 +162,14 @@ async function allowSite(): Promise<void> {
 }
 
 async function ping(): Promise<void> {
-  if (!snapshot || snapshot.status !== 'ready' || !snapshot.granted) {
-    return;
-  }
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted) return;
   pingBtn.disabled = true;
   setStatus('Injecting test content script…');
   try {
     const response = await send<ExtensionResponse>({
       type: 'PING_ACTIVE_TAB',
-      tabId: snapshot.tabId,
+      tabId: tab.tabId,
     });
     if (response.type === 'ERROR') {
       setStatus(response.message, 'error');
@@ -143,32 +190,44 @@ async function ping(): Promise<void> {
 }
 
 async function collectDom(): Promise<void> {
-  if (!snapshot || snapshot.status !== 'ready' || !snapshot.granted) {
-    return;
-  }
-  collectBtn.disabled = true;
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted) return;
+  workspace = withCollecting(workspace);
+  renderWorkspace();
   collectSummaryEl.hidden = true;
-  setStatus('Collecting DOM snapshot…');
   try {
     const response = await send<ExtensionResponse>({ type: 'COLLECT_DOM_SNAPSHOT' });
     if (response.type === 'ERROR') {
-      setStatus(response.message, 'error');
+      workspace = withCollectFailure(workspace, response.message);
+      renderWorkspace();
       return;
     }
     if (response.type !== 'COLLECT_DOM_RESULT') {
-      setStatus('Unexpected collect response.', 'error');
+      workspace = withCollectFailure(workspace, 'Unexpected collect response.');
+      renderWorkspace();
       return;
     }
     if (!response.result.ok) {
-      setStatus(response.result.error, 'error');
+      workspace = withCollectFailure(
+        workspace,
+        response.result.error,
+        response.result.captureError,
+      );
+      renderWorkspace();
       return;
     }
-    setStatus(
-      `Saved session ${response.result.sessionId}: ${response.result.summary.totalFindings} findings (${response.result.evidenceCount} evidence items). Indexability: ${response.result.summary.indexability.status}.`,
-      'ok',
+
+    evidenceById = new Map(
+      response.result.snapshot.evidence.map((item) => [item.id, item] as const),
     );
+    workspace = withSavedAudit(workspace, {
+      sessionId: response.result.sessionId,
+      findings: response.result.findings,
+      summary: response.result.summary,
+    });
+    viewingReport = false;
     collectSummaryEl.hidden = false;
-    collectSummaryEl.textContent = `Snapshot URL: ${response.result.snapshot.url}. ${response.result.summary.indexability.reason}`;
+    collectSummaryEl.textContent = `Snapshot URL: ${response.result.snapshot.url}`;
 
     const loaded = await send<ExtensionResponse>({
       type: 'LOAD_SESSION',
@@ -177,6 +236,7 @@ async function collectDom(): Promise<void> {
     if (loaded.type === 'SESSION_LOADED' && loaded.result.status === 'ok') {
       ensureReportEditor(loaded.result.session.id, loaded.result.session.reportMarkdown ?? '');
     }
+    renderWorkspace();
   } finally {
     collectBtn.disabled = false;
   }
@@ -194,5 +254,21 @@ pingBtn.addEventListener('click', () => {
 collectBtn.addEventListener('click', () => {
   void collectDom();
 });
+openReportBtn.addEventListener('click', () => {
+  viewingReport = true;
+  renderWorkspace();
+  (document.querySelector('#report-markdown') as HTMLTextAreaElement | null)?.focus();
+});
+backToFindingsBtn.addEventListener('click', () => {
+  viewingReport = false;
+  renderWorkspace();
+  findingsHeadingFocus();
+});
+
+function findingsHeadingFocus(): void {
+  const heading = document.querySelector('#findings-heading') as HTMLElement | null;
+  heading?.setAttribute('tabindex', '-1');
+  heading?.focus();
+}
 
 void refresh();

@@ -1,23 +1,74 @@
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
   font-family: 'Segoe UI', system-ui, sans-serif;
   line-height: 1.5;
-  color: #1a1a1a;
-  background: #f7f7f5;
+  --bg: #f7f7f5;
+  --fg: #1a1a1a;
   --border: #d8d8d2;
   --muted: #555;
   --accent: #0b5fff;
   --accent-text: #fff;
   --danger: #8a1f1f;
   --ok: #0b6b3a;
+  --surface: #fff;
+  --focus: #0b5fff;
+  --sev-info-bg: #e8f1ff;
+  --sev-info-fg: #0b3a8a;
+  --sev-warning-bg: #fff4df;
+  --sev-warning-fg: #7a4b00;
+  --sev-error-bg: #fde8e8;
+  --sev-error-fg: #8a1f1f;
+  --sev-critical-bg: #f5d6d6;
+  --sev-critical-fg: #5c0b0b;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12141a;
+    --fg: #eceef2;
+    --border: #3a3f4b;
+    --muted: #b0b6c2;
+    --accent: #6ea8ff;
+    --accent-text: #0b1220;
+    --danger: #ffb4b4;
+    --ok: #7ddea4;
+    --surface: #1b1f2a;
+    --focus: #9ec1ff;
+    --sev-info-bg: #1a2a44;
+    --sev-info-fg: #cfe0ff;
+    --sev-warning-bg: #3a2d12;
+    --sev-warning-fg: #ffd999;
+    --sev-error-bg: #3a1818;
+    --sev-error-fg: #ffc9c9;
+    --sev-critical-bg: #4a1414;
+    --sev-critical-fg: #ffd0d0;
+  }
 }
 
 body {
   margin: 0;
+  min-width: 320px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  background: var(--surface);
+  color: var(--fg);
+  padding: 0.5rem 0.75rem;
+  z-index: 10;
+}
+
+.skip-link:focus {
+  left: 0.5rem;
+  top: 0.5rem;
 }
 
 main {
-  padding: 1.25rem;
+  padding: 1rem;
   display: grid;
   gap: 1.25rem;
 }
@@ -39,6 +90,13 @@ h2 {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.phase-badge {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--muted);
 }
 
@@ -104,13 +162,21 @@ button:disabled {
 }
 
 button.secondary {
-  background: #fff;
-  color: #1a1a1a;
+  background: var(--surface);
+  color: var(--fg);
   border-color: var(--border);
 }
 
-button[hidden] {
-  display: none;
+button[hidden],
+section[hidden],
+#report-section[hidden],
+#findings-section[hidden] {
+  display: none !important;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .sr-only {
@@ -123,10 +189,6 @@ button[hidden] {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-#report-section[hidden] {
-  display: none;
 }
 
 .report-modes {
@@ -143,8 +205,8 @@ button[hidden] {
 }
 
 .report-toolbar button {
-  background: #fff;
-  color: #1a1a1a;
+  background: var(--surface);
+  color: var(--fg);
   border-color: var(--border);
   padding: 0.3rem 0.55rem;
   font-size: 0.8rem;
@@ -161,14 +223,14 @@ button[hidden] {
   border: 1px solid var(--border);
   border-radius: 6px;
   resize: vertical;
-  background: #fff;
+  background: var(--surface);
   color: inherit;
 }
 
 .report-preview {
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--surface);
   padding: 0.75rem 1rem;
   min-height: 12rem;
 }
@@ -193,4 +255,91 @@ button[hidden] {
 
 .report-meta .status {
   margin: 0;
+}
+
+.finding-category {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.finding-category > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.finding-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.finding-item {
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+.finding-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.severity {
+  display: inline-block;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.severity-info {
+  background: var(--sev-info-bg);
+  color: var(--sev-info-fg);
+}
+
+.severity-warning {
+  background: var(--sev-warning-bg);
+  color: var(--sev-warning-fg);
+}
+
+.severity-error {
+  background: var(--sev-error-bg);
+  color: var(--sev-error-fg);
+}
+
+.severity-critical {
+  background: var(--sev-critical-bg);
+  color: var(--sev-critical-fg);
+}
+
+.finding-rec {
+  color: var(--muted);
+}
+
+.finding-evidence {
+  margin: 0.5rem 0;
+}
+
+.finding-source a {
+  color: var(--accent);
+}
+
+@media (max-width: 320px) {
+  main {
+    padding: 0.75rem;
+  }
+
+  .actions button {
+    flex: 1 1 calc(50% - 0.5rem);
+    min-width: 8.5rem;
+  }
 }

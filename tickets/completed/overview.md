@@ -7,4 +7,5 @@
 - [x] [Ticket 103: Active-Page DOM Collector](./103-active-page-dom-collector.md)
 - [x] [Ticket 104: Findings Engine and Page Summary](./104-findings-engine-and-page-summary.md)
 - [x] [Ticket 105: Markdown Report Editor and Safe Preview](./105-markdown-report-editor-and-safe-preview.md)
+- [x] [Ticket 106: Audit Workspace and Accessibility Baseline](./106-audit-workspace-and-accessibility-baseline.md)
 
