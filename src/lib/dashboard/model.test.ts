@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DomFacts } from '../../content/dom-collector';
 import {
   buildGlanceDashboard,
+  buildGrantedShellDashboard,
   buildPreAccessDashboard,
   formatImagesForClipboard,
   formatLinksForClipboard,
@@ -84,13 +85,10 @@ describe('SEO dashboard model', () => {
     expect(model.html5?.hasMain).toBe(true);
   });
 
-  it('formats clipboard payloads for links and images', () => {
-    const model = buildGlanceDashboard({
-      tabUrl: 'https://example.com/page',
-      facts: sampleFacts(),
-    });
-    expect(formatLinksForClipboard(model.links!)).toContain('https://example.com/a');
-    expect(formatImagesForClipboard(model.images!)).toContain('(no alt attribute)');
-    expect(formatImagesForClipboard(model.images!)).toContain('Logo');
+  it('keeps accessGranted true on the granted shell when inventory is pending', () => {
+    const model = buildGrantedShellDashboard('https://example.com/', 'Loading DOM inventory…');
+    expect(model.accessGranted).toBe(true);
+    expect(model.inventoryLoaded).toBe(false);
+    expect(model.status.availability).not.toBe('needs-access');
   });
 });

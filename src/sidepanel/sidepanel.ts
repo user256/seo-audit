@@ -1,6 +1,7 @@
 import type { ExtensionRequest, ExtensionResponse } from '../background/messages';
 import {
   buildGlanceDashboard,
+  buildGrantedShellDashboard,
   buildPreAccessDashboard,
   type SeoDashboardModel,
 } from '../lib/dashboard/model';
@@ -112,20 +113,55 @@ async function loadGlanceDashboard(): Promise<void> {
     return;
   }
 
+  // Never show the pre-access “needs site access” shell once granted.
+  dashboard = buildGrantedShellDashboard(tab.url, 'Loading DOM inventory…');
+
   const response = await send<ExtensionResponse>({ type: 'GLANCE_DOM_INVENTORY' });
+  if (response.type === 'ERROR') {
+    dashboard = buildGrantedShellDashboard(
+      tab.url,
+      `Glance failed: ${response.message}. Click Refresh to retry.`,
+    );
+    workspace = {
+      ...workspace,
+      statusMessage: response.message,
+      statusKind: 'error',
+    };
+    return;
+  }
   if (response.type !== 'GLANCE_DOM_RESULT') {
-    dashboard = buildPreAccessDashboard(tab.url);
+    dashboard = buildGrantedShellDashboard(
+      tab.url,
+      'Glance returned an unexpected response. Reload the extension, then Refresh.',
+    );
+    workspace = {
+      ...workspace,
+      statusMessage: 'Unexpected glance response from the service worker.',
+      statusKind: 'error',
+    };
     return;
   }
   if (!response.result.ok) {
-    dashboard = buildPreAccessDashboard(tab.url);
-    setStatus(response.result.error, 'error');
+    dashboard = buildGrantedShellDashboard(
+      tab.url,
+      `Glance failed (${response.result.code}): ${response.result.error}`,
+    );
+    workspace = {
+      ...workspace,
+      statusMessage: response.result.error,
+      statusKind: 'error',
+    };
     return;
   }
   dashboard = buildGlanceDashboard({
     tabUrl: response.result.tabUrl,
     facts: response.result.facts,
   });
+  workspace = {
+    ...workspace,
+    statusMessage: 'Page glance updated from the live tab.',
+    statusKind: 'ok',
+  };
 }
 
 async function send<T extends ExtensionResponse>(message: ExtensionRequest): Promise<T> {
@@ -194,9 +230,6 @@ async function refresh(): Promise<void> {
   }
   workspace = withTab(workspace, response.snapshot);
   await loadGlanceDashboard();
-  if (workspace.tab?.status === 'ready' && workspace.tab.granted && dashboard?.inventoryLoaded) {
-    setStatus('Page glance updated from the live tab.', 'ok');
-  }
   renderWorkspace();
 }
 
@@ -243,6 +276,11 @@ async function ping(): Promise<void> {
       return;
     }
     setStatus(`Page access ok — content script saw ${response.result.href}`, 'ok');
+    await loadGlanceDashboard();
+    renderWorkspace();
+    if (dashboard?.inventoryLoaded) {
+      setStatus(`Page access ok — glance loaded for ${response.result.href}`, 'ok');
+    }
   } finally {
     pingBtn.disabled = false;
   }

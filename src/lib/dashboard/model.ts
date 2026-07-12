@@ -136,6 +136,41 @@ export function buildPreAccessDashboard(tabUrl: string): SeoDashboardModel {
   };
 }
 
+/** Shown when access is granted but inventory has not loaded or failed. */
+export function buildGrantedShellDashboard(tabUrl: string, detail: string): SeoDashboardModel {
+  const base = buildPreAccessDashboard(tabUrl);
+  return {
+    ...base,
+    accessGranted: true,
+    status: {
+      availability: 'unavailable',
+      code: null,
+      detail: 'HTTP status is not captured yet (Ticket 201).',
+    },
+    journey: {
+      availability: 'unavailable',
+      hops: [{ url: tabUrl, status: null }],
+      detail,
+    },
+    indexability: {
+      status: 'unknown',
+      summary: detail,
+      rows: [
+        { label: 'Final tab URL', value: tabUrl, source: 'chrome.tabs' },
+        { label: 'Canonical', value: 'inventory pending', source: 'dom' },
+        { label: 'Meta robots', value: 'inventory pending', source: 'dom' },
+        {
+          label: 'HTTP headers / X-Robots-Tag',
+          value: 'unavailable',
+          source: 'network',
+        },
+        { label: 'robots.txt', value: 'not fetched', source: 'robots' },
+      ],
+    },
+    inventoryLoaded: false,
+  };
+}
+
 /** Glance dashboard from DOM inventory. Network rows stay unavailable until Ticket 201. */
 export function buildGlanceDashboard(input: {
   tabUrl: string;

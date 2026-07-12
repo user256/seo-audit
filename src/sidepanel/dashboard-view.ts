@@ -39,9 +39,11 @@ export function renderSeoDashboard(container: HTMLElement, model: SeoDashboardMo
   const lede = el(
     'p',
     'lede',
-    model.accessGranted
+    model.inventoryLoaded
       ? 'Inventory from the live tab. Start audit runs rule tests and saves a session.'
-      : 'Allow this site to load status, redirects, and page inventory.',
+      : model.accessGranted
+        ? 'Site access is granted — loading page inventory (or Refresh if this looks stuck).'
+        : 'Allow this site to load status, redirects, and page inventory.',
   );
   container.append(lede);
 
