@@ -56,9 +56,9 @@
         <h2 id="report-heading">Audit report</h2>
         <p class="lede" id="report-session-label"></p>
         <div class="report-modes" role="group" aria-label="Report view mode">
-          <button type="button" id="report-mode-source" aria-pressed="true">Source</button>
+          <button type="button" id="report-mode-source" aria-pressed="true">Analyst notes</button>
           <button type="button" id="report-mode-preview" class="secondary" aria-pressed="false">
-            Preview
+            Report preview
           </button>
         </div>
         <div
@@ -78,12 +78,12 @@
           <button type="button" data-format="table" title="Table">Table</button>
         </div>
         <div id="report-source-panel">
-          <label class="sr-only" for="report-markdown">Report Markdown source</label>
+          <label class="sr-only" for="report-markdown">Analyst notes in Markdown</label>
           <textarea
             id="report-markdown"
             rows="12"
             spellcheck="true"
-            placeholder="Write audit notes in Markdown…"
+            placeholder="Write analyst notes in Markdown…"
           ></textarea>
         </div>
         <div id="report-preview-panel" class="report-preview" hidden>

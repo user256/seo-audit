@@ -72,6 +72,15 @@ Session envelope: `tabUrl`, `finalUrl`, `captureTime`, `extensionVersion`,
 `featureAvailability`, snapshots, findings, capture errors, and
 `reportMarkdown` (Ticket 105). Preview HTML is never persisted.
 
+## Composed audit report (Ticket 112)
+
+`buildAuditReport(session)` produces the single in-memory report contract for
+the side-panel preview: audit metadata, checks run/skipped, finding counts,
+captured page facts, capture issues, finding evidence, and analyst notes. The
+notes remain the only editable persisted report text; the complete Markdown
+preview is deterministic and regenerated from the session. Ticket 402 consumes
+this same contract for Markdown/JSON export rather than re-composing it.
+
 ## Storage API
 
 `SessionRepository` (`src/lib/storage/session-repository.ts`):

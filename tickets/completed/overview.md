@@ -11,3 +11,4 @@
 - [x] [Ticket 107: Bounded and Truthful DOM Evidence](./107-bounded-and-truthful-dom-evidence.md)
 - [x] [Ticket 108: Report Editor Isolation and Recovery](./108-report-editor-isolation-and-recovery.md)
 - [x] [Ticket 111: SEO Dashboard and Audit Phases](./111-seo-dashboard-and-audit-phases.md)
+- [x] [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md)

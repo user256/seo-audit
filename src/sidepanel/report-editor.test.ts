@@ -1,5 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mountReportEditor, type ReportEditorHost } from './report-editor';
+import { buildAuditReport } from '../lib/report/audit-report';
+import { createEmptySession } from '../lib/storage/session-repository';
+
+const report = buildAuditReport(
+  createEmptySession({
+    id: 'session',
+    tabUrl: 'https://example.test/',
+    finalUrl: 'https://example.test/',
+    extensionVersion: '0.1.0',
+    featureAvailability: { domCollector: true },
+    captureTime: '2026-07-12T00:00:00.000Z',
+  }),
+);
 
 function makeHost(): ReportEditorHost {
   document.body.innerHTML = `
@@ -48,6 +61,7 @@ describe('mountReportEditor', () => {
     const editor = mountReportEditor(host, {
       sessionId: 'sess-a',
       initialMarkdown: '',
+      report,
       debounceMs: 100,
       onAutosave,
     });
@@ -77,6 +91,7 @@ describe('mountReportEditor', () => {
     const first = mountReportEditor(host, {
       sessionId: 'sess-old',
       initialMarkdown: '',
+      report,
       debounceMs: 200,
       onAutosave: async (sessionId, markdown) => {
         saves.push({ sessionId, markdown });
@@ -93,6 +108,7 @@ describe('mountReportEditor', () => {
     const second = mountReportEditor(host, {
       sessionId: 'sess-new',
       initialMarkdown: '',
+      report,
       debounceMs: 200,
       onAutosave: async (sessionId, markdown) => {
         saves.push({ sessionId, markdown });
@@ -113,6 +129,7 @@ describe('mountReportEditor', () => {
     const editor = mountReportEditor(host, {
       sessionId: 'sess-a',
       debounceMs: 300,
+      report,
       onAutosave,
     });
 
@@ -128,6 +145,7 @@ describe('mountReportEditor', () => {
     const editor = mountReportEditor(host, {
       sessionId: 'sess-a',
       debounceMs: 50,
+      report,
       onAutosave: async () => {
         throw new Error('boom');
       },
@@ -154,6 +172,7 @@ describe('mountReportEditor', () => {
     const editor = mountReportEditor(host, {
       sessionId: 'sess-a',
       initialMarkdown: '![x](https://evil/x.png)\n\n<div>raw</div>\n\n[ok](https://example.com)',
+      report,
       onAutosave: async () => undefined,
     });
     host.modePreviewBtn.click();

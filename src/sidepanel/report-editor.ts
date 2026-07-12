@@ -1,6 +1,7 @@
 import { applyMarkdownFormat, countWords, type FormatAction } from '../lib/report/format';
 import { createDebouncedSaver } from '../lib/report/autosave';
 import { renderSafeMarkdownPreview } from '../lib/report/preview';
+import { renderAuditReportMarkdown, type AuditReport } from '../lib/report/audit-report';
 
 export type ReportEditorHost = {
   textarea: HTMLTextAreaElement;
@@ -21,6 +22,7 @@ export type ReportEditorController = {
   getMarkdown: () => string;
   isDirty: () => boolean;
   setDirty: (dirty: boolean) => void;
+  showPreview: () => void;
   /** Persist any pending debounce immediately (rejects if save fails). */
   flush: () => Promise<void>;
   /**
@@ -42,6 +44,7 @@ export function mountReportEditor(
   options: {
     sessionId: string;
     initialMarkdown?: string;
+    report: AuditReport;
     onAutosave: (sessionId: string, markdown: string) => void | Promise<void>;
     debounceMs?: number;
   },
@@ -84,7 +87,9 @@ export function mountReportEditor(
   };
 
   const showPreview = (): void => {
-    host.preview.innerHTML = renderSafeMarkdownPreview(host.textarea.value);
+    host.preview.innerHTML = renderSafeMarkdownPreview(
+      renderAuditReportMarkdown(options.report, host.textarea.value),
+    );
     host.sourcePanel.hidden = true;
     host.previewPanel.hidden = false;
     host.modeSourceBtn.setAttribute('aria-pressed', 'false');
@@ -165,7 +170,9 @@ export function mountReportEditor(
       dirty = false;
       setStatus('', 'plain');
       if (!host.previewPanel.hidden) {
-        host.preview.innerHTML = renderSafeMarkdownPreview(markdown);
+        host.preview.innerHTML = renderSafeMarkdownPreview(
+          renderAuditReportMarkdown(options.report, markdown),
+        );
       }
     },
     getMarkdown: () => host.textarea.value,
@@ -173,6 +180,7 @@ export function mountReportEditor(
     setDirty: (value: boolean) => {
       dirty = value;
     },
+    showPreview,
     async flush() {
       if (destroyed) return;
       await saver.flush();

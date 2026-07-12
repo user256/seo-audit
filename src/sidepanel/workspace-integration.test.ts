@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mountReportEditor } from './report-editor';
+import { buildAuditReport } from '../lib/report/audit-report';
+import { createEmptySession } from '../lib/storage/session-repository';
 import {
   initialWorkspace,
   withCollectFailure,
@@ -55,6 +57,17 @@ const finding: Finding = {
   capturedAt: '2026-07-12T12:00:00.000Z',
 };
 
+const report = buildAuditReport(
+  createEmptySession({
+    id: 'report-session',
+    tabUrl: 'https://example.com/',
+    finalUrl: 'https://example.com/',
+    captureTime: '2026-07-12T12:00:00.000Z',
+    extensionVersion: '0.1.0',
+    featureAvailability: { domCollector: true },
+  }),
+);
+
 describe('side-panel workspace + report editor integration', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -105,6 +118,7 @@ describe('side-panel workspace + report editor integration', () => {
     const editor = mountReportEditor(host, {
       sessionId: model.sessionId!,
       initialMarkdown: 'Initial notes',
+      report,
       debounceMs: 50,
       onAutosave: async (sessionId, markdown) => {
         saves.push({ sessionId, markdown });
@@ -131,6 +145,7 @@ describe('side-panel workspace + report editor integration', () => {
     const editor = mountReportEditor(host, {
       sessionId: 'sess-existing',
       initialMarkdown: 'Keep me',
+      report,
       debounceMs: 40,
       onAutosave: async () => undefined,
     });
