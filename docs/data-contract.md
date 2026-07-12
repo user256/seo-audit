@@ -39,7 +39,8 @@ One capture of a URL plus its evidence list.
 ### `AuditSession`
 
 Session envelope: `tabUrl`, `finalUrl`, `captureTime`, `extensionVersion`,
-`featureAvailability`, snapshots, findings, and capture errors.
+`featureAvailability`, snapshots, findings, capture errors, and
+`reportMarkdown` (Ticket 105). Preview HTML is never persisted.
 
 ## Storage API
 
