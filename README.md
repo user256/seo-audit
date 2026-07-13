@@ -101,12 +101,14 @@ ticket:
   finding.
 - **Local-first.** Audits are stored in the browser (IndexedDB). No audit URL,
   page body, or report is sent to a third party in this programme. No telemetry.
-- **Least privilege.** Page/network access is requested per-origin at the user's
-  action, not declared as blanket `<all_urls>` host access.
+- **Broad HTTP(S) host access.** The extension may declare required host
+  permissions for `http(s)://*/*` so multi-host sitemap/hreflang/robots work
+  without a per-origin Allow gate (Ticket 212). Unsupported schemes stay
+  blocked; fetches remain capped and user-started when they touch many URLs.
 - **Honest about limits.** “JavaScript off” and Googlebot-style rendering are
   _comparison experiments_, not a promise to reproduce Google Search. Every
-  feature that reloads a page, changes a setting, or attaches a debugger requires
-  a user action and an explanation first.
+  feature that reloads a page, changes a setting, attaches a debugger, or
+  fetches a URL cluster requires a user action and an explanation first.
 
 ---
 

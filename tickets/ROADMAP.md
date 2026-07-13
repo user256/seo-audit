@@ -16,13 +16,15 @@ Completed remediations on this lane: 113–115.
 
 ## Next — Sprint 2: Crawl and index signals
 
-1. [206](./206-network-capture-and-safe-fetch-foundation.md) — shared safe network boundary.
-2. [201](./201-response-metadata-and-redirect-capture.md) and [202](./202-robots-txt-fetch-parser-and-evaluator.md) — navigation evidence and robots evaluation.
-3. [203](./203-xml-sitemap-and-hreflang-parser.md) — sitemap parsing, after 202.
-4. [207](./207-hreflang-directive-validation.md) — directive validation.
-5. [204](./204-indexability-reconciliation-rules.md) — reconcile all captured signals.
-6. [205](./205-crawl-signals-workspace.md) — present the evidence in the workspace.
-7. [299](./299-sprint-2-review.md) — Sprint 2 go/no-go.
+1. [212](./212-broad-host-permissions.md) — required HTTP(S) host permissions; drop Allow-this-site NUX.
+2. [206](./206-network-capture-and-safe-fetch-foundation.md) — shared safe network boundary (caps still apply).
+3. [201](./201-response-metadata-and-redirect-capture.md) and [202](./202-robots-txt-fetch-parser-and-evaluator.md) — navigation evidence and robots evaluation.
+4. [203](./203-xml-sitemap-and-hreflang-parser.md) — sitemap parsing, after 202.
+5. [207](./207-hreflang-directive-validation.md) — structural hreflang validation on captured evidence.
+6. [213](./213-hreflang-page-cluster-validation.md) — opt-in fetch of alternates for a given page (Hreflang Pro–style).
+7. [204](./204-indexability-reconciliation-rules.md) — reconcile all captured signals.
+8. [205](./205-crawl-signals-workspace.md) — present the evidence in the workspace.
+9. [299](./299-sprint-2-review.md) — Sprint 2 go/no-go.
 
 Completed out of sequence: [208](./completed/208-structured-data-inventory-and-validation.md), [209](./completed/209-check-catalogue-and-availability-model.md), [210](./completed/210-audit-wizard-and-check-selection.md), and [211](./completed/211-register-structured-data-check.md).
 
