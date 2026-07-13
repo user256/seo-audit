@@ -9,11 +9,10 @@ tickets are archived in [completed/](./completed/).
 
 ## Now — finish the Sprint 1 gate
 
-1. [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md) — blocks 199.
-2. [Ticket 114: DOM Evidence Save-Boundary Enforcement](./114-dom-evidence-save-boundary-enforcement.md) — blocks 199 and 208.
-3. [Ticket 115: Long-URL DOM Capture Bounds](./115-long-url-dom-capture-bounds.md) — blocks 199.
-4. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally**.
-5. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — after 109 and 113–115.
+1. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally** (fresh Chrome 114+ smoke record).
+2. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — after 109.
+
+Completed remediations on this lane: 113–115.
 
 ## Next — Sprint 2: Crawl and index signals
 

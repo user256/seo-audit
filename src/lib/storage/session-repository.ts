@@ -1,5 +1,6 @@
 import {
   AUDIT_SCHEMA_VERSION,
+  assertDomEvidenceSaveBoundary,
   parseAuditSession,
   QuarantinedRecordSchema,
   type AuditSession,
@@ -44,6 +45,10 @@ export class SessionRepository {
   }
 
   async save(session: AuditSession): Promise<AuditSession> {
+    const boundary = assertDomEvidenceSaveBoundary(session);
+    if (!boundary.ok) {
+      throw new Error(`Refusing to save invalid session: ${boundary.issues?.join('; ')}`);
+    }
     const parsed = parseAuditSession(session);
     if (!parsed.ok) {
       throw new Error(`Refusing to save invalid session: ${parsed.issues?.join('; ')}`);

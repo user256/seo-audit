@@ -13,6 +13,9 @@
 - [x] [Ticket 111: SEO Dashboard and Audit Phases](./111-seo-dashboard-and-audit-phases.md)
 - [x] [Ticket 110: Source-Specific DOM Evidence Validation](./110-source-specific-dom-evidence-validation.md)
 - [x] [Ticket 112: Structured Audit Report View](./112-structured-audit-report-view.md)
+- [x] [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md)
+- [x] [Ticket 114: DOM Evidence Save-Boundary Enforcement](./114-dom-evidence-save-boundary-enforcement.md)
+- [x] [Ticket 115: Long-URL DOM Capture Bounds](./115-long-url-dom-capture-bounds.md)
 
 # Sprint 2: Crawl and Index Signals
 

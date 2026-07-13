@@ -10,6 +10,8 @@ export const DEFAULT_MAX_JSON_LD_CHARS = 50_000;
 
 export type DomCollectLimits = {
   maxStringChars: number;
+  /** Document/base URL cap (applied in the extension process after race checks). */
+  maxUrlChars: number;
   maxMetaItems: number;
   maxAlternateItems: number;
   maxJsonLdChars: number;
@@ -21,6 +23,7 @@ export type DomCollectLimits = {
 
 export const DEFAULT_DOM_COLLECT_LIMITS: DomCollectLimits = {
   maxStringChars: 2_000,
+  maxUrlChars: 8_192,
   maxMetaItems: 40,
   maxAlternateItems: 50,
   maxJsonLdChars: DEFAULT_MAX_JSON_LD_CHARS,
@@ -98,6 +101,7 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
   // Inline defaults — do not reference DEFAULT_DOM_COLLECT_LIMITS here.
   const fallback: DomCollectLimits = {
     maxStringChars: 2_000,
+    maxUrlChars: 8_192,
     maxMetaItems: 40,
     maxAlternateItems: 50,
     maxJsonLdChars: 50_000,

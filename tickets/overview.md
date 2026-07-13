@@ -37,7 +37,7 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | Blocked | Run the remaining fresh-Chrome smoke evidence after Ticket 110's schema hardening |
+| **Sprint 1 — Inspect one page** | Blocked | Fresh Chrome 114+ smoke (Ticket 109), then Ticket 199 go/no-go |
 | **Sprint 2 — Crawl/index signals** | Planned | Add robots, headers, and sitemap inspection on the settled page contract |
 | **Sprint 3 — Comparisons and site checks** | Planned | Add bounded rendering and URL-variant experiments |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
@@ -46,16 +46,11 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md) — blocks the Sprint 1 review gate
-3. [Ticket 114: DOM Evidence Save-Boundary Enforcement](./114-dom-evidence-save-boundary-enforcement.md) — PR #17 remediation; blocks the Sprint 1 review gate and Ticket 208
-4. [Ticket 115: Long-URL DOM Capture Bounds](./115-long-url-dom-capture-bounds.md) — PR #17 remediation; blocks the Sprint 1 review gate
-4. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — blocked externally
-5. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
-6. [Ticket 211: Register the Structured-Data Check](./211-register-structured-data-check.md) — current mainline structured-data tests fail because the rule is unregistered.
+1. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — blocked externally on fresh Chrome 114+ smoke
+2. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
-**Recommended next pick:** **211** — restore the failing structured-data runner
-integration, then complete Tickets 113–115 and the external Ticket 109 smoke
-evidence before Ticket 199.
+**Recommended next pick:** complete the Ticket 109 fresh-profile Chrome smoke
+record, then run Ticket 199.
 
 ---
 
@@ -91,9 +86,6 @@ useful from the side panel.
 **Tickets:**
 
 - [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
-- [ ] [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md)
-- [ ] [Ticket 114: DOM Evidence Save-Boundary Enforcement](./114-dom-evidence-save-boundary-enforcement.md)
-- [ ] [Ticket 115: Long-URL DOM Capture Bounds](./115-long-url-dom-capture-bounds.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
 **Exit criteria:**

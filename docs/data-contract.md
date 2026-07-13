@@ -22,27 +22,41 @@ documented `captureLimits` defaults and retain the historical DOM-evidence
 marker, while historical sessions receive a clear note that check selection was
 not recorded before Ticket 210. New captures use DOM evidence version **2** and
 validate every persisted DOM source at collection and session-save boundaries.
+`SessionRepository.save` additionally refuses DOM evidence that omits or
+downgrades `domEvidenceSchemaVersion`; only the migration path may retain the
+historical marker for reads.
 
 ## DOM capture limits (Ticket 107)
 
 Documented in `src/lib/schemas/dom-limits.ts` and attached to each new
 `PageSnapshot.captureLimits`:
 
-| Cap                         | Default   |
-| --------------------------- | --------- |
-| `maxStringChars`            | 2 000     |
-| `maxMetaItems` (OG/Twitter) | 40        |
-| `maxAlternateItems`         | 50        |
-| `maxJsonLdChars`            | 50 000    |
-| `maxJsonLdScripts`          | 25        |
-| `maxHeadingSamplesPerLevel` | 5         |
-| `maxSnapshotChars`          | 400 000   |
-| `maxSessionChars`           | 1 500 000 |
+| Cap                                | Default   |
+| ---------------------------------- | --------- |
+| `maxStringChars`                   | 2 000     |
+| `maxUrlChars` (document/base URLs) | 8 192     |
+| `maxMetaItems` (OG/Twitter)        | 40        |
+| `maxAlternateItems`                | 50        |
+| `maxJsonLdChars`                   | 50 000    |
+| `maxJsonLdScripts`                 | 25        |
+| `maxHeadingSamplesPerLevel`        | 5         |
+| `maxSnapshotChars`                 | 400 000   |
+| `maxSessionChars`                  | 1 500 000 |
 
 When a cap is hit, the field records `limits: { truncated, reason, omittedCount? }`
 and a `capture.limits` evidence row summarises which sources were clipped.
 JSON-LD that is incomplete because of the character budget uses
 `parseStatus: "truncated"` and must not emit `jsonld-malformed`.
+
+Document and base URLs use `maxUrlChars`, not `maxStringChars`. The collector
+emits the exact browser `document.URL` / `document.baseURI` so navigation-race
+checks compare identity before any clipping. The extension process then bounds
+those strings for persistence; when clipped, `document.URL` evidence includes
+`bounds: { documentUrl? , baseUri? }` with `truncated`, `reason`, and
+`originalLength`. New session writes must declare
+`captureLimits.domEvidenceSchemaVersion = 2` and cannot omit or downgrade that
+marker to bypass source-specific validation (Ticket 114). Migrated historical
+sessions keep version `1` and remain readable without re-validating old payloads.
 
 Ticket 208 evaluates only complete `parseStatus: "ok"` JSON-LD source text.
 Its derived inventory is bounded to 200 object nodes and depth 20, and its

@@ -1,7 +1,7 @@
 # Ticket 115: Long-URL DOM Capture Bounds
 
 **Sprint:** 1 — Inspect One Page  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** S
 
@@ -20,13 +20,13 @@ the URL identity used for navigation-race detection.
 
 ## Acceptance criteria
 
-- [ ] Define and document a URL-specific bounded representation that preserves
+- [x] Define and document a URL-specific bounded representation that preserves
   an exact value where navigation-race comparison requires it.
-- [ ] A valid URL longer than the generic string cap produces a saved, truthful
+- [x] A valid URL longer than the generic string cap produces a saved, truthful
   bounded capture rather than `dom-evidence-invalid`.
-- [ ] Tests cover long `documentUrl` and `baseUri` values plus navigation-race
+- [x] Tests cover long `documentUrl` and `baseUri` values plus navigation-race
   comparison behaviour.
-- [ ] Run `npm test`, `npm run lint`, `npm run build`, and `npm run package:check`.
+- [x] Run `npm test`, `npm run lint`, `npm run build`, and `npm run package:check`.
 
 ## Out of scope
 
@@ -43,6 +43,11 @@ the URL identity used for navigation-race detection.
 
 - 2026-07-12 — Filed during PR #17 review. The 2,000-character schema cap and
   uncapped browser collector disagree; this is a narrow correctness remediation.
+- 2026-07-13 — Added `maxUrlChars` (8,192). Collector still emits exact browser
+  URLs; the extension process runs navigation-race on those exact values, then
+  bounds for persistence. Oversized URLs retain `bounds` metadata
+  (`truncated`, `reason`, `originalLength`) on `document.URL` evidence. Documented
+  in `docs/data-contract.md`.
 
 ---
 

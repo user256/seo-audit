@@ -136,4 +136,129 @@ describe('SessionRepository', () => {
     runMigrations(db2, 1, 1);
     db2.close();
   });
+
+  it('rejects saves that omit the DOM-evidence version marker', async () => {
+    const session = createEmptySession({
+      id: 'bypass-missing',
+      tabUrl: 'https://example.com/',
+      finalUrl: 'https://example.com/',
+      extensionVersion: '0.1.0',
+    });
+    session.snapshots.push({
+      id: 'snap-missing',
+      url: 'https://example.com/',
+      capturedAt: session.captureTime,
+      evidence: [
+        {
+          id: 'title-0',
+          kind: 'dom',
+          source: 'title',
+          value: { state: 'present', value: ['not', 'a', 'title'], selector: 'title' },
+          capturedAt: session.captureTime,
+        },
+      ],
+      captureLimits: {
+        schemaVersion: 1,
+        applied: {
+          maxStringChars: 2_000,
+          maxMetaItems: 40,
+          maxAlternateItems: 50,
+          maxJsonLdChars: 50_000,
+          maxJsonLdScripts: 25,
+          maxHeadingSamplesPerLevel: 5,
+        },
+        maxSnapshotChars: 400_000,
+        maxSessionChars: 1_500_000,
+      },
+    });
+
+    await expect(repo.save(session)).rejects.toThrow(/domEvidenceSchemaVersion|version 2/i);
+  });
+
+  it('rejects saves that downgrade to the historical DOM-evidence marker', async () => {
+    const session = createEmptySession({
+      id: 'bypass-historical',
+      tabUrl: 'https://example.com/',
+      finalUrl: 'https://example.com/',
+      extensionVersion: '0.1.0',
+    });
+    session.snapshots.push({
+      id: 'snap-historical',
+      url: 'https://example.com/',
+      capturedAt: session.captureTime,
+      evidence: [
+        {
+          id: 'title-0',
+          kind: 'dom',
+          source: 'title',
+          value: { state: 'present', value: ['not', 'a', 'title'], selector: 'title' },
+          capturedAt: session.captureTime,
+        },
+      ],
+      captureLimits: {
+        schemaVersion: 1,
+        applied: {
+          maxStringChars: 2_000,
+          maxMetaItems: 40,
+          maxAlternateItems: 50,
+          maxJsonLdChars: 50_000,
+          maxJsonLdScripts: 25,
+          maxHeadingSamplesPerLevel: 5,
+        },
+        maxSnapshotChars: 400_000,
+        maxSessionChars: 1_500_000,
+        domEvidenceSchemaVersion: 1,
+      },
+    });
+
+    await expect(repo.save(session)).rejects.toThrow(/domEvidenceSchemaVersion|version 2/i);
+  });
+
+  it('keeps a valid migrated historical session readable on get', async () => {
+    const db = await openAuditDb(factory);
+    const tx = db.transaction('sessions', 'readwrite');
+    tx.objectStore('sessions').put({
+      schemaVersion: 1,
+      id: 'historical-dom',
+      createdAt: '2026-07-12T12:00:00.000Z',
+      updatedAt: '2026-07-12T12:00:00.000Z',
+      tabUrl: 'https://example.com/legacy',
+      finalUrl: 'https://example.com/legacy',
+      captureTime: '2026-07-12T12:00:00.000Z',
+      extensionVersion: '0.1.0',
+      featureAvailability: { domCollector: true },
+      snapshots: [
+        {
+          id: 'snap-legacy-dom',
+          url: 'https://example.com/legacy',
+          capturedAt: '2026-07-12T12:00:00.000Z',
+          evidence: [
+            {
+              id: 'title-0',
+              kind: 'dom',
+              source: 'title',
+              // Historical payloads were not source-validated; keep readable after migration.
+              value: { state: 'present', value: { weird: true }, selector: 'title' },
+              capturedAt: '2026-07-12T12:00:00.000Z',
+            },
+          ],
+        },
+      ],
+      findings: [],
+      captureErrors: [],
+      reportMarkdown: '',
+    });
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+
+    const loaded = await repo.get('historical-dom');
+    expect(loaded.status).toBe('ok');
+    if (loaded.status === 'ok') {
+      expect(loaded.session.schemaVersion).toBe(3);
+      expect(loaded.session.snapshots[0]?.captureLimits?.domEvidenceSchemaVersion).toBe(1);
+    }
+  });
 });

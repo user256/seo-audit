@@ -1,7 +1,7 @@
 # Ticket 114: DOM Evidence Save-Boundary Enforcement
 
 **Sprint:** 1 — Inspect One Page  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** S
 
@@ -19,13 +19,13 @@ while keeping genuinely migrated historical sessions readable.
 
 ## Acceptance criteria
 
-- [ ] A current-schema session cannot bypass DOM-evidence v2 validation by
+- [x] A current-schema session cannot bypass DOM-evidence v2 validation by
   omitting or downgrading its capture-limit version marker.
-- [ ] Historical migrated sessions retain an explicit, narrowly scoped migration
+- [x] Historical migrated sessions retain an explicit, narrowly scoped migration
   path and do not make new writes less strict.
-- [ ] Repository-save tests cover missing and historical-marker bypass attempts
+- [x] Repository-save tests cover missing and historical-marker bypass attempts
   plus a valid migrated historical session.
-- [ ] Run `npm test`, `npm run lint`, `npm run build`, and `npm run package:check`.
+- [x] Run `npm test`, `npm run lint`, `npm run build`, and `npm run package:check`.
 
 ## Out of scope
 
@@ -43,6 +43,11 @@ while keeping genuinely migrated historical sessions readable.
 - 2026-07-12 — Filed during PR #17 review. `PageSnapshotSchema` accepts an
   avoidable save-boundary bypass when the optional version marker is absent or
   marked historical.
+- 2026-07-13 — `PageSnapshotSchema` now validates unless the marker is the
+  explicit historical version. `SessionRepository.save` calls
+  `assertDomEvidenceSaveBoundary` so new writes with DOM evidence must declare
+  version 2 (missing/downgraded markers are refused). Migrated v1 sessions remain
+  readable on `get`.
 
 ---
 

@@ -42,3 +42,5 @@ Make an evidence-backed decision to begin crawl/index features.
   ticket’s demonstration script). The browser rows remain outstanding.
 - 2026-07-12 — Post-merge review filed Ticket 110 for source-specific DOM
   evidence validation before this gate can confirm the persisted contract.
+- 2026-07-13 — Tickets 113–115 closed. Remaining blockers: Ticket 109 browser
+  smoke record, then this go/no-go demonstration.

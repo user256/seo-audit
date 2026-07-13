@@ -6,6 +6,7 @@ import { collectDomForActiveTab } from './collect-dom';
 import { SessionRepository } from './storage/session-repository';
 import { collectDomFactsInPage } from '../content/dom-collector';
 import { FIXTURE_RELATIVE_URLS } from '../content/fixtures';
+import { DOM_LIMITS } from './schemas/dom-limits';
 
 describe('collectDomForActiveTab', () => {
   beforeEach(() => {
@@ -230,6 +231,117 @@ describe('collectDomForActiveTab', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.captureError?.code).toBe('collector-empty-result');
+    }
+  });
+
+  it('saves a valid documentUrl longer than maxStringChars without dom-evidence-invalid', async () => {
+    const longPath = 'a'.repeat(2_500);
+    const longUrl = `https://example.com/${longPath}`;
+    Object.assign(globalThis, {
+      chrome: createChromeStub({
+        tabs: {
+          query: async () => [{ id: 4, url: longUrl }],
+        },
+        permissions: {
+          contains: async () => true,
+        },
+        scripting: {
+          executeScript: async () => {
+            const facts = collectDomFactsInPage();
+            facts.documentUrl = longUrl;
+            facts.baseUri = longUrl;
+            return [{ result: facts }];
+          },
+        },
+      }),
+    });
+
+    const repo = new SessionRepository(new IDBFactory());
+    const result = await collectDomForActiveTab(repo);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.snapshot.url).toBe(longUrl);
+      const docEvidence = result.snapshot.evidence.find((item) => item.source === 'document.URL');
+      expect(docEvidence?.value).toMatchObject({
+        documentUrl: longUrl,
+        baseUri: longUrl,
+      });
+      expect((docEvidence?.value as { bounds?: unknown }).bounds).toBeUndefined();
+    }
+  });
+
+  it('bounds an oversized documentUrl after navigation-race comparison', async () => {
+    const exactUrl = `https://example.com/${'b'.repeat(9_000)}`;
+    Object.assign(globalThis, {
+      chrome: createChromeStub({
+        tabs: {
+          query: async () => [{ id: 4, url: exactUrl }],
+        },
+        permissions: {
+          contains: async () => true,
+        },
+        scripting: {
+          executeScript: async () => {
+            const facts = collectDomFactsInPage();
+            facts.documentUrl = exactUrl;
+            facts.baseUri = exactUrl;
+            return [{ result: facts }];
+          },
+        },
+      }),
+    });
+
+    const result = await collectDomForActiveTab(new SessionRepository(new IDBFactory()));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.snapshot.url.length).toBe(DOM_LIMITS.maxUrlChars);
+      expect(result.snapshot.url).toBe(exactUrl.slice(0, DOM_LIMITS.maxUrlChars));
+      const docEvidence = result.snapshot.evidence.find((item) => item.source === 'document.URL');
+      expect(docEvidence?.value).toMatchObject({
+        documentUrl: exactUrl.slice(0, DOM_LIMITS.maxUrlChars),
+        bounds: {
+          documentUrl: {
+            truncated: true,
+            originalLength: exactUrl.length,
+          },
+          baseUri: {
+            truncated: true,
+            originalLength: exactUrl.length,
+          },
+        },
+      });
+      expect(result.captureErrors.every((error) => error.code !== 'dom-evidence-invalid')).toBe(
+        true,
+      );
+    }
+  });
+
+  it('still detects navigation-race when exact long document URLs diverge', async () => {
+    const tabUrl = `https://example.com/${'c'.repeat(3_000)}`;
+    const otherUrl = `https://example.com/${'d'.repeat(3_000)}`;
+    Object.assign(globalThis, {
+      chrome: createChromeStub({
+        tabs: {
+          query: async () => [{ id: 4, url: tabUrl }],
+        },
+        permissions: {
+          contains: async () => true,
+        },
+        scripting: {
+          executeScript: async () => {
+            const facts = collectDomFactsInPage();
+            facts.documentUrl = otherUrl;
+            return [{ result: facts }];
+          },
+        },
+      }),
+    });
+
+    const result = await collectDomForActiveTab(new SessionRepository(new IDBFactory()));
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.captureError?.code).toBe('navigation-race');
+      expect(result.captureError?.url).toBe(otherUrl);
     }
   });
 });
