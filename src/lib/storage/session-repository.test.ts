@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
 import { DB_NAME, openAuditDb, runMigrations } from './db';
 import { createEmptySession, SessionRepository } from './session-repository';
+import {
+  sampleSoft404ProbeResult,
+  sampleVariantTestRunResult,
+} from '../schemas/comparison-evidence';
 
 describe('SessionRepository', () => {
   let factory: IDBFactory;
@@ -149,14 +153,14 @@ describe('SessionRepository', () => {
     const loaded = await repo.get('legacy-1');
     expect(loaded.status).toBe('ok');
     if (loaded.status === 'ok') {
-      expect(loaded.session.schemaVersion).toBe(3);
+      expect(loaded.session.schemaVersion).toBe(4);
       expect(loaded.session.snapshots[0]?.captureLimits).toBeTruthy();
     }
 
     const again = await repo.get('legacy-1');
     expect(again.status).toBe('ok');
     if (again.status === 'ok') {
-      expect(again.session.schemaVersion).toBe(3);
+      expect(again.session.schemaVersion).toBe(4);
     }
   });
 
@@ -298,8 +302,70 @@ describe('SessionRepository', () => {
     const loaded = await repo.get('historical-dom');
     expect(loaded.status).toBe('ok');
     if (loaded.status === 'ok') {
-      expect(loaded.session.schemaVersion).toBe(3);
+      expect(loaded.session.schemaVersion).toBe(4);
       expect(loaded.session.snapshots[0]?.captureLimits?.domEvidenceSchemaVersion).toBe(1);
+    }
+  });
+
+  it('round-trips bounded comparison runs through save helpers', async () => {
+    const session = createEmptySession({
+      id: 'comparison-roundtrip',
+      tabUrl: 'https://example.com/page',
+      finalUrl: 'https://example.com/page',
+      extensionVersion: '0.1.0',
+    });
+    await repo.save(session);
+
+    const variant = sampleVariantTestRunResult();
+    const probe = sampleSoft404ProbeResult({ cancelled: true });
+    await repo.saveVariantTestRun('comparison-roundtrip', variant);
+    await repo.saveSoft404ProbeRun('comparison-roundtrip', probe);
+
+    const loaded = await repo.get('comparison-roundtrip');
+    expect(loaded.status).toBe('ok');
+    if (loaded.status === 'ok') {
+      expect(loaded.session.variantTestRun?.requestId).toBe('vt-sample');
+      expect(loaded.session.soft404ProbeRun?.cancelled).toBe(true);
+      expect(JSON.stringify(loaded.session)).not.toMatch(/bodyText|rawBody|htmlBody/i);
+    }
+  });
+
+  it('migrates schemaVersion-3 sessions in place on get', async () => {
+    const db = await openAuditDb(factory);
+    const tx = db.transaction('sessions', 'readwrite');
+    tx.objectStore('sessions').put({
+      schemaVersion: 3,
+      id: 'legacy-v3',
+      createdAt: '2026-07-13T10:00:00.000Z',
+      updatedAt: '2026-07-13T10:00:00.000Z',
+      tabUrl: 'https://example.com/v3',
+      finalUrl: 'https://example.com/v3',
+      captureTime: '2026-07-13T10:00:00.000Z',
+      extensionVersion: '0.1.0',
+      featureAvailability: { domCollector: true, headerCapture: 'unavailable' },
+      snapshots: [],
+      findings: [],
+      captureErrors: [],
+      checkSelection: { selectedCheckIds: [], skippedChecks: [] },
+      reportMarkdown: '',
+    });
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+
+    const loaded = await repo.get('legacy-v3');
+    expect(loaded.status).toBe('ok');
+    if (loaded.status === 'ok') {
+      expect(loaded.session.schemaVersion).toBe(4);
+      expect(loaded.session.variantTestRun).toBeUndefined();
+    }
+
+    const again = await repo.get('legacy-v3');
+    expect(again.status).toBe('ok');
+    if (again.status === 'ok') {
+      expect(again.session.schemaVersion).toBe(4);
     }
   });
 });

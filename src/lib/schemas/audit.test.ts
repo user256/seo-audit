@@ -6,6 +6,7 @@ import {
   FindingSchema,
   parseAuditSession,
 } from './audit';
+import { sampleSoft404ProbeResult, sampleVariantTestRunResult } from './comparison-evidence';
 import { createEmptySession } from '../storage/session-repository';
 import { DOM_LIMITS } from './dom-limits';
 import {
@@ -186,6 +187,41 @@ describe('audit schemas', () => {
       expect(result.value.checkSelection.selectedCheckIds).toEqual([]);
       expect(result.value.checkSelection.skippedChecks).toEqual([]);
       expect(result.value.checkSelection.recordingNote).toMatch(/not recorded/i);
+    }
+  });
+
+  it('parses bounded comparison runs on the current session contract', () => {
+    const session = createEmptySession({
+      id: 'sess-comparison',
+      tabUrl: 'https://example.com/page',
+      finalUrl: 'https://example.com/page',
+      extensionVersion: '0.1.0',
+    });
+    session.variantTestRun = sampleVariantTestRunResult();
+    session.soft404ProbeRun = sampleSoft404ProbeResult({ cancelled: true });
+
+    const result = parseAuditSession(session);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.variantTestRun?.requestId).toBe('vt-sample');
+      expect(result.value.soft404ProbeRun?.cancelled).toBe(true);
+    }
+  });
+
+  it('migrates schemaVersion-3 sessions to the current contract', () => {
+    const session = createEmptySession({
+      id: 'sess-v3',
+      tabUrl: 'https://example.com/v3',
+      finalUrl: 'https://example.com/v3',
+      extensionVersion: '0.1.0',
+    });
+    const raw = { ...session, schemaVersion: 3 } as Record<string, unknown>;
+
+    const result = parseAuditSession(raw);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.schemaVersion).toBe(AUDIT_SCHEMA_VERSION);
+      expect(result.value.variantTestRun).toBeUndefined();
     }
   });
 });

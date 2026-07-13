@@ -1,7 +1,7 @@
 # Ticket 306: Persist Sprint 3 Comparison-Runner Evidence
 
 **Sprint:** 3 — Bounded Comparisons and Site Checks  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** S
 
@@ -20,14 +20,14 @@ session, then restore them when that session is reopened.
 
 ## Acceptance criteria
 
-- [ ] Version the local audit/session contract to store completed or cancelled
+- [x] Version the local audit/session contract to store completed or cancelled
   variant-test and soft-404-probe results, including their existing caps,
   limitations, and fetch-error evidence; do not persist raw response bodies.
-- [ ] Save the result after each user-started run and restore it when the audit
+- [x] Save the result after each user-started run and restore it when the audit
   session is reopened in the side panel.
-- [ ] Add repository and UI integration coverage for save/restore, cancellation,
+- [x] Add repository and UI integration coverage for save/restore, cancellation,
   and bounded-data behaviour.
-- [ ] Run and record passing `npm test`, `npm run lint`, `npm run build`, and
+- [x] Run and record passing `npm test`, `npm run lint`, `npm run build`, and
   `npm run package:check` results.
 
 ## Dependencies
@@ -35,3 +35,6 @@ session, then restore them when that session is reopened.
 - **Blocks:** 399, 401, 402
 - **Blocked by:** 301, 302
 - **External:** none
+
+## Notes / decisions log
+- 2026-07-13 — Session schema v4 persists bounded variant + soft-404 results; restore on panel reopen.

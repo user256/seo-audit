@@ -38,4 +38,6 @@
 **Tickets:**
 - [x] [Ticket 301: URL Variant and Redirect Test Runner](./301-url-variant-and-redirect-test-runner.md)
 - [x] [Ticket 302: Soft-404 Probe](./302-soft-404-probe.md)
+- [x] [Ticket 306: Sprint 3 Comparison-Runner Quality-Gate Remediation](./306-sprint-3-quality-gate-remediation.md)
+- [x] [Ticket 303: CSS and JavaScript Comparison Experiment](./303-css-and-javascript-comparison-experiment.md)
 

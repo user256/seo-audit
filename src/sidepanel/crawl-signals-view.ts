@@ -1,4 +1,5 @@
 import type { CrawlSignalsModel } from '../lib/dashboard/crawl-signals-model';
+import { CSS_JS_COMPARISON_DISPLAY_LIMITS } from '../lib/css-js-compare';
 import { HREFLANG_CLUSTER_DISPLAY_LIMITS } from '../lib/hreflang/cluster-limits';
 import { SOFT_404_DISPLAY_LIMITS } from '../lib/soft-404';
 import { VARIANT_TEST_DISPLAY_LIMITS } from '../lib/variants';
@@ -16,6 +17,8 @@ export type CrawlSignalsViewHandlers = {
   onRunSoft404Probe: () => void;
   onCancelSoft404Probe: () => void;
   onSoft404ProbeUrlChange: (probeUrl: string) => void;
+  onRunCssJsComparison: () => void;
+  onCancelCssJsComparison: () => void;
 };
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -691,6 +694,177 @@ function buildSoft404ProbePanel(
   return panel('crawl-panel-soft-404', 'Soft-404 probe', model.availability, body, actions);
 }
 
+function buildCssJsComparisonPanel(
+  model: CrawlSignalsModel['cssJsComparison'],
+  handlers: CrawlSignalsViewHandlers,
+): HTMLDetailsElement {
+  const body = el('div', 'crawl-panel-body');
+  body.append(el('p', 'lede', model.detail));
+
+  const disclosure = el('p', 'crawl-disclosure');
+  disclosure.textContent =
+    `Opens a new, unfocused browser tab at ${model.auditedUrl} on ${model.origin} and disables its ` +
+    'stylesheets and inline styles (method css-injection-disable-v1) — not browser DevTools "Disable CSS". ' +
+    'The comparison tab is closed automatically when the run finishes, is cancelled, or fails. You can cancel ' +
+    'while it runs.';
+  body.append(disclosure);
+
+  const optionsFieldset = el('fieldset', 'crawl-fieldset');
+  optionsFieldset.append(el('legend', undefined, 'Comparison method'));
+  const cssLabel = el('label', 'crawl-checkbox');
+  const cssCheckbox = el('input') as HTMLInputElement;
+  cssCheckbox.type = 'checkbox';
+  cssCheckbox.checked = true;
+  cssCheckbox.disabled = true;
+  cssCheckbox.setAttribute('aria-readonly', 'true');
+  cssLabel.append(cssCheckbox, document.createTextNode(' CSS off (only comparison offered)'));
+  optionsFieldset.append(cssLabel);
+
+  const jsLabel = el('label', 'crawl-checkbox');
+  const jsCheckbox = el('input') as HTMLInputElement;
+  jsCheckbox.type = 'checkbox';
+  jsCheckbox.checked = false;
+  jsCheckbox.disabled = true;
+  jsLabel.append(
+    jsCheckbox,
+    document.createTextNode(' JavaScript off (omitted from this release)'),
+  );
+  optionsFieldset.append(jsLabel);
+  optionsFieldset.append(el('p', 'muted', model.result?.javascriptOff.reason ?? model.detail));
+  body.append(optionsFieldset);
+
+  const rows: HTMLElement[] = [
+    row('Audited URL', model.auditedUrl),
+    row('Origin', model.origin),
+    row(
+      'Run caps',
+      `≤ ${model.limits.maxWallTimeMs / 1000}s wall time · ≤ ${model.limits.tabLoadTimeoutMs / 1000}s tab load`,
+      'muted',
+    ),
+  ];
+
+  if (model.progress && model.runState === 'busy') {
+    rows.push(
+      row(
+        'Progress',
+        `${model.progress.phase.replace(/-/g, ' ')}${model.progress.detail ? ` — ${model.progress.detail}` : ''}`,
+      ),
+    );
+  }
+
+  if (model.result) {
+    rows.push(
+      row('Method version', model.result.methodVersion),
+      row(
+        'Baseline capture',
+        model.result.baseline.ok ? 'ok' : model.result.baseline.message,
+        model.result.baseline.ok ? undefined : 'error',
+      ),
+      row(
+        'Experiment capture',
+        model.result.experiment.ok ? 'ok' : model.result.experiment.message,
+        model.result.experiment.ok ? undefined : 'error',
+      ),
+      row(
+        'Experiment tab restored',
+        model.result.experimentTabRestored ? 'yes' : 'no',
+        model.result.experimentTabRestored ? undefined : 'warn',
+      ),
+      row(
+        'Fields changed',
+        `${model.result.diffs.filter((d) => d.changed).length} of ${model.result.diffs.length}`,
+        model.result.observations.length ? 'warn' : undefined,
+      ),
+    );
+  }
+
+  appendDl(body, rows);
+
+  if (model.result?.diffs.length) {
+    const tableWrap = el('div', 'crawl-table-wrap');
+    const table = el('table', 'crawl-table');
+    table.setAttribute('aria-label', 'CSS/JS comparison field diffs');
+    const thead = el('thead');
+    const headRow = el('tr');
+    for (const heading of ['Field', 'Baseline', 'CSS-disabled', 'Changed']) {
+      headRow.append(el('th', undefined, heading));
+    }
+    thead.append(headRow);
+    table.append(thead);
+
+    const tbody = el('tbody');
+    const shown = model.result.diffs.slice(0, CSS_JS_COMPARISON_DISPLAY_LIMITS.maxDiffRows);
+    for (const diff of shown) {
+      const tr = el('tr');
+      if (diff.changed) tr.classList.add('is-warn');
+      tr.append(
+        el('td', undefined, diff.label),
+        el('td', undefined, diff.baselineSummary),
+        el('td', undefined, diff.experimentSummary),
+        el('td', undefined, diff.changed ? 'yes' : 'no'),
+      );
+      tbody.append(tr);
+    }
+    table.append(tbody);
+    tableWrap.append(table);
+    appendTruncationNote(tableWrap, shown.length, model.result.diffs.length);
+    body.append(tableWrap);
+  }
+
+  if (model.result?.observations.length) {
+    const obsDetails = el('details', 'crawl-subpanel');
+    obsDetails.open = true;
+    obsDetails.append(el('summary', undefined, 'Observations'));
+    const list = el('ul', 'dash-list');
+    const shown = model.result.observations.slice(
+      0,
+      CSS_JS_COMPARISON_DISPLAY_LIMITS.maxObservations,
+    );
+    for (const observation of shown) {
+      list.append(el('li', undefined, `${observation.summary} — ${observation.detail}`));
+    }
+    obsDetails.append(list);
+    appendTruncationNote(obsDetails, shown.length, model.result.observations.length);
+    body.append(obsDetails);
+  }
+
+  if (model.result?.limitations.length) {
+    const limitDetails = el('details', 'crawl-subpanel');
+    limitDetails.append(el('summary', undefined, 'Limitations'));
+    const list = el('ul', 'dash-list');
+    for (const limitation of model.result.limitations) {
+      list.append(el('li', undefined, limitation));
+    }
+    limitDetails.append(list);
+    body.append(limitDetails);
+  }
+
+  const actions = el('div', 'crawl-panel-actions');
+  const runBtn = el('button', 'secondary', 'Run CSS comparison') as HTMLButtonElement;
+  runBtn.type = 'button';
+  runBtn.id = 'run-css-js-comparison';
+  runBtn.disabled = model.runState === 'busy' || model.availability !== 'present';
+  runBtn.setAttribute('aria-busy', model.runState === 'busy' ? 'true' : 'false');
+  runBtn.addEventListener('click', handlers.onRunCssJsComparison);
+  actions.append(runBtn);
+
+  if (model.runState === 'busy') {
+    const cancelBtn = el('button', 'secondary', 'Cancel comparison') as HTMLButtonElement;
+    cancelBtn.type = 'button';
+    cancelBtn.id = 'cancel-css-js-comparison';
+    cancelBtn.addEventListener('click', handlers.onCancelCssJsComparison);
+    actions.append(cancelBtn);
+  }
+
+  return panel(
+    'crawl-panel-css-js-comparison',
+    'CSS/JS comparison',
+    model.availability,
+    body,
+    actions,
+  );
+}
+
 export function renderCrawlSignalsPanel(
   container: HTMLElement,
   model: CrawlSignalsModel,
@@ -724,6 +898,7 @@ export function renderCrawlSignalsPanel(
     buildHreflangClusterPanel(model.hreflangCluster, handlers),
     buildVariantTestsPanel(model.variantTests, handlers),
     buildSoft404ProbePanel(model.soft404Probe, handlers),
+    buildCssJsComparisonPanel(model.cssJsComparison, handlers),
   );
   container.append(stack);
 }

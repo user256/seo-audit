@@ -40,19 +40,18 @@ Constraints that shape the plan:
 |---|---|---|
 | **Sprint 1 — Inspect one page** | Blocked | Tickets **109** / **199** need operator Chrome smoke + go/no-go |
 | **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **299** needs its recorded public-site review and go/no-go |
-| **Sprint 3 — Comparisons and site checks** | Blocked | Ticket **299**; Ticket **306** persists the completed 301/302 evidence |
+| **Sprint 3 — Comparisons and site checks** | In progress | Tickets **303**/**306** done; **304** spike next; gate **299**/**399** still need operator |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
 
 ---
 
 # Current Priority Lane
 
-1. [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md) — operator review of the implemented Sprint 2 flow.
-2. [Ticket 306: Persist Sprint 3 Comparison-Runner Evidence](./306-sprint-3-quality-gate-remediation.md) — retain completed 301/302 evidence locally.
-3. Parallel: finish Ticket 109 / 199 when an operator has bandwidth.
+1. [Ticket 304: Googlebot-Style Render Experiment Spike](./304-googlebot-style-render-experiment-spike.md) — feasibility + optional prototype.
+2. Parallel: Ticket **299** / **109** / **199** when an operator can run Chrome smoke.
+3. Then Ticket **305** (UA profiles) after 304 outcome.
 
-**Recommended next pick:** Ticket **299**. Then take Ticket **306** before
-session comparison or export work.
+**Recommended next pick:** Ticket **304**. Do not close Ticket **399** without operator review.
 
 ---
 
@@ -142,8 +141,6 @@ and [Ticket 302](./completed/302-soft-404-probe.md).
 
 **Tickets:**
 
-- [ ] [Ticket 306: Sprint 3 Comparison-Runner Quality-Gate Remediation](./306-sprint-3-quality-gate-remediation.md)
-- [ ] [Ticket 303: CSS and JavaScript Comparison Experiment](./303-css-and-javascript-comparison-experiment.md)
 - [ ] [Ticket 304: Googlebot-Style Render Experiment Spike](./304-googlebot-style-render-experiment-spike.md)
 - [ ] [Ticket 305: User-Agent Profiles and Audit Disclosures](./305-user-agent-profiles-and-audit-disclosures.md)
 - [ ] [Ticket 399: Sprint 3 Review and Go/No-Go](./399-sprint-3-review.md)

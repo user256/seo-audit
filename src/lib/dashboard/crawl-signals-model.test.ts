@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CSS_JS_COMPARISON_LIMITS } from '../css-js-compare';
 import type { NavigationObservationStatus } from '../network/types';
 import type { RobotsFetchResult } from '../robots/fetch-robots';
 import { parseRobotsText } from '../robots/parse-robots';
@@ -320,5 +321,83 @@ describe('buildCrawlSignalsModel', () => {
     expect(model.hreflangCluster.declaredTotal).toBe(2);
     expect(model.hreflangCluster.detail).toMatch(/not Googlebot/i);
     expect(model.hreflangCluster.limits.maxAlternates).toBeGreaterThan(0);
+  });
+
+  it('marks CSS/JS comparison as needs-access before origin permission', () => {
+    const model = buildCrawlSignalsModel({
+      tabUrl: TAB,
+      documentUrl: null,
+      origin: ORIGIN,
+      accessGranted: false,
+    });
+    expect(model.cssJsComparison.availability).toBe('needs-access');
+    expect(model.cssJsComparison.runState).toBe('idle');
+  });
+
+  it('describes the CSS/JS comparison method and JS-off omission when idle', () => {
+    const model = buildCrawlSignalsModel({
+      tabUrl: TAB,
+      documentUrl: TAB,
+      origin: ORIGIN,
+      accessGranted: true,
+    });
+    expect(model.cssJsComparison.availability).toBe('present');
+    expect(model.cssJsComparison.cssOffOnly).toBe(true);
+    expect(model.cssJsComparison.detail).toMatch(/css-injection-disable-v1/);
+    expect(model.cssJsComparison.detail).toMatch(/deliberately omitted/);
+  });
+
+  it('summarises a completed CSS/JS comparison result', () => {
+    const model = buildCrawlSignalsModel({
+      tabUrl: TAB,
+      documentUrl: TAB,
+      origin: ORIGIN,
+      accessGranted: true,
+      cssJsRunState: 'done',
+      cssJsResult: {
+        requestId: 'css-js-1',
+        auditedUrl: TAB,
+        origin: ORIGIN,
+        methodVersion: 'css-injection-disable-v1',
+        startedAt: '2026-07-13T12:00:00.000Z',
+        endedAt: '2026-07-13T12:00:05.000Z',
+        cancelled: false,
+        limits: CSS_JS_COMPARISON_LIMITS,
+        baseline: { ok: true, facts: {} as never, visibleText: null },
+        experiment: { ok: true, facts: {} as never, visibleText: null },
+        cssDisable: null,
+        experimentTabRestored: true,
+        diffs: [
+          {
+            field: 'title',
+            label: 'Title',
+            baselineSummary: 'A',
+            experimentSummary: 'B',
+            changed: true,
+          },
+          {
+            field: 'canonical',
+            label: 'Canonical link',
+            baselineSummary: 'A',
+            experimentSummary: 'A',
+            changed: false,
+          },
+        ],
+        observations: [
+          {
+            id: 'css-js-diff-css-js-1-title',
+            kind: 'title-changed',
+            summary: 'Title changed when CSS was disabled.',
+            detail: 'Baseline: A · CSS-disabled: B',
+          },
+        ],
+        limitations: ['Not crawler parity.'],
+        javascriptOff: { supported: false, reason: 'Omitted.' },
+      },
+    });
+
+    expect(model.cssJsComparison.runState).toBe('done');
+    expect(model.cssJsComparison.detail).toContain('1 of 2 field(s) changed');
+    expect(model.cssJsComparison.result?.observations).toHaveLength(1);
   });
 });

@@ -1,6 +1,11 @@
 import type { NavigationObservationStatus } from '../network/types';
 import type { HreflangClusterValidationResult } from '../hreflang/cluster-validate';
 import {
+  CSS_JS_COMPARISON_LIMITS,
+  type CssJsComparisonLimits,
+  type CssJsComparisonResult,
+} from '../css-js-compare';
+import {
   DEFAULT_VARIANT_KIND_OPTIONS,
   VARIANT_TEST_LIMITS,
   type VariantKindOptions,
@@ -132,6 +137,7 @@ export type CrawlSignalsModel = {
   hreflangCluster: HreflangClusterSignalsPanel;
   variantTests: VariantTestsSignalsPanel;
   soft404Probe: Soft404ProbeSignalsPanel;
+  cssJsComparison: CssJsComparisonSignalsPanel;
 };
 
 export type HreflangClusterValidateState = 'idle' | 'busy' | 'done' | 'cancelled';
@@ -172,6 +178,20 @@ export type Soft404ProbeSignalsPanel = {
   limits: Soft404ProbeLimits;
   progress: { phase: string; currentUrl?: string } | null;
   result: Soft404ProbeResult | null;
+  detail: string;
+};
+
+export type CssJsComparisonRunState = 'idle' | 'busy' | 'done' | 'cancelled';
+
+export type CssJsComparisonSignalsPanel = {
+  availability: SignalAvailability;
+  runState: CssJsComparisonRunState;
+  auditedUrl: string;
+  origin: string;
+  cssOffOnly: true;
+  limits: CssJsComparisonLimits;
+  progress: { phase: string; detail?: string } | null;
+  result: CssJsComparisonResult | null;
   detail: string;
 };
 
@@ -644,6 +664,57 @@ function buildSoft404ProbePanel(input: {
   };
 }
 
+function buildCssJsComparisonPanel(input: {
+  accessGranted: boolean;
+  auditedUrl: string;
+  origin: string;
+  runState: CssJsComparisonRunState;
+  progress: CssJsComparisonSignalsPanel['progress'];
+  result: CssJsComparisonResult | null;
+}): CssJsComparisonSignalsPanel {
+  if (!input.accessGranted) {
+    return {
+      availability: 'needs-access',
+      runState: 'idle',
+      auditedUrl: input.auditedUrl,
+      origin: input.origin,
+      cssOffOnly: true,
+      limits: CSS_JS_COMPARISON_LIMITS,
+      progress: null,
+      result: null,
+      detail: 'CSS/JS comparison requires site access for the active tab origin.',
+    };
+  }
+
+  const busy = input.runState === 'busy';
+  const done = input.runState === 'done' || input.runState === 'cancelled';
+
+  let detail =
+    'Opt-in comparison: opens a dedicated background tab to this URL, disables its stylesheets ' +
+    '(css-injection-disable-v1), and diffs the DOM against the active tab. JavaScript-disabled comparison ' +
+    'is deliberately omitted — see docs/css-js-comparison.md. Not Googlebot or crawler-rendering parity.';
+  if (busy && input.progress) {
+    detail = `CSS comparison ${input.progress.phase.replace(/-/g, ' ')}${input.progress.detail ? ` — ${input.progress.detail}` : ''}.`;
+  } else if (done && input.result) {
+    const changed = input.result.diffs.filter((d) => d.changed).length;
+    detail = input.result.cancelled
+      ? 'CSS comparison cancelled before both captures completed.'
+      : `CSS comparison complete — ${changed} of ${input.result.diffs.length} field(s) changed, ${input.result.observations.length} observation(s).`;
+  }
+
+  return {
+    availability: 'present',
+    runState: input.runState,
+    auditedUrl: input.auditedUrl,
+    origin: input.origin,
+    cssOffOnly: true,
+    limits: CSS_JS_COMPARISON_LIMITS,
+    progress: input.progress,
+    result: input.result,
+    detail,
+  };
+}
+
 /** Build deduplicated sitemap candidates from robots directives and common paths. */
 export function buildSitemapCandidatesForOrigin(
   origin: string,
@@ -677,6 +748,9 @@ export function buildCrawlSignalsModel(input: {
   soft404RunState?: Soft404ProbeRunState;
   soft404Progress?: Soft404ProbeSignalsPanel['progress'];
   soft404Result?: Soft404ProbeResult | null;
+  cssJsRunState?: CssJsComparisonRunState;
+  cssJsProgress?: CssJsComparisonSignalsPanel['progress'];
+  cssJsResult?: CssJsComparisonResult | null;
 }): CrawlSignalsModel {
   const auditedUrl = input.documentUrl ?? input.tabUrl;
   const candidates =
@@ -725,6 +799,14 @@ export function buildCrawlSignalsModel(input: {
       runState: input.soft404RunState ?? 'idle',
       progress: input.soft404Progress ?? null,
       result: input.soft404Result ?? null,
+    }),
+    cssJsComparison: buildCssJsComparisonPanel({
+      accessGranted: input.accessGranted,
+      auditedUrl,
+      origin: input.origin,
+      runState: input.cssJsRunState ?? 'idle',
+      progress: input.cssJsProgress ?? null,
+      result: input.cssJsResult ?? null,
     }),
   };
 }
