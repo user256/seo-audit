@@ -12,7 +12,7 @@ tickets are archived in [completed/](./completed/).
 1. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally** (fresh Chrome 114+ smoke record).
 2. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — after 109.
 
-Completed remediations on this lane: 113–115.
+Merged remediations on this lane: 113–115 (PR #22).
 
 ## Next — Sprint 2: Crawl and index signals
 

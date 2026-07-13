@@ -1,7 +1,7 @@
 # Ticket 199: Sprint 1 Review and Go/No-Go
 
 **Sprint:** 1 — Inspect One Page  
-**Status:** Not started  
+**Status:** Blocked
 **Owner:** unassigned  
 **Estimate:** S
 
@@ -32,7 +32,7 @@ Make an evidence-backed decision to begin crawl/index features.
 ## Dependencies
 
 - **Blocks:** 201–205
-- **Blocked by:** 101–110
+- **Blocked by:** 109, 110–115
 - **External:** two representative public test sites
 
 ## Notes / decisions log
