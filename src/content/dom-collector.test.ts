@@ -286,14 +286,14 @@ describe('Ticket 107 rule honesty', () => {
   it('treats robots none as noindex+nofollow tokens', () => {
     const findings = findingsFor(FIXTURE_ROBOTS_NONE, 'https://example.com/none');
     const ids = findings.map((f) => f.ruleId);
-    expect(ids).toContain('robots-noindex');
+    expect(ids).toContain('indexability-noindex-signal');
     expect(ids).toContain('robots-nofollow');
   });
 
   it('does not match noindex via substring inside other directives', () => {
     const findings = findingsFor(FIXTURE_ROBOTS_SUBSTRING_TRAP, 'https://example.com/trap');
     const ids = findings.map((f) => f.ruleId);
-    expect(ids).not.toContain('robots-noindex');
+    expect(ids).not.toContain('indexability-noindex-signal');
     expect(ids).not.toContain('robots-nofollow');
   });
 });

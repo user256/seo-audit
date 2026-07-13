@@ -1,4 +1,9 @@
-export { COMMON_SITEMAP_PATHS, discoverSitemapCandidates, type SitemapCandidate, type SitemapCandidateSource } from './discover';
+export {
+  COMMON_SITEMAP_PATHS,
+  discoverSitemapCandidates,
+  type SitemapCandidate,
+  type SitemapCandidateSource,
+} from './discover';
 export {
   SITEMAP_FETCH_SOURCE,
   fetchSitemap,

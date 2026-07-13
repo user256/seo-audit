@@ -29,18 +29,30 @@ describe('CHECK_CATALOGUE', () => {
       'canonical-rules',
       'robots-meta-directives',
       'hreflang-invalid-url',
+      'hreflang-directive-validation',
       'jsonld-malformed',
       'jsonld-structural-validation',
       'language-missing',
       'images-missing-alt',
       'images-empty-alt-advisory',
+      'indexability-noindex-signal',
+      'indexability-robots-conflict',
+      'indexability-robots-blocked',
+      'indexability-canonical-mismatch',
+      'indexability-redirect-anomaly',
+      'indexability-non-html-content',
+      'indexability-sitemap-robots-blocked',
     ]);
     for (const check of CHECK_CATALOGUE) {
       expect(check.label).not.toBe('');
       expect(check.description).not.toBe('');
       expect(check.category).not.toBe('');
       expect(check.requiredSources.length).toBeGreaterThan(0);
-      expect(check.cost).toBe('dom');
+      if (check.id.startsWith('indexability-')) {
+        expect(check.cost).toBe('network');
+      } else {
+        expect(check.cost).toBe('dom');
+      }
       expect(check.optIn).toBe(false);
       expect(check.sourceRef).toMatch(/^https:\/\//);
     }

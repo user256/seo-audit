@@ -26,10 +26,12 @@ export function evaluatePageSnapshot(
     ? CHECK_CATALOGUE.filter((check) => options.checkIds!.has(check.id))
     : CHECK_CATALOGUE.filter((check) => !check.optIn);
   const findings = checks.flatMap((check) => check.run(ctx));
+  const evidenceSources = new Set(snapshot.evidence.map((item) => item.source));
   const summary = buildPageSummary({
     findings,
     featureAvailability: options.featureAvailability,
     captureErrors: options.captureErrors,
+    evidenceSources,
   });
   return { findings, summary };
 }

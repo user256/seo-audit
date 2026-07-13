@@ -190,10 +190,7 @@ describe('fetchSitemap', () => {
       }),
     );
 
-    await fetchSitemap([
-      'https://example.com/sitemap.xml',
-      'https://example.com/sitemap.xml',
-    ]);
+    await fetchSitemap(['https://example.com/sitemap.xml', 'https://example.com/sitemap.xml']);
 
     expect(mockedSafeFetch).toHaveBeenCalledTimes(1);
   });

@@ -109,7 +109,9 @@ function extractAlternates(urlBlock: Element): SitemapAlternate[] {
 /**
  * Reject DOCTYPE and unsafe entity references before DOM parsing.
  */
-export function sanitizeSitemapXml(xml: string): { ok: true; xml: string } | { ok: false; error: string } {
+export function sanitizeSitemapXml(
+  xml: string,
+): { ok: true; xml: string } | { ok: false; error: string } {
   const trimmed = xml.replace(/^\uFEFF/, '').trimStart();
   if (/<!DOCTYPE/i.test(trimmed)) {
     return { ok: false, error: 'DOCTYPE declarations are not allowed in sitemap XML.' };

@@ -49,8 +49,15 @@ becomes a pass.
 | `canonical-multiple`                                  | indexability      | error    | More than one canonical                             |
 | `canonical-malformed`                                 | indexability      | error    | Canonical href does not resolve                     |
 | `canonical-off-page`                                  | indexability      | warning  | Canonical origin ≠ page origin                      |
-| `robots-noindex`                                      | indexability      | warning  | Meta robots includes noindex (DOM only)             |
 | `robots-nofollow`                                     | indexability      | info     | Meta robots includes nofollow (DOM only)            |
+| `indexability-noindex-signal`                         | indexability      | warning  | Observed noindex in meta and/or X-Robots-Tag        |
+| `indexability-robots-conflict`                        | indexability      | error    | Meta robots disagrees with X-Robots-Tag             |
+| `indexability-robots-blocked`                         | indexability      | warning  | robots.txt evaluation observed crawl block          |
+| `indexability-canonical-mismatch`                     | indexability      | warning  | Canonical target ≠ browser-navigation final URL     |
+| `indexability-redirect-loop`                          | indexability      | error    | Redirect loop in browser-navigation chain           |
+| `indexability-redirect-excessive`                     | indexability      | warning  | More than five redirect hops observed               |
+| `indexability-non-html-content`                       | indexability      | warning  | Content-Type is present and not HTML                |
+| `indexability-sitemap-robots-blocked`                 | indexability      | warning  | Sitemap lists URL blocked by robots.txt             |
 | `hreflang-invalid-url`                                | international     | error    | Alternate hreflang href does not resolve            |
 | `jsonld-malformed`                                    | structured-data   | warning  | JSON-LD script fails `JSON.parse`                   |
 | `jsonld-unevaluated`                                  | structured-data   | info     | JSON-LD capture was truncated                       |
@@ -65,10 +72,11 @@ becomes a pass.
 ## Page summary
 
 `buildPageSummary` counts findings by severity and category. **Indexability
-status is never `indexable` in Sprint 1.** When headers and/or robots.txt were
-not captured, status is `unknown` with an explicit reason. Even if those
-captures exist later, Sprint 1 still reports `signals-partial` until Ticket 204
-reconciliation lands.
+status is never `indexable`.** When headers and/or robots.txt were not captured,
+status is `unknown` with an explicit insufficient-data reason. When reconciliation
+evidence exists, status is `signals-partial` and wording uses “observed” /
+“signal” — never a definitive search-engine indexing claim. See
+`docs/indexability-matrix.md` for combination reference.
 
 ## Structured-data policy
 
