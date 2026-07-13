@@ -91,8 +91,8 @@ useful from the side panel.
 
 **Exit criteria:**
 
-- A user can explicitly grant access to the current origin, open the side
-  panel, audit the active HTTP(S) page, and see the captured facts.
+- A user can open the side panel, audit the active HTTP(S) page (required
+  host permissions), and see the captured facts.
 - DOM facts and derived findings validate against versioned schemas and are
   saved in a local session.
 - The UI explains unavailable data rather than inferring a negative result.
