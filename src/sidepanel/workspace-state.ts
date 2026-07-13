@@ -54,10 +54,22 @@ export function withTab(model: WorkspaceModel, tab: ActiveTabSnapshot): Workspac
         : 'Click “Allow this site” to grant access for this origin only.'
       : tab.reason;
 
+  const sameUrl =
+    model.tab?.status === 'ready' && tab.status === 'ready' && model.tab.url === tab.url;
+  const keepSession = Boolean(model.sessionId) && sameUrl && phase === 'ready-to-collect';
+
   return {
     ...model,
     tab,
-    phase: model.sessionId && phase === 'ready-to-collect' ? 'saved-audit' : phase,
+    phase: keepSession ? 'saved-audit' : phase,
+    ...(keepSession
+      ? {}
+      : {
+          sessionId: null,
+          findings: [],
+          summary: null,
+          captureErrors: [],
+        }),
     statusMessage: viewMessage,
     statusKind:
       tab.status === 'ready' && tab.granted ? 'ok' : tab.status === 'ready' ? 'plain' : 'error',
