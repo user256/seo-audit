@@ -6,7 +6,13 @@ import {
 import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
 import { evaluatePageSnapshot, type PageSummary } from './rules/engine';
 import { availabilityFromEvidence, resolveAuditCheckSelection } from './rules/check-selection';
-import type { AuditSession, CaptureError, Finding, PageSnapshot } from './schemas/audit';
+import type {
+  AuditCheckSelection,
+  AuditSession,
+  CaptureError,
+  Finding,
+  PageSnapshot,
+} from './schemas/audit';
 import { parseDomFacts } from './schemas/dom-evidence';
 import {
   boundDomFactUrls,
@@ -25,6 +31,7 @@ export type CollectDomResult =
       findings: Finding[];
       summary: PageSummary;
       captureErrors: CaptureError[];
+      checkSelection: AuditCheckSelection;
     }
   | { ok: false; error: string; captureError?: CaptureError };
 
@@ -278,6 +285,7 @@ export async function collectDomForActiveTab(
       findings,
       summary,
       captureErrors,
+      checkSelection: saved.checkSelection,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
