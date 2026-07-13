@@ -5,6 +5,7 @@ import {
   imagesEmptyAltAdvisory,
   imagesMissingAlt,
   jsonLdMalformed,
+  jsonLdStructuralValidation,
   languageMissing,
   robotsMetaDirectives,
   titleLengthAdvisory,
@@ -134,6 +135,15 @@ export const CHECK_CATALOGUE: readonly CheckDescriptor[] = [
     cost: 'dom',
     sourceRef:
       'https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data',
+  }),
+  describeCheck(jsonLdStructuralValidation, {
+    label: 'JSON-LD structural validation',
+    description:
+      'Reports bounded generic JSON-LD structure observations; it does not assess rich-result eligibility.',
+    category: 'structured-data',
+    requiredSources: ['script[type=application/ld+json]'],
+    cost: 'dom',
+    sourceRef: 'https://www.w3.org/TR/json-ld11/',
   }),
   describeCheck(languageMissing, {
     label: 'Document language',

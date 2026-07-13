@@ -30,6 +30,7 @@ describe('CHECK_CATALOGUE', () => {
       'robots-meta-directives',
       'hreflang-invalid-url',
       'jsonld-malformed',
+      'jsonld-structural-validation',
       'language-missing',
       'images-missing-alt',
       'images-empty-alt-advisory',

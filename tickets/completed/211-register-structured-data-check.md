@@ -1,7 +1,7 @@
 # Ticket 211: Register the Structured-Data Check
 
 **Sprint:** 2 — Crawl and Index Signals  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** S
 
@@ -19,9 +19,9 @@ audit execution.
 
 ## Acceptance criteria
 
-- [ ] `CHECK_CATALOGUE` contains the structured-data validation descriptor.
-- [ ] Normal audits report structural and truncated JSON-LD observations.
-- [ ] The full quality gate passes.
+- [x] `CHECK_CATALOGUE` contains the structured-data validation descriptor.
+- [x] Normal audits report structural and truncated JSON-LD observations.
+- [x] The full quality gate passes.
 
 ## Dependencies
 
@@ -33,3 +33,6 @@ audit execution.
 
 - 2026-07-13 — Filed during final mainline validation after PR #21. Ticket 208
   code is present but dormant in the default runner.
+- 2026-07-13 — Registered `jsonld-structural-validation` in `CHECK_CATALOGUE`
+  with generic JSON-LD metadata and restored both structural and truncated
+  observations in normal audits. The full automated quality gate passes.
