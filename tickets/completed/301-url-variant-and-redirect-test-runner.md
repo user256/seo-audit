@@ -1,7 +1,7 @@
 # Ticket 301: URL Variant and Redirect Test Runner
 
 **Sprint:** 3 — Bounded Comparisons and Site Checks  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** L
 
@@ -17,15 +17,15 @@ Run and retain a user-approved set of URL-variant redirect tests.
 
 ## Acceptance criteria
 
-- [ ] A user can enter/select a base URL and opt into individual variants:
+- [x] A user can enter/select a base URL and opt into individual variants:
   scheme, www/non-www, trailing slash, case, and configured index filenames.
-- [ ] The runner validates URLs, deduplicates variants, limits concurrency and
+- [x] The runner validates URLs, deduplicates variants, limits concurrency and
   redirects, supports cancellation, and never sends credentials/cookies.
-- [ ] Each result records request URL, final URL, status, redirect hops,
+- [x] Each result records request URL, final URL, status, redirect hops,
   elapsed time, response content type, and any exception with a request limit.
-- [ ] The UI compares final destinations and canonical evidence where available,
+- [x] The UI compares final destinations and canonical evidence where available,
   flagging inconsistencies as observations rather than forcing a preferred host.
-- [ ] Tests cover redirect loops, cross-origin redirects, duplicate variants,
+- [x] Tests cover redirect loops, cross-origin redirects, duplicate variants,
   timeouts, cancellation, and mixed status results with mocked fetches.
 
 ## Out of scope
@@ -39,3 +39,4 @@ Run and retain a user-approved set of URL-variant redirect tests.
 - **Blocks:** 399, 401, 402
 - **Blocked by:** 102, 201, 206, 299
 - **External:** permission for each requested origin
+- 2026-07-13 — Variant generate/run/compare via safeFetch; Crawl signals UI.

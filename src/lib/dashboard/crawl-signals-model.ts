@@ -1,6 +1,18 @@
 import type { NavigationObservationStatus } from '../network/types';
 import type { HreflangClusterValidationResult } from '../hreflang/cluster-validate';
 import {
+  DEFAULT_VARIANT_KIND_OPTIONS,
+  VARIANT_TEST_LIMITS,
+  type VariantKindOptions,
+  type VariantTestLimits,
+  type VariantTestRunResult,
+} from '../variants';
+import {
+  SOFT_404_PROBE_LIMITS,
+  type Soft404ProbeLimits,
+  type Soft404ProbeResult,
+} from '../soft-404';
+import {
   HREFLANG_CLUSTER_DISPLAY_LIMITS,
   HREFLANG_CLUSTER_LIMITS,
   type HreflangClusterLimits,
@@ -118,6 +130,8 @@ export type CrawlSignalsModel = {
   robots: RobotsSignalsPanel;
   sitemap: SitemapSignalsPanel;
   hreflangCluster: HreflangClusterSignalsPanel;
+  variantTests: VariantTestsSignalsPanel;
+  soft404Probe: Soft404ProbeSignalsPanel;
 };
 
 export type HreflangClusterValidateState = 'idle' | 'busy' | 'done' | 'cancelled';
@@ -132,6 +146,32 @@ export type HreflangClusterSignalsPanel = {
   limits: HreflangClusterLimits;
   progress: { completed: number; total: number; currentUrl?: string } | null;
   result: HreflangClusterValidationResult | null;
+  detail: string;
+};
+
+export type VariantTestsRunState = 'idle' | 'busy' | 'done' | 'cancelled';
+
+export type VariantTestsSignalsPanel = {
+  availability: SignalAvailability;
+  runState: VariantTestsRunState;
+  baseUrl: string;
+  kindOptions: VariantKindOptions;
+  limits: VariantTestLimits;
+  progress: { completed: number; total: number; currentUrl?: string } | null;
+  result: VariantTestRunResult | null;
+  detail: string;
+};
+
+export type Soft404ProbeRunState = 'idle' | 'busy' | 'done' | 'cancelled';
+
+export type Soft404ProbeSignalsPanel = {
+  availability: SignalAvailability;
+  runState: Soft404ProbeRunState;
+  auditedUrl: string;
+  probeUrl: string;
+  limits: Soft404ProbeLimits;
+  progress: { phase: string; currentUrl?: string } | null;
+  result: Soft404ProbeResult | null;
   detail: string;
 };
 
@@ -508,6 +548,102 @@ function buildHreflangClusterPanel(input: {
   };
 }
 
+function buildVariantTestsPanel(input: {
+  accessGranted: boolean;
+  auditedUrl: string;
+  baseUrl: string;
+  kindOptions: VariantKindOptions;
+  runState: VariantTestsRunState;
+  progress: VariantTestsSignalsPanel['progress'];
+  result: VariantTestRunResult | null;
+}): VariantTestsSignalsPanel {
+  if (!input.accessGranted) {
+    return {
+      availability: 'needs-access',
+      runState: 'idle',
+      baseUrl: input.baseUrl,
+      kindOptions: input.kindOptions,
+      limits: VARIANT_TEST_LIMITS,
+      progress: null,
+      result: null,
+      detail:
+        'URL variant redirect tests require site access and a user-selected HTTP(S) base URL.',
+    };
+  }
+
+  const busy = input.runState === 'busy';
+  const done = input.runState === 'done' || input.runState === 'cancelled';
+
+  let detail =
+    'Opt-in extension fetch experiment: requests URL variants (scheme, host, slash, case, index files) and records redirect chains. Observations flag inconsistent finals without assuming a preferred host.';
+  if (busy && input.progress) {
+    detail = `Fetching variants (${input.progress.completed}/${input.progress.total})${input.progress.currentUrl ? ` — ${input.progress.currentUrl}` : ''}.`;
+  } else if (done && input.result) {
+    const fetched = input.result.results.filter((row) => !row.skipped).length;
+    detail = input.result.cancelled
+      ? `Cancelled after ${fetched} variant request(s). ${input.result.observations.length} observation(s).`
+      : `Completed ${fetched} variant request(s). ${input.result.finalGroups.length} final URL group(s), ${input.result.observations.length} observation(s).`;
+  }
+
+  return {
+    availability: 'present',
+    runState: input.runState,
+    baseUrl: input.baseUrl,
+    kindOptions: input.kindOptions,
+    limits: VARIANT_TEST_LIMITS,
+    progress: input.progress,
+    result: input.result,
+    detail,
+  };
+}
+
+function buildSoft404ProbePanel(input: {
+  accessGranted: boolean;
+  auditedUrl: string;
+  probeUrl: string;
+  runState: Soft404ProbeRunState;
+  progress: Soft404ProbeSignalsPanel['progress'];
+  result: Soft404ProbeResult | null;
+}): Soft404ProbeSignalsPanel {
+  if (!input.accessGranted) {
+    return {
+      availability: 'needs-access',
+      runState: 'idle',
+      auditedUrl: input.auditedUrl,
+      probeUrl: input.probeUrl,
+      limits: SOFT_404_PROBE_LIMITS,
+      progress: null,
+      result: null,
+      detail:
+        'Soft-404 probe requires site access and a user-confirmed probe URL on the audited origin.',
+    };
+  }
+
+  const busy = input.runState === 'busy';
+  const done = input.runState === 'done' || input.runState === 'cancelled';
+
+  let detail =
+    'Opt-in extension fetch experiment: requests one nonexistent URL and compares it to the audited page. Observations are heuristic only — not Google soft-404 parity.';
+  if (busy && input.progress) {
+    detail = `Soft-404 probe ${input.progress.phase.replace(/-/g, ' ')}${input.progress.currentUrl ? ` — ${input.progress.currentUrl}` : ''}.`;
+  } else if (done && input.result) {
+    detail = input.result.cancelled
+      ? 'Soft-404 probe cancelled before both fetches completed.'
+      : `${input.result.observations.length} possible soft-404 observation(s) from probe comparison.`;
+  }
+
+  return {
+    availability: 'present',
+    runState: input.runState,
+    auditedUrl: input.auditedUrl,
+    probeUrl: input.probeUrl,
+    limits: SOFT_404_PROBE_LIMITS,
+    progress: input.progress,
+    result: input.result,
+    detail,
+  };
+}
+
 /** Build deduplicated sitemap candidates from robots directives and common paths. */
 export function buildSitemapCandidatesForOrigin(
   origin: string,
@@ -532,6 +668,15 @@ export function buildCrawlSignalsModel(input: {
   hreflangValidateState?: HreflangClusterValidateState;
   hreflangProgress?: HreflangClusterSignalsPanel['progress'];
   hreflangResult?: HreflangClusterValidationResult | null;
+  variantBaseUrl?: string;
+  variantKindOptions?: VariantKindOptions;
+  variantRunState?: VariantTestsRunState;
+  variantProgress?: VariantTestsSignalsPanel['progress'];
+  variantResult?: VariantTestRunResult | null;
+  soft404ProbeUrl?: string;
+  soft404RunState?: Soft404ProbeRunState;
+  soft404Progress?: Soft404ProbeSignalsPanel['progress'];
+  soft404Result?: Soft404ProbeResult | null;
 }): CrawlSignalsModel {
   const auditedUrl = input.documentUrl ?? input.tabUrl;
   const candidates =
@@ -563,6 +708,23 @@ export function buildCrawlSignalsModel(input: {
       validateState: input.hreflangValidateState ?? 'idle',
       progress: input.hreflangProgress ?? null,
       result: input.hreflangResult ?? null,
+    }),
+    variantTests: buildVariantTestsPanel({
+      accessGranted: input.accessGranted,
+      auditedUrl,
+      baseUrl: input.variantBaseUrl ?? auditedUrl,
+      kindOptions: input.variantKindOptions ?? DEFAULT_VARIANT_KIND_OPTIONS,
+      runState: input.variantRunState ?? 'idle',
+      progress: input.variantProgress ?? null,
+      result: input.variantResult ?? null,
+    }),
+    soft404Probe: buildSoft404ProbePanel({
+      accessGranted: input.accessGranted,
+      auditedUrl,
+      probeUrl: input.soft404ProbeUrl ?? auditedUrl,
+      runState: input.soft404RunState ?? 'idle',
+      progress: input.soft404Progress ?? null,
+      result: input.soft404Result ?? null,
     }),
   };
 }

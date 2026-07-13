@@ -2,12 +2,16 @@ import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createChromeStub } from '../test/chrome-stub';
 import { resetClusterValidationState } from '../lib/hreflang/cluster-validate';
+import { resetSoft404ProbeState } from '../lib/soft-404';
+import { resetVariantTestState } from '../lib/variants';
 import { handleExtensionRequest } from './messages';
 import { createEmptySession, SessionRepository } from '../lib/storage/session-repository';
 
 describe('handleExtensionRequest', () => {
   beforeEach(() => {
     resetClusterValidationState();
+    resetVariantTestState();
+    resetSoft404ProbeState();
     Object.assign(globalThis, {
       chrome: createChromeStub({
         tabs: {
@@ -31,6 +35,8 @@ describe('handleExtensionRequest', () => {
 
   afterEach(() => {
     resetClusterValidationState();
+    resetVariantTestState();
+    resetSoft404ProbeState();
     vi.unstubAllGlobals();
   });
 
@@ -99,6 +105,90 @@ describe('handleExtensionRequest', () => {
     if (result.type === 'HREFLANG_CLUSTER_RESULT') {
       expect(result.result.cancelled).toBe(true);
       expect(result.result.requestId).toBe('cluster-cancel-test');
+    }
+  });
+
+  it('cancels an in-flight URL variant test run by requestId', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) => {
+        const signal = init?.signal;
+        return new Promise<Response>((_resolve, reject) => {
+          signal?.addEventListener('abort', () => {
+            reject(new DOMException('aborted', 'AbortError'));
+          });
+        });
+      }),
+    );
+
+    const run = handleExtensionRequest({
+      type: 'RUN_URL_VARIANT_TESTS',
+      requestId: 'variant-cancel-test',
+      baseUrl: 'https://shop.example/item',
+      kindOptions: {
+        scheme: true,
+        www: true,
+        trailingSlash: true,
+        case: false,
+        indexFilenames: false,
+      },
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const cancel = await handleExtensionRequest({
+      type: 'CANCEL_URL_VARIANT_TESTS',
+      requestId: 'variant-cancel-test',
+    });
+    expect(cancel).toEqual({
+      type: 'URL_VARIANT_TESTS_CANCELLED',
+      requestId: 'variant-cancel-test',
+      cancelled: true,
+    });
+
+    const result = await run;
+    expect(result.type).toBe('URL_VARIANT_TESTS_RESULT');
+    if (result.type === 'URL_VARIANT_TESTS_RESULT') {
+      expect(result.result.cancelled).toBe(true);
+      expect(result.result.requestId).toBe('variant-cancel-test');
+    }
+  });
+
+  it('cancels an in-flight soft-404 probe by requestId', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) => {
+        const signal = init?.signal;
+        return new Promise<Response>((_resolve, reject) => {
+          signal?.addEventListener('abort', () => {
+            reject(new DOMException('aborted', 'AbortError'));
+          });
+        });
+      }),
+    );
+
+    const run = handleExtensionRequest({
+      type: 'RUN_SOFT_404_PROBE',
+      requestId: 'soft-404-cancel-test',
+      auditedUrl: 'https://shop.example/item',
+      probeUrl: 'https://shop.example/seo-audit-probe-cancel',
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const cancel = await handleExtensionRequest({
+      type: 'CANCEL_SOFT_404_PROBE',
+      requestId: 'soft-404-cancel-test',
+    });
+    expect(cancel).toEqual({
+      type: 'SOFT_404_PROBE_CANCELLED',
+      requestId: 'soft-404-cancel-test',
+      cancelled: true,
+    });
+
+    const result = await run;
+    expect(result.type).toBe('SOFT_404_PROBE_RESULT');
+    if (result.type === 'SOFT_404_PROBE_RESULT') {
+      expect(result.result.cancelled).toBe(true);
+      expect(result.result.requestId).toBe('soft-404-cancel-test');
     }
   });
 

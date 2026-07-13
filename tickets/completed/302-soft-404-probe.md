@@ -1,7 +1,7 @@
 # Ticket 302: Soft-404 Probe
 
 **Sprint:** 3 — Bounded Comparisons and Site Checks  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** M
 
@@ -17,15 +17,15 @@ Perform a conservative, user-started soft-404 comparison for an audited URL.
 
 ## Acceptance criteria
 
-- [ ] Generate one opaque, URL-safe nonexistent path under a user-confirmed
+- [x] Generate one opaque, URL-safe nonexistent path under a user-confirmed
   origin; display it before sending and allow the user to edit/cancel it.
-- [ ] Record status, final URL, content type, title, body-length/hash, and a
+- [x] Record status, final URL, content type, title, body-length/hash, and a
   bounded text fingerprint for the probe and the audited page.
-- [ ] Flag only a “possible soft 404” when the probe has a success/redirect
+- [x] Flag only a “possible soft 404” when the probe has a success/redirect
   response and similarity/status heuristics cross documented thresholds.
-- [ ] Never probe non-HTTP(S) URLs, send cookies or credentials, or follow more
+- [x] Never probe non-HTTP(S) URLs, send cookies or credentials, or follow more
   than the documented redirect cap.
-- [ ] Fixture tests cover true 404/410, 200 error template, redirect-to-home,
+- [x] Fixture tests cover true 404/410, 200 error template, redirect-to-home,
   SPA fallback, and distinct valid content.
 
 ## Out of scope
@@ -39,3 +39,4 @@ Perform a conservative, user-started soft-404 comparison for an audited URL.
 - **Blocks:** 399, 402
 - **Blocked by:** 102, 201, 206, 299
 - **External:** user confirmation for each network probe
+- 2026-07-13 — Soft-404 probe heuristics as soft-404-possible observations; Crawl signals UI.

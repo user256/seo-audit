@@ -26,17 +26,17 @@ Notes:
 
 Load **`dist/`** via `chrome://extensions` → Developer mode → Load unpacked.
 
-| #   | Step                                                                                                             | Pass? | Notes                                                                                          |
-| --- | ---------------------------------------------------------------------------------------------------------------- | ----- | ---------------------------------------------------------------------------------------------- |
-| 1   | Unsupported URL (`chrome://extensions`): phase “Unsupported tab”; Allow/Start hidden                             | ☑     | 2026-07-13: `State: Unsupported tab`; Access “Not available”; chrome:// copy; only Refresh.    |
-| 2   | HTTPS page: Start audit available without an Allow gate (Ticket 212 host_permissions)                            | ☑     | Historical Allow-NUX smoke superseded; re-verify Start audit on first open after 212.          |
-| 3   | Deny permission prompt: status explains denial; no findings invented                                             | ☑     | 2026-07-13 solarcapture.io (pre-212 optional grant). Re-check only if install prompt appears.  |
-| 4   | Grant origin: Start audit available; collect produces findings + local session                                   | ☑     | See interim evidence below (whiskipedia / milroys).                                            |
-| 5   | Close and reopen side panel: session/findings still available for the same audit flow                            | ☐     | Session restore shipped; retest after merge.                                                   |
-| 6   | Open report: edit Markdown, preview strips images/raw HTML, autosave status updates                              | ☐     |                                                                                                |
-| 7   | Start a second audit while typing (or mid-debounce): prior Markdown does not overwrite the new session           | ☐     |                                                                                                |
-| 8   | Navigate the audited tab during collection: `navigation-race` (or equivalent) capture error, not a false finding | ☐     |                                                                                                |
-| 9   | Keyboard: Tab order, focus rings, findings `<summary>` toggle, report focus return                               | ☐     |                                                                                                |
+| #   | Step                                                                                                             | Pass? | Notes                                                                                         |
+| --- | ---------------------------------------------------------------------------------------------------------------- | ----- | --------------------------------------------------------------------------------------------- |
+| 1   | Unsupported URL (`chrome://extensions`): phase “Unsupported tab”; Allow/Start hidden                             | ☑    | 2026-07-13: `State: Unsupported tab`; Access “Not available”; chrome:// copy; only Refresh.   |
+| 2   | HTTPS page: Start audit available without an Allow gate (Ticket 212 host_permissions)                            | ☑    | Historical Allow-NUX smoke superseded; re-verify Start audit on first open after 212.         |
+| 3   | Deny permission prompt: status explains denial; no findings invented                                             | ☑    | 2026-07-13 solarcapture.io (pre-212 optional grant). Re-check only if install prompt appears. |
+| 4   | Grant origin: Start audit available; collect produces findings + local session                                   | ☑    | See interim evidence below (whiskipedia / milroys).                                           |
+| 5   | Close and reopen side panel: session/findings still available for the same audit flow                            | ☐     | Session restore shipped; retest after merge.                                                  |
+| 6   | Open report: edit Markdown, preview strips images/raw HTML, autosave status updates                              | ☐     |                                                                                               |
+| 7   | Start a second audit while typing (or mid-debounce): prior Markdown does not overwrite the new session           | ☐     |                                                                                               |
+| 8   | Navigate the audited tab during collection: `navigation-race` (or equivalent) capture error, not a false finding | ☐     |                                                                                               |
+| 9   | Keyboard: Tab order, focus rings, findings `<summary>` toggle, report focus return                               | ☐     |                                                                                               |
 
 Operator: **\*\***\_\_\_\_**\*\*** Date: **\_\_\_\_** Chrome version: **\_\_\_\_**
 

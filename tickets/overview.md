@@ -39,19 +39,20 @@ Constraints that shape the plan:
 | Area | State | Outstanding / next |
 |---|---|---|
 | **Sprint 1 — Inspect one page** | Blocked | Tickets **109** / **199** need operator Chrome smoke + go/no-go |
-| **Sprint 2 — Crawl/index signals** | Implementation done | Tickets **212→213** closed on PR branch; **299** go/no-go needs operator |
-| **Sprint 3 — Comparisons and site checks** | Planned | Blocked on Sprint 2 **299** |
+| **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **299** needs its recorded public-site review and go/no-go |
+| **Sprint 3 — Comparisons and site checks** | Blocked | Ticket **299**; Ticket **306** remediates the pending 301/302 quality gate |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
 
 ---
 
 # Current Priority Lane
 
-1. [Ticket 203: XML Sitemap and Hreflang Parser](./203-xml-sitemap-and-hreflang-parser.md)
-2. [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
-3. Parallel: finish Ticket 109 / 199 when an operator has bandwidth
+1. [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md) — operator review of the implemented Sprint 2 flow.
+2. [Ticket 306: Sprint 3 Comparison-Runner Quality-Gate Remediation](./306-sprint-3-quality-gate-remediation.md) — after the pending 301/302 work is ready for re-review.
+3. Parallel: finish Ticket 109 / 199 when an operator has bandwidth.
 
-**Recommended next pick:** Ticket **299** Sprint 2 go/no-go (needs operator). Also finish Sprint 1 **109/199** smoke.
+**Recommended next pick:** Ticket **299**. Do not accept or merge the pending
+301/302 implementation until Ticket **306** and the full quality gate pass.
 
 ---
 
@@ -110,7 +111,10 @@ parsing, render comparisons, multi-page variants, cloud sync.
 **Theme:** Add the high-value inputs that explain whether an inspected URL can
 be discovered, crawled, and indexed.
 
-**Tickets:**
+**Completed implementation:** Tickets 201–213 are archived in
+[completed/](./completed/).
+
+**Open gate:**
 
 - [ ] [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md)
 
@@ -135,8 +139,7 @@ without hiding their limits.
 
 **Tickets:**
 
-- [ ] [Ticket 301: URL Variant and Redirect Test Runner](./301-url-variant-and-redirect-test-runner.md)
-- [ ] [Ticket 302: Soft-404 Probe](./302-soft-404-probe.md)
+- [ ] [Ticket 306: Sprint 3 Comparison-Runner Quality-Gate Remediation](./306-sprint-3-quality-gate-remediation.md)
 - [ ] [Ticket 303: CSS and JavaScript Comparison Experiment](./303-css-and-javascript-comparison-experiment.md)
 - [ ] [Ticket 304: Googlebot-Style Render Experiment Spike](./304-googlebot-style-render-experiment-spike.md)
 - [ ] [Ticket 305: User-Agent Profiles and Audit Disclosures](./305-user-agent-profiles-and-audit-disclosures.md)

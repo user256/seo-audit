@@ -1,11 +1,21 @@
 import type { CrawlSignalsModel } from '../lib/dashboard/crawl-signals-model';
 import { HREFLANG_CLUSTER_DISPLAY_LIMITS } from '../lib/hreflang/cluster-limits';
+import { SOFT_404_DISPLAY_LIMITS } from '../lib/soft-404';
+import { VARIANT_TEST_DISPLAY_LIMITS } from '../lib/variants';
+import type { VariantKindOptions } from '../lib/variants';
 
 export type CrawlSignalsViewHandlers = {
   onFetchRobots: () => void;
   onFetchSitemap: () => void;
   onValidateHreflangCluster: () => void;
   onCancelHreflangCluster: () => void;
+  onRunVariantTests: () => void;
+  onCancelVariantTests: () => void;
+  onVariantBaseUrlChange: (baseUrl: string) => void;
+  onVariantKindChange: (kind: keyof VariantKindOptions, enabled: boolean) => void;
+  onRunSoft404Probe: () => void;
+  onCancelSoft404Probe: () => void;
+  onSoft404ProbeUrlChange: (probeUrl: string) => void;
 };
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -428,6 +438,259 @@ function buildHreflangClusterPanel(
   );
 }
 
+function buildVariantTestsPanel(
+  model: CrawlSignalsModel['variantTests'],
+  handlers: CrawlSignalsViewHandlers,
+): HTMLDetailsElement {
+  const body = el('div', 'crawl-panel-body');
+  body.append(el('p', 'lede', model.detail));
+
+  const disclosure = el('p', 'crawl-disclosure');
+  disclosure.textContent =
+    'Extension-initiated HEAD/GET requests (no cookies/credentials) for user-selected URL variants. Results compare final destinations and Link canonical headers where present — observations only, no preferred host.';
+  body.append(disclosure);
+
+  const baseField = el('div', 'crawl-field');
+  const baseLabel = el('label', undefined, 'Base URL') as HTMLLabelElement;
+  baseLabel.htmlFor = 'variant-base-url';
+  const baseInput = el('input', undefined) as HTMLInputElement;
+  baseInput.type = 'url';
+  baseInput.id = 'variant-base-url';
+  baseInput.name = 'variant-base-url';
+  baseInput.value = model.baseUrl;
+  baseInput.disabled = model.runState === 'busy' || model.availability !== 'present';
+  baseInput.autocomplete = 'off';
+  baseInput.spellcheck = false;
+  baseInput.addEventListener('change', () => handlers.onVariantBaseUrlChange(baseInput.value));
+  baseField.append(baseLabel, baseInput);
+  body.append(baseField);
+
+  const kindsFieldset = el('fieldset', 'crawl-fieldset');
+  kindsFieldset.disabled = model.runState === 'busy' || model.availability !== 'present';
+  kindsFieldset.append(el('legend', undefined, 'Variant kinds'));
+  const kindLabels: Record<keyof VariantKindOptions, string> = {
+    scheme: 'HTTP / HTTPS scheme',
+    www: 'WWW / non-WWW host',
+    trailingSlash: 'Trailing slash',
+    case: 'Uppercase host/path',
+    indexFilenames: 'Index filenames (index.html, index.php, …)',
+  };
+  for (const [kind, label] of Object.entries(kindLabels) as [keyof VariantKindOptions, string][]) {
+    const wrap = el('label', 'crawl-checkbox');
+    const checkbox = el('input') as HTMLInputElement;
+    checkbox.type = 'checkbox';
+    checkbox.name = `variant-kind-${kind}`;
+    checkbox.checked = model.kindOptions[kind];
+    checkbox.addEventListener('change', () => handlers.onVariantKindChange(kind, checkbox.checked));
+    wrap.append(checkbox, document.createTextNode(` ${label}`));
+    kindsFieldset.append(wrap);
+  }
+  body.append(kindsFieldset);
+
+  const rows: HTMLElement[] = [
+    row(
+      'Fetch caps',
+      `≤ ${model.limits.maxVariants} variants · ≤ ${model.limits.maxWallTimeMs / 1000}s wall time`,
+      'muted',
+    ),
+  ];
+
+  if (model.progress && model.runState === 'busy') {
+    rows.push(
+      row(
+        'Progress',
+        `${model.progress.completed} / ${model.progress.total}${model.progress.currentUrl ? ` — ${model.progress.currentUrl}` : ''}`,
+      ),
+    );
+  }
+
+  if (model.result) {
+    rows.push(
+      row('Variant requests', String(model.result.results.length)),
+      row('Final URL groups', String(model.result.finalGroups.length)),
+      row(
+        'Observations',
+        String(model.result.observations.length),
+        model.result.observations.length ? 'warn' : undefined,
+      ),
+    );
+  }
+
+  appendDl(body, rows);
+
+  if (model.result?.results.length) {
+    const tableWrap = el('div', 'crawl-table-wrap');
+    const table = el('table', 'crawl-table');
+    table.setAttribute('aria-label', 'URL variant test results');
+    const thead = el('thead');
+    const headRow = el('tr');
+    for (const heading of ['Request URL', 'Final URL', 'Status', 'Hops', 'ms', 'Content-Type']) {
+      headRow.append(el('th', undefined, heading));
+    }
+    thead.append(headRow);
+    table.append(thead);
+
+    const tbody = el('tbody');
+    const shown = model.result.results.slice(0, VARIANT_TEST_DISPLAY_LIMITS.maxResultRows);
+    for (const result of shown) {
+      const tr = el('tr');
+      if (result.error) tr.classList.add('is-error');
+      tr.append(
+        el('td', undefined, result.requestUrl),
+        el('td', undefined, result.finalUrl ?? '—'),
+        el(
+          'td',
+          undefined,
+          result.status != null ? String(result.status) : (result.error?.code ?? '—'),
+        ),
+        el('td', undefined, String(result.redirectHops.length)),
+        el('td', undefined, String(result.elapsedMs)),
+        el('td', undefined, result.contentType ?? '—'),
+      );
+      tbody.append(tr);
+    }
+    table.append(tbody);
+    tableWrap.append(table);
+    appendTruncationNote(tableWrap, shown.length, model.result.results.length);
+    body.append(tableWrap);
+  }
+
+  if (model.result?.observations.length) {
+    const obsDetails = el('details', 'crawl-subpanel');
+    obsDetails.open = true;
+    obsDetails.append(el('summary', undefined, 'Observations'));
+    const list = el('ul', 'dash-list');
+    const shown = model.result.observations.slice(0, VARIANT_TEST_DISPLAY_LIMITS.maxObservations);
+    for (const observation of shown) {
+      list.append(el('li', undefined, `${observation.summary} — ${observation.detail}`));
+    }
+    obsDetails.append(list);
+    appendTruncationNote(obsDetails, shown.length, model.result.observations.length);
+    body.append(obsDetails);
+  }
+
+  const actions = el('div', 'crawl-panel-actions');
+  const runBtn = el('button', 'secondary', 'Run variant tests') as HTMLButtonElement;
+  runBtn.type = 'button';
+  runBtn.id = 'run-variant-tests';
+  runBtn.disabled = model.runState === 'busy' || model.availability !== 'present';
+  runBtn.setAttribute('aria-busy', model.runState === 'busy' ? 'true' : 'false');
+  runBtn.addEventListener('click', handlers.onRunVariantTests);
+  actions.append(runBtn);
+
+  if (model.runState === 'busy') {
+    const cancelBtn = el('button', 'secondary', 'Cancel tests') as HTMLButtonElement;
+    cancelBtn.type = 'button';
+    cancelBtn.id = 'cancel-variant-tests';
+    cancelBtn.addEventListener('click', handlers.onCancelVariantTests);
+    actions.append(cancelBtn);
+  }
+
+  return panel('crawl-panel-variant-tests', 'URL variant tests', model.availability, body, actions);
+}
+
+function buildSoft404ProbePanel(
+  model: CrawlSignalsModel['soft404Probe'],
+  handlers: CrawlSignalsViewHandlers,
+): HTMLDetailsElement {
+  const body = el('div', 'crawl-panel-body');
+  body.append(el('p', 'lede', model.detail));
+
+  const disclosure = el('p', 'crawl-disclosure');
+  disclosure.textContent =
+    'Fetches one user-confirmed nonexistent URL on this origin (no cookies/credentials) and compares it to the audited page. Possible soft-404 observations are heuristic only — not a definitive Google classification. Edit the probe URL before running; you can cancel while it runs.';
+  body.append(disclosure);
+
+  const probeField = el('div', 'crawl-field');
+  const probeLabel = el('label', undefined, 'Probe URL') as HTMLLabelElement;
+  probeLabel.htmlFor = 'soft-404-probe-url';
+  const probeInput = el('input', undefined) as HTMLInputElement;
+  probeInput.type = 'url';
+  probeInput.id = 'soft-404-probe-url';
+  probeInput.name = 'soft-404-probe-url';
+  probeInput.value = model.probeUrl;
+  probeInput.disabled = model.runState === 'busy' || model.availability !== 'present';
+  probeInput.autocomplete = 'off';
+  probeInput.spellcheck = false;
+  probeInput.addEventListener('change', () => handlers.onSoft404ProbeUrlChange(probeInput.value));
+  probeField.append(probeLabel, probeInput);
+  body.append(probeField);
+
+  const rows: HTMLElement[] = [
+    row('Audited URL', model.auditedUrl),
+    row(
+      'Fetch caps',
+      `1 probe + 1 audited page · ≤ ${model.limits.maxWallTimeMs / 1000}s wall time`,
+      'muted',
+    ),
+  ];
+
+  if (model.progress) {
+    rows.push(
+      row(
+        'Progress',
+        `${model.progress.phase.replace(/-/g, ' ')}${model.progress.currentUrl ? ` — ${model.progress.currentUrl}` : ''}`,
+      ),
+    );
+  }
+
+  if (model.result) {
+    rows.push(
+      row(
+        'Probe status',
+        model.result.probe.status != null ? String(model.result.probe.status) : '—',
+      ),
+      row('Probe final URL', model.result.probe.finalUrl ?? '—'),
+      row('Probe title', model.result.probe.title ?? '—'),
+      row('Probe body bytes', String(model.result.probe.bodyByteLength)),
+      row('Audited body bytes', String(model.result.audited.bodyByteLength)),
+      row(
+        'Observations',
+        String(model.result.observations.length),
+        model.result.observations.length > 0 ? 'warn' : undefined,
+      ),
+    );
+  }
+
+  appendDl(body, rows);
+
+  if (model.result?.observations.length) {
+    const list = el('ul', 'crawl-observations');
+    list.setAttribute('aria-label', 'Soft-404 probe observations');
+    for (const observation of model.result.observations.slice(
+      0,
+      SOFT_404_DISPLAY_LIMITS.maxObservations,
+    )) {
+      const item = el('li');
+      item.append(
+        el('strong', undefined, observation.summary),
+        el('p', 'muted', observation.detail),
+      );
+      list.append(item);
+    }
+    body.append(list);
+  }
+
+  const actions = el('div', 'crawl-panel-actions');
+  const runBtn = el('button', 'secondary', 'Run soft-404 probe') as HTMLButtonElement;
+  runBtn.type = 'button';
+  runBtn.id = 'run-soft-404-probe';
+  runBtn.disabled = model.runState === 'busy' || model.availability !== 'present';
+  runBtn.setAttribute('aria-busy', model.runState === 'busy' ? 'true' : 'false');
+  runBtn.addEventListener('click', handlers.onRunSoft404Probe);
+  actions.append(runBtn);
+
+  if (model.runState === 'busy') {
+    const cancelBtn = el('button', 'secondary', 'Cancel probe') as HTMLButtonElement;
+    cancelBtn.type = 'button';
+    cancelBtn.id = 'cancel-soft-404-probe';
+    cancelBtn.addEventListener('click', handlers.onCancelSoft404Probe);
+    actions.append(cancelBtn);
+  }
+
+  return panel('crawl-panel-soft-404', 'Soft-404 probe', model.availability, body, actions);
+}
+
 export function renderCrawlSignalsPanel(
   container: HTMLElement,
   model: CrawlSignalsModel,
@@ -459,6 +722,8 @@ export function renderCrawlSignalsPanel(
     buildRobotsPanel(model.robots, handlers),
     buildSitemapPanel(model.sitemap, handlers),
     buildHreflangClusterPanel(model.hreflangCluster, handlers),
+    buildVariantTestsPanel(model.variantTests, handlers),
+    buildSoft404ProbePanel(model.soft404Probe, handlers),
   );
   container.append(stack);
 }
