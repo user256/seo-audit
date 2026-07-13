@@ -26,6 +26,7 @@ export type ExtensionRequest =
   | { type: 'GLANCE_DOM_INVENTORY' }
   | { type: 'COLLECT_DOM_SNAPSHOT'; selectedCheckIds?: string[] }
   | { type: 'LOAD_SESSION'; sessionId: string }
+  | { type: 'FIND_LATEST_SESSION_FOR_URL'; url: string }
   | { type: 'SAVE_REPORT_MARKDOWN'; sessionId: string; markdown: string }
   | { type: 'WATCH_TAB_NAVIGATION'; tabId: number }
   | { type: 'GET_NAVIGATION_OBSERVATION'; tabId: number; requestedUrl?: string }
@@ -54,6 +55,10 @@ export type ExtensionResponse =
         | { status: 'ok'; session: AuditSession }
         | { status: 'missing'; id: string }
         | { status: 'quarantined'; reason: string };
+    }
+  | {
+      type: 'LATEST_SESSION_FOR_URL';
+      result: { status: 'ok'; session: AuditSession } | { status: 'none' };
     }
   | { type: 'REPORT_SAVED'; sessionId: string }
   | { type: 'NAVIGATION_WATCHING'; tabId: number }
@@ -138,6 +143,13 @@ export async function handleExtensionRequest(
         type: 'SESSION_LOADED',
         result: { status: 'quarantined', reason: loaded.record.reason },
       };
+    }
+    case 'FIND_LATEST_SESSION_FOR_URL': {
+      const found = await repo.findLatestForUrl(message.url);
+      if (found.status === 'ok') {
+        return { type: 'LATEST_SESSION_FOR_URL', result: { status: 'ok', session: found.session } };
+      }
+      return { type: 'LATEST_SESSION_FOR_URL', result: { status: 'none' } };
     }
     case 'SAVE_REPORT_MARKDOWN': {
       const loaded = await repo.get(message.sessionId);

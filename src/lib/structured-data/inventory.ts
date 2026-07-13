@@ -58,6 +58,16 @@ function isRecord(value: unknown): value is JsonRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * JSON-LD node references are objects whose only member is `@id`. They point at
+ * a defined node elsewhere in the graph and must not count as a second
+ * definition of that id (e.g. `"publisher": { "@id": "#organization" }`).
+ */
+function isIdReferenceNode(value: JsonRecord): boolean {
+  const keys = Object.keys(value);
+  return keys.length === 1 && keys[0] === '@id';
+}
+
 function contextStatus(value: unknown): JsonLdContextStatus {
   if (value === undefined) return 'missing';
   if (typeof value === 'string' && value.trim() !== '') return 'valid';
@@ -163,7 +173,10 @@ export function inventoryJsonLdEntry(entry: JsonLdCapturedEntry): JsonLdInventor
 
       nodeCount += 1;
       const id = readId(next.value['@id']);
-      if (id !== undefined) ids.set(id, (ids.get(id) ?? 0) + 1);
+      // Count only defining nodes toward duplicate-id; pure `@id` references are links.
+      if (id !== undefined && !isIdReferenceNode(next.value)) {
+        ids.set(id, (ids.get(id) ?? 0) + 1);
+      }
       nodes.push({
         path: next.path,
         types: readTypes(next.value['@type']),

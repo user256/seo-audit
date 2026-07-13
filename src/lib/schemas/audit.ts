@@ -205,57 +205,75 @@ export function assertDomEvidenceSaveBoundary(session: AuditSession): ParseResul
 /**
  * Lift a Ticket 102/106 schemaVersion-1 session into the current contract.
  * Historical DOM evidence stays readable; captureLimits are filled with documented defaults.
+ * Also backfills missing `checkSelection` on otherwise-current rows (Ticket 210 field).
  */
 export function migrateAuditSessionToCurrent(input: unknown): unknown {
   if (!input || typeof input !== 'object') return input;
   const raw = input as Record<string, unknown>;
-  if (raw.schemaVersion !== 1 && raw.schemaVersion !== 2) return input;
 
-  const snapshots =
-    raw.schemaVersion === 1 && Array.isArray(raw.snapshots)
-      ? raw.snapshots.map((snap) => {
-          if (!snap || typeof snap !== 'object') return snap;
-          const s = snap as Record<string, unknown>;
-          if (s.captureLimits) return s;
+  let candidate: Record<string, unknown> =
+    raw.schemaVersion === 1 || raw.schemaVersion === 2
+      ? (() => {
+          const snapshots =
+            raw.schemaVersion === 1 && Array.isArray(raw.snapshots)
+              ? raw.snapshots.map((snap) => {
+                  if (!snap || typeof snap !== 'object') return snap;
+                  const s = snap as Record<string, unknown>;
+                  if (s.captureLimits) return s;
+                  return {
+                    ...s,
+                    captureLimits: {
+                      schemaVersion: 1,
+                      applied: {
+                        maxStringChars: DOM_LIMITS.maxStringChars,
+                        maxUrlChars: DOM_LIMITS.maxUrlChars,
+                        maxMetaItems: DOM_LIMITS.maxMetaItems,
+                        maxAlternateItems: DOM_LIMITS.maxAlternateItems,
+                        maxJsonLdChars: DOM_LIMITS.maxJsonLdChars,
+                        maxJsonLdScripts: DOM_LIMITS.maxJsonLdScripts,
+                        maxHeadingSamplesPerLevel: DOM_LIMITS.maxHeadingSamplesPerLevel,
+                        maxLinkInventory: DOM_LIMITS.maxLinkInventory,
+                        maxImageInventory: DOM_LIMITS.maxImageInventory,
+                      },
+                      maxSnapshotChars: DOM_LIMITS.maxSnapshotChars,
+                      maxSessionChars: DOM_LIMITS.maxSessionChars,
+                      domEvidenceSchemaVersion: HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION,
+                    },
+                  };
+                })
+              : raw.snapshots;
+
+          const v2 = {
+            ...raw,
+            schemaVersion: 2,
+            snapshots,
+            reportMarkdown: typeof raw.reportMarkdown === 'string' ? raw.reportMarkdown : '',
+          };
+
           return {
-            ...s,
-            captureLimits: {
-              schemaVersion: 1,
-              applied: {
-                maxStringChars: DOM_LIMITS.maxStringChars,
-                maxUrlChars: DOM_LIMITS.maxUrlChars,
-                maxMetaItems: DOM_LIMITS.maxMetaItems,
-                maxAlternateItems: DOM_LIMITS.maxAlternateItems,
-                maxJsonLdChars: DOM_LIMITS.maxJsonLdChars,
-                maxJsonLdScripts: DOM_LIMITS.maxJsonLdScripts,
-                maxHeadingSamplesPerLevel: DOM_LIMITS.maxHeadingSamplesPerLevel,
-                maxLinkInventory: DOM_LIMITS.maxLinkInventory,
-                maxImageInventory: DOM_LIMITS.maxImageInventory,
-              },
-              maxSnapshotChars: DOM_LIMITS.maxSnapshotChars,
-              maxSessionChars: DOM_LIMITS.maxSessionChars,
-              domEvidenceSchemaVersion: HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION,
+            ...v2,
+            schemaVersion: AUDIT_SCHEMA_VERSION,
+            checkSelection: {
+              selectedCheckIds: [],
+              skippedChecks: [],
+              recordingNote: 'Check selection was not recorded for this historical audit.',
             },
           };
-        })
-      : raw.snapshots;
+        })()
+      : { ...raw };
 
-  const v2 = {
-    ...raw,
-    schemaVersion: 2,
-    snapshots,
-    reportMarkdown: typeof raw.reportMarkdown === 'string' ? raw.reportMarkdown : '',
-  };
+  if (!candidate.checkSelection || typeof candidate.checkSelection !== 'object') {
+    candidate = {
+      ...candidate,
+      checkSelection: {
+        selectedCheckIds: [],
+        skippedChecks: [],
+        recordingNote: 'Check selection was not recorded for this audit.',
+      },
+    };
+  }
 
-  return {
-    ...v2,
-    schemaVersion: AUDIT_SCHEMA_VERSION,
-    checkSelection: {
-      selectedCheckIds: [],
-      skippedChecks: [],
-      recordingNote: 'Check selection was not recorded for this historical audit.',
-    },
-  };
+  return candidate;
 }
 
 export function parseAuditSession(input: unknown): ParseResult<AuditSession> {

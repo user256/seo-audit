@@ -44,3 +44,6 @@ Make an evidence-backed decision to begin crawl/index features.
   evidence validation before this gate can confirm the persisted contract.
 - 2026-07-13 — Tickets 113–115 closed. Remaining blockers: Ticket 109 browser
   smoke record, then this go/no-go demonstration.
+- 2026-07-13 — Whiskipedia interim smoke (one public page) recorded in
+  `docs/sprint-1-smoke.md`. Still need second public page, unsupported URL,
+  denial/failure paths, and the rest of the 109 checklist before go/no-go.

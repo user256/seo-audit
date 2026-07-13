@@ -150,7 +150,8 @@ describe('evaluatePageSnapshot', () => {
         <script type="application/ld+json">{
           "@context": "https://schema.org",
           "@graph": [
-            {"@id": "#same"},
+            {"@id": "#orphan"},
+            {"@type": "Thing", "@id": "#same"},
             {"@type": "WebPage", "@id": "#same"}
           ]
         }</script>

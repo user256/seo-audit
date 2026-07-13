@@ -69,6 +69,10 @@ and browser behaviour.
 - 2026-07-13 — Tickets 113–115 closed. Automated gate is 121 tests / lint /
   build / package:check green. Browser checklist in `docs/sprint-1-smoke.md`
   remains the sole open acceptance item.
+- 2026-07-13 — Interim browser evidence on whiskipedia (grant + collect +
+  saved session + honest indexability unknown + 0 findings after JSON-LD
+  reference fix). Recorded under `docs/sprint-1-smoke.md` row 4 / Interim
+  evidence. Rows 1–3 and 5–9 still outstanding; ticket stays open.
 
 ---
 

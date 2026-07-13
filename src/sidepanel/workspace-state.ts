@@ -50,10 +50,22 @@ export function withTab(model: WorkspaceModel, tab: ActiveTabSnapshot): Workspac
       ? 'HTTP(S) host access is available. Start an audit when ready.'
       : tab.reason;
 
+  const sameUrl =
+    model.tab?.status === 'ready' && tab.status === 'ready' && model.tab.url === tab.url;
+  const keepSession = Boolean(model.sessionId) && sameUrl && phase === 'ready-to-collect';
+
   return {
     ...model,
     tab,
-    phase: model.sessionId && phase === 'ready-to-collect' ? 'saved-audit' : phase,
+    phase: keepSession ? 'saved-audit' : phase,
+    ...(keepSession
+      ? {}
+      : {
+          sessionId: null,
+          findings: [],
+          summary: null,
+          captureErrors: [],
+        }),
     statusMessage: viewMessage,
     statusKind: tab.status === 'ready' ? 'ok' : 'error',
   };

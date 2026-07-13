@@ -1,7 +1,9 @@
+import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createChromeStub } from '../test/chrome-stub';
 import { resetClusterValidationState } from '../lib/hreflang/cluster-validate';
 import { handleExtensionRequest } from './messages';
+import { createEmptySession, SessionRepository } from '../lib/storage/session-repository';
 
 describe('handleExtensionRequest', () => {
   beforeEach(() => {
@@ -98,7 +100,38 @@ describe('handleExtensionRequest', () => {
       expect(result.result.cancelled).toBe(true);
       expect(result.result.requestId).toBe('cluster-cancel-test');
     }
+  });
 
-    vi.unstubAllGlobals();
+  it('finds the latest session for a URL via FIND_LATEST_SESSION_FOR_URL', async () => {
+    const repo = new SessionRepository();
+    await repo.save(
+      createEmptySession({
+        id: 'url-sess',
+        tabUrl: 'https://shop.example/item',
+        finalUrl: 'https://shop.example/item',
+        extensionVersion: '0.1.0',
+      }),
+    );
+
+    const response = await handleExtensionRequest({
+      type: 'FIND_LATEST_SESSION_FOR_URL',
+      url: 'https://shop.example/item',
+    });
+    expect(response.type).toBe('LATEST_SESSION_FOR_URL');
+    if (response.type === 'LATEST_SESSION_FOR_URL') {
+      expect(response.result).toMatchObject({
+        status: 'ok',
+        session: { id: 'url-sess' },
+      });
+    }
+
+    const missing = await handleExtensionRequest({
+      type: 'FIND_LATEST_SESSION_FOR_URL',
+      url: 'https://missing.example/',
+    });
+    expect(missing).toEqual({
+      type: 'LATEST_SESSION_FOR_URL',
+      result: { status: 'none' },
+    });
   });
 });
