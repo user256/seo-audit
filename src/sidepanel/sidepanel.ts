@@ -52,11 +52,11 @@ import { availabilityFromEvidence, defaultCheckIds } from '../lib/rules/check-se
 import { buildPageSummary } from '../lib/rules/summary';
 import {
   applyTheme,
-  clearCustomTheme,
   DEFAULT_THEME_TOKENS,
   loadResolvedTheme,
+  queueClearCustomTheme,
+  queueSaveCustomTheme,
   resetTheme,
-  saveCustomTheme,
   THEME_PRESETS,
   THEME_TOKEN_KEYS,
   type ThemeMode,
@@ -182,7 +182,7 @@ function renderThemeEditorPanel(): void {
       onTokenChange: (mode: ThemeMode, key: ThemeTokenKey, value: string) => {
         themeTokens = { ...themeTokens, [mode]: { ...themeTokens[mode], [key]: value } };
         applyTheme(themeTokens);
-        void saveCustomTheme(themeTokens);
+        void queueSaveCustomTheme(themeTokens);
         renderThemeEditorPanel();
       },
       onPresetSelect: (presetId: string) => {
@@ -190,13 +190,13 @@ function renderThemeEditorPanel(): void {
         if (!preset) return;
         themeTokens = structuredClone(preset.tokens);
         applyTheme(themeTokens);
-        void saveCustomTheme(themeTokens);
+        void queueSaveCustomTheme(themeTokens);
         renderThemeEditorPanel();
       },
       onReset: () => {
         themeTokens = structuredClone(DEFAULT_THEME_TOKENS);
         resetTheme();
-        void clearCustomTheme();
+        void queueClearCustomTheme();
         renderThemeEditorPanel();
         setStatus('Theme reset to the shipped default.', 'ok');
       },

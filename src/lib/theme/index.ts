@@ -19,6 +19,12 @@ export {
   type StoredCustomTheme,
 } from './theme-storage';
 export {
+  flushThemeWriteQueue,
+  queueClearCustomTheme,
+  queueSaveCustomTheme,
+  resetThemeWriteQueue,
+} from './theme-write-queue';
+export {
   DEFAULT_THEME_TOKENS,
   fillThemeTokens,
   fillTokenSet,
