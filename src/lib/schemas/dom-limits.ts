@@ -6,6 +6,13 @@
 export const DOM_LIMITS = {
   /** Max characters retained for a single string field (title, meta, samples). */
   maxStringChars: 2_000,
+  /**
+   * Max characters retained for document/base URLs (Ticket 115).
+   * Separate from `maxStringChars` so valid long page URLs survive capture.
+   * Bounding happens in the extension process after navigation-race comparison
+   * against the exact browser URL.
+   */
+  maxUrlChars: 8_192,
   /** Max Open Graph / Twitter meta entries retained. */
   maxMetaItems: 40,
   /** Max hreflang alternate entries retained. */
@@ -28,6 +35,7 @@ export const DOM_LIMITS = {
 
 export type DomCollectLimits = {
   maxStringChars: number;
+  maxUrlChars: number;
   maxMetaItems: number;
   maxAlternateItems: number;
   maxJsonLdChars: number;
@@ -39,6 +47,7 @@ export type DomCollectLimits = {
 
 export const DEFAULT_DOM_COLLECT_LIMITS: DomCollectLimits = {
   maxStringChars: DOM_LIMITS.maxStringChars,
+  maxUrlChars: DOM_LIMITS.maxUrlChars,
   maxMetaItems: DOM_LIMITS.maxMetaItems,
   maxAlternateItems: DOM_LIMITS.maxAlternateItems,
   maxJsonLdChars: DOM_LIMITS.maxJsonLdChars,
@@ -47,6 +56,61 @@ export const DEFAULT_DOM_COLLECT_LIMITS: DomCollectLimits = {
   maxLinkInventory: DOM_LIMITS.maxLinkInventory,
   maxImageInventory: DOM_LIMITS.maxImageInventory,
 };
+
+/** Truthful truncation metadata for a document/base URL that exceeded maxUrlChars. */
+export type UrlBoundRecord = {
+  truncated: true;
+  reason: string;
+  originalLength: number;
+};
+
+export type DomUrlBounds = {
+  documentUrl?: UrlBoundRecord;
+  baseUri?: UrlBoundRecord;
+};
+
+/** Bound a single URL for persistence while retaining length evidence when clipped. */
+export function boundUrlString(
+  url: string,
+  maxChars: number = DOM_LIMITS.maxUrlChars,
+): { value: string; bound?: UrlBoundRecord } {
+  if (url.length <= maxChars) {
+    return { value: url };
+  }
+  return {
+    value: url.slice(0, maxChars),
+    bound: {
+      truncated: true,
+      reason: `URL clipped to ${maxChars} characters`,
+      originalLength: url.length,
+    },
+  };
+}
+
+/**
+ * Apply URL-specific caps to collector output after navigation-race checks have
+ * compared the exact browser URLs.
+ */
+export function boundDomFactUrls(
+  facts: { documentUrl: string; baseUri: string },
+  maxUrlChars: number = DOM_LIMITS.maxUrlChars,
+): {
+  documentUrl: string;
+  baseUri: string;
+  urlBounds?: DomUrlBounds;
+} {
+  const document = boundUrlString(facts.documentUrl, maxUrlChars);
+  const base = boundUrlString(facts.baseUri, maxUrlChars);
+  const urlBounds: DomUrlBounds = {
+    ...(document.bound ? { documentUrl: document.bound } : {}),
+    ...(base.bound ? { baseUri: base.bound } : {}),
+  };
+  return {
+    documentUrl: document.value,
+    baseUri: base.value,
+    urlBounds: Object.keys(urlBounds).length > 0 ? urlBounds : undefined,
+  };
+}
 
 export type CaptureLimitsRecord = {
   schemaVersion: 1;

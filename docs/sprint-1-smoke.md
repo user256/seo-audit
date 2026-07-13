@@ -6,12 +6,13 @@ fresh Chrome 114+ profile.
 
 ## Automated gates
 
-Recorded **2026-07-12** on the Ticket 109 branch:
+Recorded **2026-07-13** on the Sprint 1 gate remediation branch
+(`agent/sprint-1-gate-113-115`):
 
 | Command                 | Result                                                 |
 | ----------------------- | ------------------------------------------------------ |
 | `npm run lint`          | pass                                                   |
-| `npm test`              | pass                                                   |
+| `npm test`              | pass (27 files / 121 tests)                            |
 | `npm run build`         | pass (`dist/` emitted)                                 |
 | `npm run package:check` | pass (stub: MV3 `dist/manifest.json` only; **no ZIP**) |
 

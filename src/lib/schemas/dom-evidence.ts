@@ -6,6 +6,8 @@ export const DOM_EVIDENCE_SCHEMA_VERSION = 2 as const;
 export const HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION = 1 as const;
 
 const BoundedString = z.string().max(DOM_LIMITS.maxStringChars);
+/** Document/base URLs use a dedicated cap so valid long page URLs are not rejected. */
+const BoundedUrlString = z.string().max(DOM_LIMITS.maxUrlChars);
 const BoundedSelector = BoundedString.min(1);
 const NonNegativeInteger = z.number().int().nonnegative();
 
@@ -14,6 +16,20 @@ const TruncationSchema = z.object({
   reason: BoundedString.min(1),
   omittedCount: NonNegativeInteger.optional(),
 });
+
+const UrlBoundRecordSchema = z.object({
+  truncated: z.literal(true),
+  reason: BoundedString.min(1),
+  originalLength: z.number().int().positive(),
+});
+const DomUrlBoundsSchema = z
+  .object({
+    documentUrl: UrlBoundRecordSchema.optional(),
+    baseUri: UrlBoundRecordSchema.optional(),
+  })
+  .refine((value) => value.documentUrl !== undefined || value.baseUri !== undefined, {
+    message: 'At least one URL bound must be present',
+  });
 
 const AbsentFieldSchema = z.object({ state: z.literal('absent') });
 const InaccessibleFieldSchema = z.object({
@@ -180,8 +196,8 @@ const Html5FieldSchema = fieldSchema(Html5SummarySchema);
 const JsonLdFieldSchema = fieldSchema(z.array(JsonLdEntrySchema).max(DOM_LIMITS.maxJsonLdScripts));
 
 export const DomFactsSchema = z.object({
-  documentUrl: BoundedString,
-  baseUri: BoundedString,
+  documentUrl: BoundedUrlString,
+  baseUri: BoundedUrlString,
   collectedAt: z.string().datetime(),
   title: TitleFieldSchema,
   metaDescription: StringMetaFieldSchema,
@@ -234,8 +250,14 @@ export const DOM_EVIDENCE_SOURCES = [
   'capture.limits',
 ] as const;
 
+const DocumentUrlEvidenceSchema = z.object({
+  documentUrl: BoundedUrlString,
+  baseUri: BoundedUrlString,
+  bounds: DomUrlBoundsSchema.optional(),
+});
+
 const DomEvidenceValueSchemas = {
-  'document.URL': z.object({ documentUrl: BoundedString, baseUri: BoundedString }),
+  'document.URL': DocumentUrlEvidenceSchema,
   title: TitleFieldSchema,
   'meta[name=description]': StringMetaFieldSchema,
   'meta[name=robots|googlebot]': MetaRobotsFieldSchema,

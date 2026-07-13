@@ -66,6 +66,9 @@ and browser behaviour.
   remaining work is the external fresh-profile Chrome smoke run and recording
   its results; keep this ticket blocked rather than implying implementation is
   still active.
+- 2026-07-13 — Tickets 113–115 closed. Automated gate is 121 tests / lint /
+  build / package:check green. Browser checklist in `docs/sprint-1-smoke.md`
+  remains the sole open acceptance item.
 
 ---
 

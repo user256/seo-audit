@@ -15,9 +15,11 @@ crawler. Read `mini-seo-tech-audit-extension-spec.md` for scope and
 
 These are load-bearing promises, not preferences:
 
-- **Least privilege.** Request page/network access per-origin at the user's
-  action. Never add `<all_urls>` or a blanket host permission to the baseline
-  manifest.
+- **Broad host access for audits.** Required HTTP(S) host permissions are
+  acceptable so multi-host sitemaps, hreflang clusters, robots, and header
+  capture do not need a per-origin “Allow” gate (Ticket 212). Unsupported URL
+  schemes (`chrome://`, `file://`, etc.) stay blocked. Fetch behaviour is still
+  capped and user-started where the feature crawls or reloads.
 - **Local-first, no exfiltration.** Audits live in the browser (IndexedDB). No
   audit URL, page body, or report leaves the machine. No telemetry, no remote
   analytics, no remote scripts/fonts under the extension CSP.
@@ -26,8 +28,9 @@ These are load-bearing promises, not preferences:
   negative result.
 - **Honest about limits.** Rendering / "JS off" / Googlebot-style features are
   disclosed comparison experiments, never claims of crawler parity. Anything
-  that reloads a page, changes a setting, or attaches a debugger needs a user
-  action and an up-front explanation, and must restore state on completion/error.
+  that reloads a page, changes a setting, attaches a debugger, or fetches a
+  multi-URL cluster needs a user action and an up-front explanation, and must
+  restore state on completion/error where applicable.
 
 ## Git & version-control workflow
 

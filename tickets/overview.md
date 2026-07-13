@@ -23,8 +23,9 @@ The product will provide:
 
 Constraints that shape the plan:
 
-- Page and network access must be requested for the current origin, not
-  declared as blanket host access.
+- Broad HTTP(S) host permissions are preferred over a per-origin Allow NUX so
+  multi-host sitemaps and hreflang clusters work without repeated prompts
+  (Ticket 212). Fetches remain capped; unsupported schemes stay blocked.
 - A Chrome extension cannot faithfully emulate every crawler or change the
   browser-wide User-Agent without privileged/debugging APIs. Any such feature
   must state its scope and consent surface explicitly.
@@ -37,7 +38,7 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | Blocked | Run the remaining fresh-Chrome smoke evidence after Ticket 110's schema hardening |
+| **Sprint 1 — Inspect one page** | Blocked | Fresh Chrome 114+ smoke (Ticket 109), then Ticket 199 go/no-go |
 | **Sprint 2 — Crawl/index signals** | Planned | Add robots, headers, and sitemap inspection on the settled page contract |
 | **Sprint 3 — Comparisons and site checks** | Planned | Add bounded rendering and URL-variant experiments |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
@@ -46,16 +47,12 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md) — blocks the Sprint 1 review gate
-3. [Ticket 114: DOM Evidence Save-Boundary Enforcement](./114-dom-evidence-save-boundary-enforcement.md) — PR #17 remediation; blocks the Sprint 1 review gate and Ticket 208
-4. [Ticket 115: Long-URL DOM Capture Bounds](./115-long-url-dom-capture-bounds.md) — PR #17 remediation; blocks the Sprint 1 review gate
-4. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — blocked externally
-5. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
-6. [Ticket 211: Register the Structured-Data Check](./211-register-structured-data-check.md) — current mainline structured-data tests fail because the rule is unregistered.
+1. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — blocked externally on fresh Chrome 114+ smoke
+2. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
+3. After gate: [Ticket 212: Broad Host Permissions](./212-broad-host-permissions.md) then [206](./206-network-capture-and-safe-fetch-foundation.md)
 
-**Recommended next pick:** **211** — restore the failing structured-data runner
-integration, then complete Tickets 113–115 and the external Ticket 109 smoke
-evidence before Ticket 199.
+**Recommended next pick:** complete the Ticket 109 fresh-profile Chrome smoke
+record, then run Ticket 199. Sprint 2 starts with **212** (drop Allow NUX).
 
 ---
 
@@ -67,8 +64,9 @@ evidence before Ticket 199.
   missing permission or failed fetch into a pass/fail finding.
 - The extension stores audits locally by default. No audit URL, page body, or
   report is sent to a third party in this programme.
-- Every feature that reloads a page, changes a content setting, or attaches a
-  debugger requires a user action and an explanation of what will happen.
+- Broad HTTP(S) host access may be declared so Sprint 2 network features avoid
+  per-origin Allow friction; every multi-URL fetch or reload still needs a user
+  action, caps, and an explanation of what will happen.
 - The report editor stores Markdown as source-of-truth; preview HTML is
   transient, sanitised, and never persisted.
 
@@ -91,9 +89,6 @@ useful from the side panel.
 **Tickets:**
 
 - [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
-- [ ] [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md)
-- [ ] [Ticket 114: DOM Evidence Save-Boundary Enforcement](./114-dom-evidence-save-boundary-enforcement.md)
-- [ ] [Ticket 115: Long-URL DOM Capture Bounds](./115-long-url-dom-capture-bounds.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
 **Exit criteria:**
@@ -118,11 +113,13 @@ be discovered, crawled, and indexed.
 
 **Tickets:**
 
+- [ ] [Ticket 212: Broad Host Permissions (Drop Per-Origin Allow NUX)](./212-broad-host-permissions.md)
 - [ ] [Ticket 206: Network Capture and Safe Fetch Foundation](./206-network-capture-and-safe-fetch-foundation.md)
 - [ ] [Ticket 201: Response Metadata and Redirect Capture](./201-response-metadata-and-redirect-capture.md)
 - [ ] [Ticket 202: Robots.txt Fetch, Parser, and Evaluator](./202-robots-txt-fetch-parser-and-evaluator.md)
 - [ ] [Ticket 203: XML Sitemap and Hreflang Parser](./203-xml-sitemap-and-hreflang-parser.md)
 - [ ] [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
+- [ ] [Ticket 213: Hreflang Page-Cluster Validation (Opt-In Fetch)](./213-hreflang-page-cluster-validation.md)
 - [ ] [Ticket 204: Indexability Reconciliation Rules](./204-indexability-reconciliation-rules.md)
 - [ ] [Ticket 205: Crawl Signals Workspace](./205-crawl-signals-workspace.md)
 - [ ] [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md)

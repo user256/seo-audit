@@ -8,7 +8,11 @@ import { evaluatePageSnapshot, type PageSummary } from './rules/engine';
 import { availabilityFromEvidence, resolveAuditCheckSelection } from './rules/check-selection';
 import type { AuditSession, CaptureError, Finding, PageSnapshot } from './schemas/audit';
 import { parseDomFacts } from './schemas/dom-evidence';
-import { DEFAULT_DOM_COLLECT_LIMITS as SCHEMA_LIMITS, DOM_LIMITS } from './schemas/dom-limits';
+import {
+  boundDomFactUrls,
+  DEFAULT_DOM_COLLECT_LIMITS as SCHEMA_LIMITS,
+  DOM_LIMITS,
+} from './schemas/dom-limits';
 import { createEmptySession, SessionRepository } from './storage/session-repository';
 import { getActiveTabSnapshot } from './tab-access';
 
@@ -158,7 +162,39 @@ export async function collectDomForActiveTab(
       return { ok: false, error: captureError.message, captureError };
     }
 
-    const parsed = parseDomFacts(rawFacts);
+    // Navigation-race identity uses exact browser URLs before URL bounding, but
+    // only when the collector returned URL fields. Otherwise fall through to
+    // schema validation (`dom-evidence-invalid`).
+    if (
+      typeof rawFacts.documentUrl === 'string' &&
+      !sameDocumentUrl(urlBefore, rawFacts.documentUrl)
+    ) {
+      const captureError: CaptureError = {
+        id: newId('cerr'),
+        code: 'navigation-race',
+        source: 'domCollector',
+        message: `Captured document URL diverged from the active tab (tab: ${urlBefore}; document: ${rawFacts.documentUrl}).`,
+        url: rawFacts.documentUrl,
+        capturedAt:
+          typeof rawFacts.collectedAt === 'string'
+            ? rawFacts.collectedAt
+            : new Date().toISOString(),
+      };
+      return { ok: false, error: captureError.message, captureError };
+    }
+
+    const boundedUrls =
+      typeof rawFacts.documentUrl === 'string' && typeof rawFacts.baseUri === 'string'
+        ? boundDomFactUrls(rawFacts, SCHEMA_LIMITS.maxUrlChars)
+        : undefined;
+    const factsForParse: unknown = boundedUrls
+      ? {
+          ...rawFacts,
+          documentUrl: boundedUrls.documentUrl,
+          baseUri: boundedUrls.baseUri,
+        }
+      : rawFacts;
+    const parsed = parseDomFacts(factsForParse);
     if (!parsed.ok) {
       const captureError: CaptureError = {
         id: newId('cerr'),
@@ -172,20 +208,13 @@ export async function collectDomForActiveTab(
     }
 
     const facts = parsed.value as DomFacts;
-    if (!sameDocumentUrl(urlBefore, facts.documentUrl)) {
-      const captureError: CaptureError = {
-        id: newId('cerr'),
-        code: 'navigation-race',
-        source: 'domCollector',
-        message: `Captured document URL diverged from the active tab (tab: ${urlBefore}; document: ${facts.documentUrl}).`,
-        url: facts.documentUrl,
-        capturedAt: facts.collectedAt,
-      };
-      return { ok: false, error: captureError.message, captureError };
-    }
-
     const captureErrors: CaptureError[] = [];
-    let snapshot = domFactsToPageSnapshot(facts, newId('snap'), SCHEMA_LIMITS);
+    let snapshot = domFactsToPageSnapshot(
+      facts,
+      newId('snap'),
+      SCHEMA_LIMITS,
+      boundedUrls?.urlBounds,
+    );
     const budget = enforceSnapshotBudget(snapshot);
     snapshot = budget.snapshot;
     if (budget.truncated) {

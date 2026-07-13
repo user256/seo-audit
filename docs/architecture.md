@@ -49,14 +49,12 @@ These are load-bearing for Ticket 404 packaging and the product privacy promise:
    `dist/`, never loaded from a CDN at runtime.
 4. **`package:check`.** Today a stub that asserts `dist/manifest.json` is MV3.
    Ticket 404 expands it to ZIP contents allow/deny lists and version stamping.
-5. **Least privilege remains a product invariant.** Required permissions are
-   `storage`, `activeTab`, `sidePanel`, `scripting`, and `tabs`. There is **no**
-   required `host_permissions` / `<all_urls>` entry. Optional
-   `http://*/*` + `https://*/*` patterns exist only so
-   `chrome.permissions.request` can grant a single active origin
-   (`https://host/*` or `http://host/*`) after an explicit “Allow this site”
-   click in the side panel. URL eligibility and pattern generation live in
-   `src/lib/origins.ts` — do not invent ad-hoc permission patterns elsewhere.
+5. **Host access policy (Tickets 101 → 212).** Sprint 1 shipped optional
+   per-origin grants. Product direction is now required HTTP(S)
+   `host_permissions` so multi-host Sprint 2 fetches avoid the Allow NUX
+   (Ticket 212). Until 212 lands, the live code still uses optional patterns in
+   `src/lib/origins.ts`. Unsupported schemes (`chrome://`, `file://`, …) stay
+   blocked. Safe-fetch caps (Ticket 206) still apply after broad host access.
 
 ## Permission boundary (Ticket 101)
 

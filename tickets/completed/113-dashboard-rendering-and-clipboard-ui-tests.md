@@ -1,7 +1,7 @@
 # Ticket 113: Dashboard Rendering and Clipboard UI Tests
 
 **Sprint:** 1 — Inspect One Page  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** S
 
@@ -21,13 +21,13 @@ controls.
 
 ## Acceptance criteria
 
-- [ ] Render and assert the pre-access dashboard, including honest unavailable
+- [x] Render and assert the pre-access dashboard, including honest unavailable
   status and redirect slots.
-- [ ] Render a populated glance dashboard and assert bounded inventory facts,
+- [x] Render a populated glance dashboard and assert bounded inventory facts,
   links, images, and visually distinct unavailable states.
-- [ ] Exercise both clipboard controls with a stubbed clipboard API and assert
+- [x] Exercise both clipboard controls with a stubbed clipboard API and assert
   their CSV payloads and accessible labels.
-- [ ] Run `npm test`, `npm run lint`, `npm run build`, and `npm run package:check`.
+- [x] Run `npm test`, `npm run lint`, `npm run build`, and `npm run package:check`.
 
 ## Out of scope
 
@@ -46,6 +46,10 @@ controls.
 - 2026-07-12 — Filed during PR #11 review. The implementation is mergeable,
   but Ticket 111's stated dashboard-rendering coverage is incomplete; retain
   this small, separately testable remediation rather than silently accepting it.
+- 2026-07-13 — Added `src/sidepanel/dashboard-view.test.ts` covering pre-access
+  unavailable slots (`is-warn`), populated glance inventory, and both CSV
+  clipboard buttons with a stubbed `navigator.clipboard`. Quality gate green
+  (121 tests).
 
 ---
 

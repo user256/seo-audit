@@ -4,6 +4,7 @@ import {
   type DomFacts,
 } from '../../content/dom-collector';
 import { parseDomFacts } from '../schemas/dom-evidence';
+import { boundDomFactUrls, DOM_LIMITS } from '../schemas/dom-limits';
 import { getActiveTabSnapshot } from '../tab-access';
 
 export type GlanceInventoryResult =
@@ -33,7 +34,7 @@ export async function glanceDomInventoryForActiveTab(): Promise<GlanceInventoryR
       func: collectDomFactsInPage,
       args: [DEFAULT_DOM_COLLECT_LIMITS],
     });
-    const raw = results[0]?.result;
+    const raw = results[0]?.result as DomFacts | undefined | null;
     if (raw == null) {
       return {
         ok: false,
@@ -41,7 +42,12 @@ export async function glanceDomInventoryForActiveTab(): Promise<GlanceInventoryR
         code: 'collector-empty-result',
       };
     }
-    const parsed = parseDomFacts(raw);
+    const boundedUrls = boundDomFactUrls(raw, DOM_LIMITS.maxUrlChars);
+    const parsed = parseDomFacts({
+      ...raw,
+      documentUrl: boundedUrls.documentUrl,
+      baseUri: boundedUrls.baseUri,
+    });
     if (!parsed.ok) {
       return {
         ok: false,

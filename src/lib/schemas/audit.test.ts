@@ -106,6 +106,7 @@ describe('audit schemas', () => {
         schemaVersion: 1,
         applied: {
           maxStringChars: DOM_LIMITS.maxStringChars,
+          maxUrlChars: DOM_LIMITS.maxUrlChars,
           maxMetaItems: DOM_LIMITS.maxMetaItems,
           maxAlternateItems: DOM_LIMITS.maxAlternateItems,
           maxJsonLdChars: DOM_LIMITS.maxJsonLdChars,

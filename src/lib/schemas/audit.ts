@@ -71,6 +71,7 @@ export const CaptureLimitsSchema = z.object({
   schemaVersion: z.literal(1),
   applied: z.object({
     maxStringChars: z.number().int().positive(),
+    maxUrlChars: z.number().int().positive().optional(),
     maxMetaItems: z.number().int().positive(),
     maxAlternateItems: z.number().int().positive(),
     maxJsonLdChars: z.number().int().positive(),
@@ -100,9 +101,14 @@ export const PageSnapshotSchema = z
     captureLimits: CaptureLimitsSchema.optional(),
   })
   .superRefine((snapshot, ctx) => {
-    // Ticket 110 validates only new v2 DOM evidence. Historical v1 snapshots
-    // stay readable after migration rather than being quarantined wholesale.
-    if (snapshot.captureLimits?.domEvidenceSchemaVersion !== DOM_EVIDENCE_SCHEMA_VERSION) return;
+    // Ticket 114: skip source-specific checks only for explicitly migrated
+    // historical snapshots. Missing or current markers always validate, so new
+    // writes cannot bypass the v2 boundary by omitting the version field.
+    if (
+      snapshot.captureLimits?.domEvidenceSchemaVersion === HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION
+    ) {
+      return;
+    }
     snapshot.evidence.forEach((evidence, index) => {
       if (evidence.kind !== 'dom') return;
       const parsed = parseDomEvidenceValue(evidence.source, evidence.value);
@@ -170,6 +176,33 @@ export type ParseResult<T> =
   | { ok: false; error: string; issues?: string[] };
 
 /**
+ * Save-boundary guard (Ticket 114). New writes must declare the current DOM
+ * evidence schema and cannot claim the historical migration marker.
+ * `parseAuditSession` remains lenient for migrated reads.
+ */
+export function assertDomEvidenceSaveBoundary(session: AuditSession): ParseResult<true> {
+  const issues: string[] = [];
+  session.snapshots.forEach((snapshot, snapIndex) => {
+    const hasDom = snapshot.evidence.some((item) => item.kind === 'dom');
+    if (!hasDom) return;
+    const version = snapshot.captureLimits?.domEvidenceSchemaVersion;
+    if (version !== DOM_EVIDENCE_SCHEMA_VERSION) {
+      issues.push(
+        `snapshots.${snapIndex}.captureLimits.domEvidenceSchemaVersion: new writes with DOM evidence must declare version ${DOM_EVIDENCE_SCHEMA_VERSION} (received ${version ?? 'missing'})`,
+      );
+    }
+  });
+  if (issues.length > 0) {
+    return {
+      ok: false,
+      error: 'DOM evidence save boundary rejected the session.',
+      issues,
+    };
+  }
+  return { ok: true, value: true };
+}
+
+/**
  * Lift a Ticket 102/106 schemaVersion-1 session into the current contract.
  * Historical DOM evidence stays readable; captureLimits are filled with documented defaults.
  */
@@ -190,6 +223,7 @@ export function migrateAuditSessionToCurrent(input: unknown): unknown {
               schemaVersion: 1,
               applied: {
                 maxStringChars: DOM_LIMITS.maxStringChars,
+                maxUrlChars: DOM_LIMITS.maxUrlChars,
                 maxMetaItems: DOM_LIMITS.maxMetaItems,
                 maxAlternateItems: DOM_LIMITS.maxAlternateItems,
                 maxJsonLdChars: DOM_LIMITS.maxJsonLdChars,

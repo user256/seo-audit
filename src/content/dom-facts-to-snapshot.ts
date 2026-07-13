@@ -4,6 +4,7 @@ import {
   captureLimitsRecord,
   DEFAULT_DOM_COLLECT_LIMITS,
   type DomCollectLimits,
+  type DomUrlBounds,
 } from '../lib/schemas/dom-limits';
 import type { DomFacts, FieldState } from './dom-collector';
 
@@ -31,6 +32,7 @@ export function domFactsToPageSnapshot(
   facts: DomFacts,
   snapshotId: string,
   limits: DomCollectLimits = DEFAULT_DOM_COLLECT_LIMITS,
+  urlBounds?: DomUrlBounds,
 ): PageSnapshot {
   const capturedAt = facts.collectedAt;
   const evidence: Evidence[] = [
@@ -41,6 +43,7 @@ export function domFactsToPageSnapshot(
       value: {
         documentUrl: facts.documentUrl,
         baseUri: facts.baseUri,
+        ...(urlBounds ? { bounds: urlBounds } : {}),
       },
       capturedAt,
     },
@@ -93,6 +96,17 @@ export function domFactsToPageSnapshot(
         omittedCount: v.limits.omittedCount,
       };
     });
+
+  if (urlBounds) {
+    const reasons: string[] = [];
+    if (urlBounds.documentUrl) reasons.push(`documentUrl: ${urlBounds.documentUrl.reason}`);
+    if (urlBounds.baseUri) reasons.push(`baseUri: ${urlBounds.baseUri.reason}`);
+    truncatedFields.push({
+      source: 'document.URL',
+      reason: reasons.join('; '),
+      omittedCount: undefined,
+    });
+  }
 
   if (truncatedFields.length > 0) {
     evidence.push({
