@@ -2,6 +2,8 @@ import { safeFetch } from '../network/safe-fetch';
 import { SAFE_FETCH_LIMITS } from '../network/limits';
 import type { RedirectHop, SafeFetchResult } from '../network/types';
 import type { CaptureError, Finding } from '../schemas/audit';
+import { resolveUaProfile } from '../ua-profiles/resolve-profile';
+import type { UaProfileResult, UaProfileSelection } from '../ua-profiles/types';
 import type { HreflangAlternateRef } from './compare-sources';
 import { HREFLANG_CLUSTER_LIMITS, type HreflangClusterLimits } from './cluster-limits';
 import { extractHreflangAlternatesFromHtml } from './extract-html-alternates';
@@ -62,6 +64,8 @@ export type HreflangClusterValidationResult = {
   members: HreflangClusterMemberResult[];
   findings: Finding[];
   errors: ClusterFetchError[];
+  /** User-agent profile applied to every alternate fetch in this run (Ticket 305). */
+  uaProfile: UaProfileResult;
   limitations: string[];
 };
 
@@ -70,6 +74,8 @@ export type ValidateHreflangClusterInput = {
   seedUrl: string;
   alternates: readonly ClusterAlternateInput[];
   limits?: Partial<HreflangClusterLimits>;
+  /** Defaults to browser-default (no header override) when omitted. */
+  uaProfile?: UaProfileSelection;
   onProgress?: (progress: HreflangClusterProgress) => void;
   /** Test hook to stub safeFetch. */
   fetchImpl?: typeof safeFetch;
@@ -373,6 +379,7 @@ export async function validateHreflangCluster(
   const startedAt = nowIso();
   const startedMs = Date.now();
   const evidenceId = `hreflang-cluster-${input.requestId}`;
+  const uaProfile = resolveUaProfile(input.uaProfile ?? { id: 'browser-default' });
   const allTargets = dedupeFetchTargets(input.alternates);
   const cappedTargets = allTargets.slice(0, limits.maxAlternates);
   const alternateCapHit = allTargets.length > cappedTargets.length;
@@ -439,6 +446,7 @@ export async function validateHreflangCluster(
         expectMime: 'text/html',
         requestId: `${input.requestId}-${slug(target.requestedUrl)}`,
         signal: abortController.signal,
+        ...(uaProfile.userAgent ? { userAgent: uaProfile.userAgent } : {}),
       });
 
       completed += 1;
@@ -586,6 +594,7 @@ export async function validateHreflangCluster(
     members: memberResults,
     findings,
     errors,
+    uaProfile,
     limitations,
   };
 }

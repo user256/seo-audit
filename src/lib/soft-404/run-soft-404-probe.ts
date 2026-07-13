@@ -1,4 +1,6 @@
 import { safeFetch } from '../network/safe-fetch';
+import { resolveUaProfile } from '../ua-profiles/resolve-profile';
+import type { UaProfileSelection } from '../ua-profiles/types';
 import { evaluateSoft404Heuristics } from './evaluate-probe';
 import { validateProbeUrl } from './generate-probe-url';
 import { mapFetchToPageCapture } from './map-capture';
@@ -10,6 +12,8 @@ export type RunSoft404ProbeInput = {
   auditedUrl: string;
   probeUrl: string;
   limits?: Partial<Soft404ProbeLimits>;
+  /** Defaults to browser-default (no header override) when omitted. */
+  uaProfile?: UaProfileSelection;
   onProgress?: (progress: Soft404ProbeProgress) => void;
   /** Test hook to stub safeFetch. */
   fetchImpl?: typeof safeFetch;
@@ -91,6 +95,7 @@ export async function runSoft404Probe(input: RunSoft404ProbeInput): Promise<Soft
   const fetchFn = input.fetchImpl ?? safeFetch;
   const startedAt = nowIso();
   const startedMs = Date.now();
+  const uaProfile = resolveUaProfile(input.uaProfile ?? { id: 'browser-default' });
 
   const validated = validateProbeUrl(input.auditedUrl, input.probeUrl);
   if (!validated.ok) {
@@ -106,6 +111,7 @@ export async function runSoft404Probe(input: RunSoft404ProbeInput): Promise<Soft
       probe: emptyCapture('probe', input.probeUrl),
       audited: emptyCapture('audited', input.auditedUrl),
       observations: [],
+      uaProfile,
       limitations: [...BASE_LIMITATIONS, validated.message],
     };
   }
@@ -139,6 +145,7 @@ export async function runSoft404Probe(input: RunSoft404ProbeInput): Promise<Soft
       includeBody: true,
       signal: abortController.signal,
       requestId: `${input.requestId}-probe`,
+      ...(uaProfile.userAgent ? { userAgent: uaProfile.userAgent } : {}),
     });
     const skipped = !shouldContinue() && !probeFetch.ok && probeFetch.code === 'aborted';
     probeCapture = mapFetchToPageCapture({
@@ -158,6 +165,7 @@ export async function runSoft404Probe(input: RunSoft404ProbeInput): Promise<Soft
       includeBody: true,
       signal: abortController.signal,
       requestId: `${input.requestId}-audited`,
+      ...(uaProfile.userAgent ? { userAgent: uaProfile.userAgent } : {}),
     });
     const skipped = !shouldContinue() && !auditedFetch.ok && auditedFetch.code === 'aborted';
     auditedCapture = mapFetchToPageCapture({
@@ -212,6 +220,7 @@ export async function runSoft404Probe(input: RunSoft404ProbeInput): Promise<Soft
     probe: probeCapture,
     audited: auditedCapture,
     observations,
+    uaProfile,
     limitations,
   };
 }

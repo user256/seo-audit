@@ -1,6 +1,8 @@
 import { safeFetch } from '../network/safe-fetch';
 import { SAFE_FETCH_LIMITS } from '../network/limits';
 import type { SafeFetchResult } from '../network/types';
+import { resolveUaProfile } from '../ua-profiles/resolve-profile';
+import type { UaProfileSelection } from '../ua-profiles/types';
 import {
   buildVariantObservations,
   canonicalFromLinkHeader,
@@ -21,6 +23,8 @@ export type RunVariantTestsInput = {
   kindOptions: VariantKindOptions;
   method?: 'HEAD' | 'GET';
   limits?: Partial<VariantTestLimits>;
+  /** Defaults to browser-default (no header override) when omitted. */
+  uaProfile?: UaProfileSelection;
   onProgress?: (progress: VariantTestProgress) => void;
   /** Test hook to stub safeFetch. */
   fetchImpl?: typeof safeFetch;
@@ -148,6 +152,7 @@ export async function runVariantTests(input: RunVariantTestsInput): Promise<Vari
   const method = input.method ?? 'HEAD';
   const startedAt = nowIso();
   const startedMs = Date.now();
+  const uaProfile = resolveUaProfile(input.uaProfile ?? { id: 'browser-default' });
 
   const generated = generateVariants(input.baseUrl, input.kindOptions);
   if (!generated.ok) {
@@ -163,6 +168,7 @@ export async function runVariantTests(input: RunVariantTestsInput): Promise<Vari
       results: [],
       finalGroups: [],
       observations: [],
+      uaProfile,
       limitations: [...BASE_LIMITATIONS, generated.message],
       truncation: {
         totalGenerated: 0,
@@ -237,6 +243,7 @@ export async function runVariantTests(input: RunVariantTestsInput): Promise<Vari
         method,
         requestId: `${input.requestId}-${slug(variant.url)}`,
         signal: abortController.signal,
+        ...(uaProfile.userAgent ? { userAgent: uaProfile.userAgent } : {}),
       });
 
       completed += 1;
@@ -316,6 +323,7 @@ export async function runVariantTests(input: RunVariantTestsInput): Promise<Vari
     results,
     finalGroups,
     observations,
+    uaProfile,
     limitations,
     truncation: {
       totalGenerated: allVariants.length,

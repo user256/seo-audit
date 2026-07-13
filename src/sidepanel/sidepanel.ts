@@ -35,6 +35,12 @@ import {
 } from '../lib/hreflang';
 import { buildDefaultProbeUrl, type Soft404ProbeResult } from '../lib/soft-404';
 import {
+  loadUaProfilePreference,
+  saveUaProfilePreference,
+  type UaProfileId,
+  type UaProfileSelection,
+} from '../lib/ua-profiles';
+import {
   DEFAULT_VARIANT_KIND_OPTIONS,
   type VariantKindOptions,
   type VariantTestRunResult,
@@ -103,6 +109,8 @@ let hreflangValidateState: HreflangClusterValidateState = 'idle';
 let hreflangProgress: CrawlSignalsModel['hreflangCluster']['progress'] = null;
 let hreflangResult: HreflangClusterValidationResult | null = null;
 let hreflangRequestId: string | null = null;
+let uaProfileId: UaProfileId = 'browser-default';
+let uaProfileCustomUserAgent = '';
 let variantBaseUrl = '';
 let variantKindOptions: VariantKindOptions = { ...DEFAULT_VARIANT_KIND_OPTIONS };
 let variantRunState: VariantTestsRunState = 'idle';
@@ -278,6 +286,16 @@ function renderWorkspace(): void {
       onFetchSitemap: () => {
         void fetchSitemapForTab();
       },
+      onUaProfileSelectionChange: (profileId) => {
+        uaProfileId = profileId;
+        void saveUaProfilePreference({ profileId, customUserAgent: uaProfileCustomUserAgent });
+        void refreshUaProfilePanel();
+      },
+      onUaProfileCustomUaChange: (customUserAgent) => {
+        uaProfileCustomUserAgent = customUserAgent;
+        void saveUaProfilePreference({ profileId: uaProfileId, customUserAgent });
+        void refreshUaProfilePanel();
+      },
       onValidateHreflangCluster: () => {
         void validateHreflangClusterForTab();
       },
@@ -351,6 +369,8 @@ async function rebuildCrawlSignals(tab: NonNullable<WorkspaceModel['tab']>): Pro
     sitemapCandidates,
     robotsFetchBusy,
     sitemapFetchBusy,
+    uaProfileSelection: uaProfileId,
+    uaProfileCustomUserAgent,
     hreflangAlternates: hreflangAlternatesFromEvidence(wizardEvidence),
     hreflangValidateState,
     hreflangProgress,
@@ -368,6 +388,18 @@ async function rebuildCrawlSignals(tab: NonNullable<WorkspaceModel['tab']>): Pro
     cssJsProgress,
     cssJsResult,
   });
+}
+
+function currentUaProfileSelection(): UaProfileSelection {
+  return uaProfileId === 'custom'
+    ? { id: 'custom', customUserAgent: uaProfileCustomUserAgent }
+    : { id: uaProfileId };
+}
+
+async function refreshUaProfilePanel(): Promise<void> {
+  const tab = workspace.tab;
+  if (tab) await rebuildCrawlSignals(tab);
+  renderWorkspace();
 }
 
 async function loadGlanceDashboard(): Promise<void> {
@@ -571,6 +603,7 @@ async function validateHreflangClusterForTab(): Promise<void> {
       requestId: hreflangRequestId,
       seedUrl,
       alternates,
+      uaProfile: currentUaProfileSelection(),
     });
     if (response.type === 'ERROR') {
       hreflangValidateState = 'idle';
@@ -634,6 +667,7 @@ async function runVariantTestsForTab(): Promise<void> {
       baseUrl,
       kindOptions: variantKindOptions,
       method: 'HEAD',
+      uaProfile: currentUaProfileSelection(),
     });
     if (response.type === 'ERROR') {
       variantRunState = 'idle';
@@ -703,6 +737,7 @@ async function runSoft404ProbeForTab(): Promise<void> {
       requestId: soft404RequestId,
       auditedUrl,
       probeUrl,
+      uaProfile: currentUaProfileSelection(),
     });
     if (response.type === 'ERROR') {
       soft404RunState = 'idle';
@@ -1162,4 +1197,11 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
-void refresh();
+async function bootstrap(): Promise<void> {
+  const preference = await loadUaProfilePreference();
+  uaProfileId = preference.profileId;
+  uaProfileCustomUserAgent = preference.customUserAgent;
+  await refresh();
+}
+
+void bootstrap();

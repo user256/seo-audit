@@ -1,5 +1,9 @@
 import type { NavigationObservationStatus } from '../network/types';
 import type { HreflangClusterValidationResult } from '../hreflang/cluster-validate';
+import { resolveUaProfile } from '../ua-profiles/resolve-profile';
+import { UA_PROFILE_LIMITS, type UaProfileLimits } from '../ua-profiles/limits';
+import { UA_PROFILE_DEFINITIONS } from '../ua-profiles/profiles';
+import type { UaProfileDefinition, UaProfileId, UaProfileResult } from '../ua-profiles/types';
 import {
   CSS_JS_COMPARISON_LIMITS,
   type CssJsComparisonLimits,
@@ -134,10 +138,27 @@ export type CrawlSignalsModel = {
   navigation: NavigationSignalsPanel;
   robots: RobotsSignalsPanel;
   sitemap: SitemapSignalsPanel;
+  uaProfile: UaProfileSignalsPanel;
   hreflangCluster: HreflangClusterSignalsPanel;
   variantTests: VariantTestsSignalsPanel;
   soft404Probe: Soft404ProbeSignalsPanel;
   cssJsComparison: CssJsComparisonSignalsPanel;
+};
+
+/**
+ * Selector + live preview of what a UA profile would do if applied right now
+ * (Ticket 305). Shared by variant tests, the soft-404 probe, and hreflang
+ * cluster validation — each run result also records the profile actually
+ * used for that run in `uaProfile` on its own result object.
+ */
+export type UaProfileSignalsPanel = {
+  availability: SignalAvailability;
+  selection: UaProfileId;
+  customUserAgent: string;
+  resolved: UaProfileResult;
+  limits: UaProfileLimits;
+  definitions: UaProfileDefinition[];
+  detail: string;
 };
 
 export type HreflangClusterValidateState = 'idle' | 'busy' | 'done' | 'cancelled';
@@ -495,6 +516,30 @@ function buildSitemapPanel(
   };
 }
 
+function buildUaProfilePanel(input: {
+  accessGranted: boolean;
+  selection: UaProfileId;
+  customUserAgent: string;
+}): UaProfileSignalsPanel {
+  const resolved = resolveUaProfile(
+    input.selection === 'custom'
+      ? { id: 'custom', customUserAgent: input.customUserAgent }
+      : { id: input.selection },
+  );
+  return {
+    availability: input.accessGranted ? 'present' : 'needs-access',
+    selection: input.selection,
+    customUserAgent: input.customUserAgent,
+    resolved,
+    limits: UA_PROFILE_LIMITS,
+    definitions: Object.values(UA_PROFILE_DEFINITIONS),
+    detail:
+      'Applies to the network probes below only (variant tests, soft-404 probe, hreflang cluster ' +
+      'validation). Changes the HTTP User-Agent header on those extension-initiated fetches only — ' +
+      'never the active browser tab or navigator.userAgent.',
+  };
+}
+
 function buildHreflangClusterPanel(input: {
   accessGranted: boolean;
   auditedUrl: string;
@@ -735,6 +780,8 @@ export function buildCrawlSignalsModel(input: {
   sitemapCandidates?: SitemapCandidate[];
   robotsFetchBusy?: boolean;
   sitemapFetchBusy?: boolean;
+  uaProfileSelection?: UaProfileId;
+  uaProfileCustomUserAgent?: string;
   hreflangAlternates?: { hreflang: string; href: string }[];
   hreflangValidateState?: HreflangClusterValidateState;
   hreflangProgress?: HreflangClusterSignalsPanel['progress'];
@@ -775,6 +822,11 @@ export function buildCrawlSignalsModel(input: {
       input.sitemap,
       Boolean(input.sitemapFetchBusy),
     ),
+    uaProfile: buildUaProfilePanel({
+      accessGranted: input.accessGranted,
+      selection: input.uaProfileSelection ?? 'browser-default',
+      customUserAgent: input.uaProfileCustomUserAgent ?? '',
+    }),
     hreflangCluster: buildHreflangClusterPanel({
       accessGranted: input.accessGranted,
       auditedUrl,

@@ -40,18 +40,20 @@ Constraints that shape the plan:
 |---|---|---|
 | **Sprint 1 — Inspect one page** | Blocked | Tickets **109** / **199** need operator Chrome smoke + go/no-go |
 | **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **299** needs its recorded public-site review and go/no-go |
-| **Sprint 3 — Comparisons and site checks** | In progress | Tickets **303**/**306** done; **304** spike next; gate **299**/**399** still need operator |
+| **Sprint 3 — Comparisons and site checks** | In progress | Tickets **303**/**304**/**305**/**306** done (304: defer, see `docs/googlebot-style-experiment.md`; 305: network-probe-only UA profiles, see `docs/ua-profiles.md`); gate **299**/**399** still need operator |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
 
 ---
 
 # Current Priority Lane
 
-1. [Ticket 304: Googlebot-Style Render Experiment Spike](./304-googlebot-style-render-experiment-spike.md) — feasibility + optional prototype.
-2. Parallel: Ticket **299** / **109** / **199** when an operator can run Chrome smoke.
-3. Then Ticket **305** (UA profiles) after 304 outcome.
+1. Parallel: Ticket **299** / **109** / **199** when an operator can run Chrome smoke.
+2. Then Ticket **399** (Sprint 3 review) once the external gates land — Ticket
+   305 is done, so 399 is unblocked from the implementation side.
 
-**Recommended next pick:** Ticket **304**. Do not close Ticket **399** without operator review.
+**Recommended next pick:** Ticket **399** (operator gate), or the parallel
+**299**/**109**/**199** operator gates. Do not close Ticket **399** without
+operator review.
 
 ---
 
@@ -136,13 +138,15 @@ emulation, external SEO services.
 **Theme:** Offer opt-in experiments that reveal redirect and rendering risks,
 without hiding their limits.
 
-**Completed implementation:** [Ticket 301](./completed/301-url-variant-and-redirect-test-runner.md)
-and [Ticket 302](./completed/302-soft-404-probe.md).
+**Completed implementation:** [Ticket 301](./completed/301-url-variant-and-redirect-test-runner.md),
+[Ticket 302](./completed/302-soft-404-probe.md),
+[Ticket 303](./completed/303-css-and-javascript-comparison-experiment.md),
+[Ticket 304](./completed/304-googlebot-style-render-experiment-spike.md),
+[Ticket 305](./completed/305-user-agent-profiles-and-audit-disclosures.md),
+and [Ticket 306](./completed/306-sprint-3-quality-gate-remediation.md).
 
 **Tickets:**
 
-- [ ] [Ticket 304: Googlebot-Style Render Experiment Spike](./304-googlebot-style-render-experiment-spike.md)
-- [ ] [Ticket 305: User-Agent Profiles and Audit Disclosures](./305-user-agent-profiles-and-audit-disclosures.md)
 - [ ] [Ticket 399: Sprint 3 Review and Go/No-Go](./399-sprint-3-review.md)
 
 **Exit criteria:**
