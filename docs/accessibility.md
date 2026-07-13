@@ -46,6 +46,22 @@ Run after loading unpacked `dist/` in Chrome (see also
    clickable/focusable (not clipped off-screen).
 9. Toggle OS light/dark appearance — body text remains readable (AA contrast
    targets for `--fg` on `--bg` as measured above).
+10. With site access on an https page, expand **Crawl signals** panels with
+    keyboard (**Tab** into each `<summary>`, Space toggles). **Fetch robots**
+    and **Discover & fetch sitemap** disable while a fetch is in flight
+    (`aria-busy="true"`).
+11. Confirm availability badges (`present`, `unavailable`, `absent`, `error`,
+    `needs access`) are exposed to screen readers via `role="status"` and
+    `aria-label`.
+
+## Crawl signals (Ticket 205)
+
+- Three labelled `<details>` panels: navigation/headers, robots.txt, sitemap.
+- Capture errors render as plain text with a distinct **error** availability
+  badge — they are not styled as pass/fail findings.
+- Long redirect hops, header lists, and sitemap candidate lists truncate with
+  “Showing N of M”.
+- Findings below remain the reconciliation surface for indexability rules.
 
 ## Design notes
 

@@ -4,7 +4,9 @@ import {
   type GlanceInventoryResult,
 } from '../lib/dashboard/glance';
 import type { NavigationObservationStatus } from '../lib/network/types';
+import { fetchRobotsForOrigin, type RobotsFetchResult } from '../lib/robots/fetch-robots';
 import type { AuditSession } from '../lib/schemas/audit';
+import { fetchSitemap, type SitemapFetchResult } from '../lib/sitemap/fetch-sitemap';
 import { SessionRepository } from '../lib/storage/session-repository';
 import { getActiveTabSnapshot, pingActiveTab, type ActiveTabSnapshot } from '../lib/tab-access';
 import { navigationCapture } from './navigation-listeners';
@@ -20,7 +22,9 @@ export type ExtensionRequest =
   | { type: 'SAVE_REPORT_MARKDOWN'; sessionId: string; markdown: string }
   | { type: 'WATCH_TAB_NAVIGATION'; tabId: number }
   | { type: 'GET_NAVIGATION_OBSERVATION'; tabId: number; requestedUrl?: string }
-  | { type: 'RELOAD_AND_OBSERVE_NAVIGATION'; tabId: number };
+  | { type: 'RELOAD_AND_OBSERVE_NAVIGATION'; tabId: number }
+  | { type: 'FETCH_ROBOTS_FOR_ORIGIN'; origin: string; bypassCache?: boolean }
+  | { type: 'FETCH_SITEMAP'; rootUrls: string[] };
 
 export type ExtensionResponse =
   | { type: 'ACTIVE_TAB_SNAPSHOT'; snapshot: ActiveTabSnapshot }
@@ -40,6 +44,8 @@ export type ExtensionResponse =
   | { type: 'REPORT_SAVED'; sessionId: string }
   | { type: 'NAVIGATION_WATCHING'; tabId: number }
   | { type: 'NAVIGATION_OBSERVATION'; observation: NavigationObservationStatus }
+  | { type: 'ROBOTS_FETCH_RESULT'; result: RobotsFetchResult }
+  | { type: 'SITEMAP_FETCH_RESULT'; result: SitemapFetchResult }
   | { type: 'ERROR'; message: string };
 
 async function reloadAndObserve(tabId: number): Promise<NavigationObservationStatus> {
@@ -129,6 +135,18 @@ export async function handleExtensionRequest(
       return {
         type: 'NAVIGATION_OBSERVATION',
         observation: await reloadAndObserve(message.tabId),
+      };
+    case 'FETCH_ROBOTS_FOR_ORIGIN':
+      return {
+        type: 'ROBOTS_FETCH_RESULT',
+        result: await fetchRobotsForOrigin(message.origin, {
+          bypassCache: message.bypassCache,
+        }),
+      };
+    case 'FETCH_SITEMAP':
+      return {
+        type: 'SITEMAP_FETCH_RESULT',
+        result: await fetchSitemap(message.rootUrls),
       };
     default: {
       const _exhaustive: never = message;

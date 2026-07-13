@@ -31,3 +31,4 @@
 - [x] [Ticket 203: XML Sitemap and Hreflang Parser](./203-xml-sitemap-and-hreflang-parser.md)
 - [x] [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
 - [x] [Ticket 204: Indexability Reconciliation Rules](./204-indexability-reconciliation-rules.md)
+- [x] [Ticket 205: Crawl Signals Workspace](./205-crawl-signals-workspace.md)

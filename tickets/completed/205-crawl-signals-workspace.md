@@ -1,7 +1,7 @@
 # Ticket 205: Crawl Signals Workspace
 
 **Sprint:** 2 — Crawl and Index Signals  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** M
 
@@ -18,15 +18,15 @@ the audit workspace.
 
 ## Acceptance criteria
 
-- [ ] Provide separate, labelled panels for navigation/headers, robots,
+- [x] Provide separate, labelled panels for navigation/headers, robots,
   sitemap, and resulting findings, with source URL and capture time shown.
-- [ ] Show redirect hops, matched robots rule, sitemap parse limits, and
+- [x] Show redirect hops, matched robots rule, sitemap parse limits, and
   raw/normalised URLs on demand without unbounded text rendering.
-- [ ] Fetches and parses show progress, cancellation where supported, and
+- [x] Fetches and parses show progress, cancellation where supported, and
   actionable non-sensitive errors.
-- [ ] All data-unavailable states are visually and programmatically distinct
+- [x] All data-unavailable states are visually and programmatically distinct
   from “not found” and “passes”.
-- [ ] Keyboard, small-panel, and screen-reader smoke tests cover the new panels.
+- [x] Keyboard, small-panel, and screen-reader smoke tests cover the new panels.
 
 ## Out of scope
 
@@ -38,3 +38,4 @@ the audit workspace.
 - **Blocks:** 299
 - **Blocked by:** 106, 201–204, 207, 208
 - **External:** none
+- 2026-07-13 — Crawl signals panels + FETCH_ROBOTS/FETCH_SITEMAP messages; view-model tests.

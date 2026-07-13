@@ -1,16 +1,26 @@
 import type { ExtensionRequest, ExtensionResponse } from '../background/messages';
 import {
+  buildCrawlSignalsModel,
+  buildSitemapCandidatesForOrigin,
+  type CrawlSignalsModel,
+} from '../lib/dashboard/crawl-signals-model';
+import {
   buildGlanceDashboard,
   buildGrantedShellDashboard,
   buildPreAccessDashboard,
   type SeoDashboardModel,
 } from '../lib/dashboard/model';
+import type { NavigationObservationStatus } from '../lib/network/types';
+import type { RobotsFetchResult } from '../lib/robots/fetch-robots';
 import type { AuditSession, Evidence } from '../lib/schemas/audit';
+import type { SitemapCandidate } from '../lib/sitemap/discover';
+import type { SitemapFetchResult } from '../lib/sitemap/fetch-sitemap';
 import { buildAuditReport } from '../lib/report/audit-report';
 import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
 import { DEFAULT_DOM_COLLECT_LIMITS } from '../lib/schemas/dom-limits';
 import { availabilityFromEvidence, defaultCheckIds } from '../lib/rules/check-selection';
 import { renderCheckSelectionView } from './check-selection-view';
+import { renderCrawlSignalsPanel } from './crawl-signals-view';
 import { renderSeoDashboard } from './dashboard-view';
 import { renderFindingsPanel } from './findings-view';
 import { mountReportEditor, type ReportEditorController } from './report-editor';
@@ -43,6 +53,7 @@ const pingBtn = document.querySelector('#ping') as HTMLButtonElement;
 const openReportBtn = document.querySelector('#open-report') as HTMLButtonElement;
 const backToFindingsBtn = document.querySelector('#back-to-findings') as HTMLButtonElement;
 const dashboardSection = document.querySelector('#dashboard-section') as HTMLElement;
+const crawlSignalsSection = document.querySelector('#crawl-signals-section') as HTMLElement;
 const findingsSection = document.querySelector('#findings-section') as HTMLElement;
 const findingsSummaryEl = document.querySelector('#findings-summary')!;
 const findingsPanel = document.querySelector('#findings-panel') as HTMLElement;
@@ -56,6 +67,13 @@ let reportEditor: ReportEditorController | null = null;
 let evidenceById = new Map<string, Evidence>();
 let viewingReport = false;
 let dashboard: SeoDashboardModel | null = null;
+let crawlSignals: CrawlSignalsModel | null = null;
+let navigationObservation: NavigationObservationStatus | undefined;
+let robotsResult: RobotsFetchResult | null = null;
+let sitemapResult: SitemapFetchResult | null = null;
+let sitemapCandidates: SitemapCandidate[] = [];
+let robotsFetchBusy = false;
+let sitemapFetchBusy = false;
 let wizardEvidence: Evidence[] = [];
 let wizardOpen = false;
 let selectedWizardCheckIds = defaultCheckIds();
@@ -121,6 +139,19 @@ function renderWorkspace(): void {
     renderSeoDashboard(dashboardSection, dashboard);
   }
 
+  const showCrawlSignals = Boolean(crawlSignals) && !viewingReport;
+  crawlSignalsSection.hidden = !showCrawlSignals;
+  if (showCrawlSignals && crawlSignals) {
+    renderCrawlSignalsPanel(crawlSignalsSection, crawlSignals, {
+      onFetchRobots: () => {
+        void fetchRobotsForTab();
+      },
+      onFetchSitemap: () => {
+        void fetchSitemapForTab();
+      },
+    });
+  }
+
   findingsSection.hidden = !hasSession || viewingReport;
   reportSection.hidden = !hasSession || !viewingReport;
   openReportBtn.hidden = !hasSession || viewingReport;
@@ -135,20 +166,45 @@ function renderWorkspace(): void {
   }
 }
 
+async function rebuildCrawlSignals(tab: NonNullable<WorkspaceModel['tab']>): Promise<void> {
+  const origin = tab.status === 'ready' ? tab.origin : '';
+  const accessGranted = tab.status === 'ready' && tab.granted;
+  sitemapCandidates = buildSitemapCandidatesForOrigin(origin, robotsResult);
+  crawlSignals = buildCrawlSignalsModel({
+    tabUrl: tab.status === 'ready' ? tab.url : '—',
+    documentUrl: dashboard?.documentUrl ?? null,
+    origin,
+    accessGranted,
+    navigation: navigationObservation,
+    robots: robotsResult,
+    sitemap: sitemapResult,
+    sitemapCandidates,
+    robotsFetchBusy,
+    sitemapFetchBusy,
+  });
+}
+
 async function loadGlanceDashboard(): Promise<void> {
   const tab = workspace.tab;
   if (!tab || tab.status !== 'ready') {
     dashboard = null;
+    crawlSignals = null;
+    navigationObservation = undefined;
     return;
   }
   if (!tab.granted) {
     wizardEvidence = [];
+    robotsResult = null;
+    sitemapResult = null;
+    navigationObservation = undefined;
     dashboard = buildPreAccessDashboard(tab.url);
+    await rebuildCrawlSignals(tab);
     return;
   }
 
   // Never show the pre-access “needs site access” shell once granted.
   dashboard = buildGrantedShellDashboard(tab.url, 'Loading DOM inventory…');
+  await rebuildCrawlSignals(tab);
 
   await send<ExtensionResponse>({ type: 'WATCH_TAB_NAVIGATION', tabId: tab.tabId });
   const navResponse = await send<ExtensionResponse>({
@@ -156,8 +212,9 @@ async function loadGlanceDashboard(): Promise<void> {
     tabId: tab.tabId,
     requestedUrl: tab.url,
   });
-  const navigation =
+  navigationObservation =
     navResponse.type === 'NAVIGATION_OBSERVATION' ? navResponse.observation : undefined;
+  await rebuildCrawlSignals(tab);
 
   const response = await send<ExtensionResponse>({ type: 'GLANCE_DOM_INVENTORY' });
   if (response.type === 'ERROR') {
@@ -166,6 +223,7 @@ async function loadGlanceDashboard(): Promise<void> {
       tab.url,
       `Glance failed: ${response.message}. Click Refresh to retry.`,
     );
+    await rebuildCrawlSignals(tab);
     workspace = {
       ...workspace,
       statusMessage: response.message,
@@ -179,6 +237,7 @@ async function loadGlanceDashboard(): Promise<void> {
       tab.url,
       'Glance returned an unexpected response. Reload the extension, then Refresh.',
     );
+    await rebuildCrawlSignals(tab);
     workspace = {
       ...workspace,
       statusMessage: 'Unexpected glance response from the service worker.',
@@ -192,6 +251,7 @@ async function loadGlanceDashboard(): Promise<void> {
       tab.url,
       `Glance failed (${response.result.code}): ${response.result.error}`,
     );
+    await rebuildCrawlSignals(tab);
     workspace = {
       ...workspace,
       statusMessage: response.result.error,
@@ -202,8 +262,9 @@ async function loadGlanceDashboard(): Promise<void> {
   dashboard = buildGlanceDashboard({
     tabUrl: response.result.tabUrl,
     facts: response.result.facts,
-    navigation,
+    navigation: navigationObservation,
   });
+  await rebuildCrawlSignals(tab);
   wizardEvidence = domFactsToPageSnapshot(
     response.result.facts,
     'wizard-glance',
@@ -214,6 +275,89 @@ async function loadGlanceDashboard(): Promise<void> {
     statusMessage: 'Page glance updated from the live tab.',
     statusKind: 'ok',
   };
+}
+
+async function fetchRobotsForTab(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted || robotsFetchBusy) return;
+  robotsFetchBusy = true;
+  await rebuildCrawlSignals(tab);
+  renderWorkspace();
+  setStatus('Fetching robots.txt…');
+  try {
+    const response = await send<ExtensionResponse>({
+      type: 'FETCH_ROBOTS_FOR_ORIGIN',
+      origin: tab.origin,
+    });
+    if (response.type === 'ERROR') {
+      setStatus(response.message, 'error');
+      return;
+    }
+    if (response.type !== 'ROBOTS_FETCH_RESULT') {
+      setStatus('Unexpected robots fetch response.', 'error');
+      return;
+    }
+    robotsResult = response.result;
+    sitemapCandidates = buildSitemapCandidatesForOrigin(tab.origin, robotsResult);
+    await rebuildCrawlSignals(tab);
+    renderWorkspace();
+    if (response.result.ok) {
+      setStatus(`robots.txt fetched (HTTP ${response.result.status}).`, 'ok');
+    } else {
+      setStatus(`robots.txt capture issue: ${response.result.error.message}`, 'error');
+    }
+  } finally {
+    robotsFetchBusy = false;
+    if (tab) await rebuildCrawlSignals(tab);
+    renderWorkspace();
+  }
+}
+
+async function fetchSitemapForTab(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted || sitemapFetchBusy) return;
+  sitemapFetchBusy = true;
+  sitemapCandidates = buildSitemapCandidatesForOrigin(tab.origin, robotsResult);
+  await rebuildCrawlSignals(tab);
+  renderWorkspace();
+  setStatus('Discovering and fetching sitemap candidates…');
+  try {
+    const rootUrls = sitemapCandidates.map((candidate) => candidate.url);
+    if (rootUrls.length === 0) {
+      setStatus('No sitemap candidates to fetch for this origin.', 'error');
+      return;
+    }
+    const response = await send<ExtensionResponse>({
+      type: 'FETCH_SITEMAP',
+      rootUrls,
+    });
+    if (response.type === 'ERROR') {
+      setStatus(response.message, 'error');
+      return;
+    }
+    if (response.type !== 'SITEMAP_FETCH_RESULT') {
+      setStatus('Unexpected sitemap fetch response.', 'error');
+      return;
+    }
+    sitemapResult = response.result;
+    await rebuildCrawlSignals(tab);
+    renderWorkspace();
+    if (response.result.ok) {
+      const membership = crawlSignals?.sitemap.membership.state;
+      setStatus(
+        membership === 'present'
+          ? `Sitemap fetched — audited URL is listed (${response.result.entries.size} entries parsed).`
+          : `Sitemap fetched — audited URL not listed among ${response.result.entries.size} entries.`,
+        membership === 'present' ? 'ok' : 'plain',
+      );
+    } else {
+      setStatus(`Sitemap capture issue: ${response.result.error.message}`, 'error');
+    }
+  } finally {
+    sitemapFetchBusy = false;
+    if (tab) await rebuildCrawlSignals(tab);
+    renderWorkspace();
+  }
 }
 
 async function captureNavigation(): Promise<void> {
