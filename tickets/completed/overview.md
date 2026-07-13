@@ -47,4 +47,5 @@
 
 **Tickets:**
 - [x] [Ticket 405: User-Defined Theme Editor](./405-user-defined-theme-editor.md)
+- [x] [Ticket 406: Theme Preference Write Ordering](./406-theme-preference-write-ordering.md)
 

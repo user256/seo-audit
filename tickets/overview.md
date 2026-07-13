@@ -178,7 +178,6 @@ cloaking detection claims, guarantees about Google’s renderer.
 - [ ] [Ticket 402: Markdown and JSON Export](./402-markdown-and-json-export.md)
 - [ ] [Ticket 403: Error States, Privacy Controls, and Data Retention](./403-error-states-privacy-controls-and-data-retention.md)
 - [ ] [Ticket 404: Quality Gates and Release Packaging](./404-quality-gates-and-release-packaging.md)
-- [ ] [Ticket 406: Theme Preference Write Ordering](./406-theme-preference-write-ordering.md)
 - [ ] [Ticket 499: Sprint 4 Review and Release Go/No-Go](./499-sprint-4-review-and-release-go-no-go.md)
 
 **Exit criteria:**
