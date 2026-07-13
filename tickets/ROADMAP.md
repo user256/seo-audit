@@ -7,33 +7,26 @@ This is the dependency-ordered delivery view. Ticket files remain the source
 of truth for scope and acceptance criteria; completed Sprint 1 implementation
 tickets are archived in [completed/](./completed/).
 
-## Now — finish the Sprint 1 gate
+## Now — complete the Sprint 2 go/no-go gate
+
+1. [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md) — **blocked externally** on the recorded fixture and three-site review.
+
+Tickets 201–213 are implemented and archived in [completed/](./completed/).
+
+## Parallel manual lane — finish the Sprint 1 gate
 
 1. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally** (fresh Chrome 114+ smoke record).
 2. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — after 109.
 
 Merged remediations on this lane: 113–115 (PR #22).
 
-## Next — Sprint 2: Crawl and index signals
-
-1. [212](./212-broad-host-permissions.md) — required HTTP(S) host permissions; drop Allow-this-site NUX.
-2. [206](./206-network-capture-and-safe-fetch-foundation.md) — shared safe network boundary (caps still apply).
-3. [201](./201-response-metadata-and-redirect-capture.md) and [202](./202-robots-txt-fetch-parser-and-evaluator.md) — navigation evidence and robots evaluation.
-4. [203](./203-xml-sitemap-and-hreflang-parser.md) — sitemap parsing, after 202.
-5. [207](./207-hreflang-directive-validation.md) — structural hreflang validation on captured evidence.
-6. [213](./213-hreflang-page-cluster-validation.md) — opt-in fetch of alternates for a given page (Hreflang Pro–style).
-7. [204](./204-indexability-reconciliation-rules.md) — reconcile all captured signals.
-8. [205](./205-crawl-signals-workspace.md) — present the evidence in the workspace.
-9. [299](./299-sprint-2-review.md) — Sprint 2 go/no-go.
-
-Completed out of sequence: [208](./completed/208-structured-data-inventory-and-validation.md), [209](./completed/209-check-catalogue-and-availability-model.md), [210](./completed/210-audit-wizard-and-check-selection.md), and [211](./completed/211-register-structured-data-check.md).
-
 ## Then — Sprint 3: bounded experiments
 
-1. [301](./301-url-variant-and-redirect-test-runner.md) and [302](./302-soft-404-probe.md).
-2. [303](./303-css-and-javascript-comparison-experiment.md) and [304](./304-googlebot-style-render-experiment-spike.md).
-3. [305](./305-user-agent-profiles-and-audit-disclosures.md), after 301 and 304.
-4. [399](./399-sprint-3-review.md).
+1. [301](./301-url-variant-and-redirect-test-runner.md) and [302](./302-soft-404-probe.md), after 299.
+2. [306](./306-sprint-3-quality-gate-remediation.md) — required before accepting 301/302.
+3. [303](./303-css-and-javascript-comparison-experiment.md) and [304](./304-googlebot-style-render-experiment-spike.md).
+4. [305](./305-user-agent-profiles-and-audit-disclosures.md), after 301 and 304.
+5. [399](./399-sprint-3-review.md).
 
 ## Release path — Sprint 4: durable audits
 

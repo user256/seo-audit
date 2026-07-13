@@ -2,12 +2,16 @@ import type {
   ExtensionRequest,
   ExtensionResponse,
   HreflangClusterProgressMessage,
+  Soft404ProbeProgressMessage,
+  UrlVariantTestsProgressMessage,
 } from '../background/messages';
 import {
   buildCrawlSignalsModel,
   buildSitemapCandidatesForOrigin,
   type CrawlSignalsModel,
   type HreflangClusterValidateState,
+  type Soft404ProbeRunState,
+  type VariantTestsRunState,
 } from '../lib/dashboard/crawl-signals-model';
 import {
   buildGlanceDashboard,
@@ -25,6 +29,12 @@ import {
   htmlAlternatesFromField,
   type HreflangClusterValidationResult,
 } from '../lib/hreflang';
+import { buildDefaultProbeUrl, type Soft404ProbeResult } from '../lib/soft-404';
+import {
+  DEFAULT_VARIANT_KIND_OPTIONS,
+  type VariantKindOptions,
+  type VariantTestRunResult,
+} from '../lib/variants';
 import { buildAuditReport } from '../lib/report/audit-report';
 import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
 import { DEFAULT_DOM_COLLECT_LIMITS } from '../lib/schemas/dom-limits';
@@ -89,6 +99,17 @@ let hreflangValidateState: HreflangClusterValidateState = 'idle';
 let hreflangProgress: CrawlSignalsModel['hreflangCluster']['progress'] = null;
 let hreflangResult: HreflangClusterValidationResult | null = null;
 let hreflangRequestId: string | null = null;
+let variantBaseUrl = '';
+let variantKindOptions: VariantKindOptions = { ...DEFAULT_VARIANT_KIND_OPTIONS };
+let variantRunState: VariantTestsRunState = 'idle';
+let variantProgress: CrawlSignalsModel['variantTests']['progress'] = null;
+let variantResult: VariantTestRunResult | null = null;
+let variantRequestId: string | null = null;
+let soft404ProbeUrl = '';
+let soft404RunState: Soft404ProbeRunState = 'idle';
+let soft404Progress: CrawlSignalsModel['soft404Probe']['progress'] = null;
+let soft404Result: Soft404ProbeResult | null = null;
+let soft404RequestId: string | null = null;
 let wizardEvidence: Evidence[] = [];
 let wizardOpen = false;
 let selectedWizardCheckIds = defaultCheckIds();
@@ -123,6 +144,14 @@ function hreflangAlternatesFromEvidence(
 
 function nextHreflangRequestId(): string {
   return `hc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function nextVariantRequestId(): string {
+  return `vt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function nextSoft404RequestId(): string {
+  return `sf-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function renderWorkspace(): void {
@@ -186,6 +215,27 @@ function renderWorkspace(): void {
       onCancelHreflangCluster: () => {
         void cancelHreflangClusterValidation();
       },
+      onRunVariantTests: () => {
+        void runVariantTestsForTab();
+      },
+      onCancelVariantTests: () => {
+        void cancelVariantTestsRun();
+      },
+      onVariantBaseUrlChange: (baseUrl) => {
+        variantBaseUrl = baseUrl;
+      },
+      onVariantKindChange: (kind, enabled) => {
+        variantKindOptions = { ...variantKindOptions, [kind]: enabled };
+      },
+      onRunSoft404Probe: () => {
+        void runSoft404ProbeForTab();
+      },
+      onCancelSoft404Probe: () => {
+        void cancelSoft404ProbeRun();
+      },
+      onSoft404ProbeUrlChange: (probeUrl) => {
+        soft404ProbeUrl = probeUrl;
+      },
     });
   }
 
@@ -206,6 +256,14 @@ function renderWorkspace(): void {
 async function rebuildCrawlSignals(tab: NonNullable<WorkspaceModel['tab']>): Promise<void> {
   const origin = tab.status === 'ready' ? tab.origin : '';
   const accessGranted = tab.status === 'ready' && tab.granted;
+  const auditedUrl = dashboard?.documentUrl ?? (tab.status === 'ready' ? tab.url : '—');
+  if (!variantBaseUrl) {
+    variantBaseUrl = auditedUrl;
+  }
+  if (!soft404ProbeUrl) {
+    const built = buildDefaultProbeUrl(auditedUrl);
+    soft404ProbeUrl = built.ok ? built.probeUrl : auditedUrl;
+  }
   sitemapCandidates = buildSitemapCandidatesForOrigin(origin, robotsResult);
   crawlSignals = buildCrawlSignalsModel({
     tabUrl: tab.status === 'ready' ? tab.url : '—',
@@ -222,6 +280,15 @@ async function rebuildCrawlSignals(tab: NonNullable<WorkspaceModel['tab']>): Pro
     hreflangValidateState,
     hreflangProgress,
     hreflangResult,
+    variantBaseUrl,
+    variantKindOptions,
+    variantRunState,
+    variantProgress,
+    variantResult,
+    soft404ProbeUrl,
+    soft404RunState,
+    soft404Progress,
+    soft404Result,
   });
 }
 
@@ -466,6 +533,137 @@ async function cancelHreflangClusterValidation(): Promise<void> {
   });
   if (response.type === 'HREFLANG_CLUSTER_CANCELLED' && response.cancelled) {
     setStatus('Cancelling hreflang cluster validation…');
+  }
+}
+
+async function runVariantTestsForTab(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted || variantRunState === 'busy') return;
+
+  const baseUrl = variantBaseUrl.trim() || dashboard?.documentUrl || tab.url;
+  variantRequestId = nextVariantRequestId();
+  variantRunState = 'busy';
+  variantProgress = { completed: 0, total: 0 };
+  variantResult = null;
+  await rebuildCrawlSignals(tab);
+  renderWorkspace();
+  setStatus('Running URL variant redirect tests (opt-in fetch)…');
+
+  try {
+    const response = await send<ExtensionResponse>({
+      type: 'RUN_URL_VARIANT_TESTS',
+      requestId: variantRequestId,
+      baseUrl,
+      kindOptions: variantKindOptions,
+      method: 'HEAD',
+    });
+    if (response.type === 'ERROR') {
+      variantRunState = 'idle';
+      variantProgress = null;
+      setStatus(response.message, 'error');
+      return;
+    }
+    if (response.type !== 'URL_VARIANT_TESTS_RESULT') {
+      variantRunState = 'idle';
+      variantProgress = null;
+      setStatus('Unexpected URL variant tests response.', 'error');
+      return;
+    }
+    variantResult = response.result;
+    variantRunState = response.result.cancelled ? 'cancelled' : 'done';
+    variantProgress = null;
+    variantBaseUrl = response.result.baseUrl;
+    await rebuildCrawlSignals(tab);
+    renderWorkspace();
+    setStatus(
+      response.result.cancelled
+        ? `URL variant tests cancelled (${response.result.results.filter((row) => !row.skipped).length} request(s)).`
+        : `URL variant tests complete — ${response.result.finalGroups.length} final group(s), ${response.result.observations.length} observation(s).`,
+      response.result.observations.length > 0 ? 'plain' : 'ok',
+    );
+  } finally {
+    variantRequestId = null;
+    if (tab) await rebuildCrawlSignals(tab);
+    renderWorkspace();
+  }
+}
+
+async function cancelVariantTestsRun(): Promise<void> {
+  if (!variantRequestId) return;
+  const response = await send<ExtensionResponse>({
+    type: 'CANCEL_URL_VARIANT_TESTS',
+    requestId: variantRequestId,
+  });
+  if (response.type === 'URL_VARIANT_TESTS_CANCELLED' && response.cancelled) {
+    setStatus('Cancelling URL variant tests…');
+  }
+}
+
+async function runSoft404ProbeForTab(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted || soft404RunState === 'busy') return;
+
+  const auditedUrl = dashboard?.documentUrl ?? tab.url;
+  const probeUrl = soft404ProbeUrl.trim();
+  if (!probeUrl) {
+    setStatus('Enter a probe URL on the audited origin before running.', 'error');
+    return;
+  }
+
+  soft404RequestId = nextSoft404RequestId();
+  soft404RunState = 'busy';
+  soft404Progress = { phase: 'fetching-probe', currentUrl: probeUrl };
+  soft404Result = null;
+  await rebuildCrawlSignals(tab);
+  renderWorkspace();
+  setStatus('Running soft-404 probe (opt-in fetch)…');
+
+  try {
+    const response = await send<ExtensionResponse>({
+      type: 'RUN_SOFT_404_PROBE',
+      requestId: soft404RequestId,
+      auditedUrl,
+      probeUrl,
+    });
+    if (response.type === 'ERROR') {
+      soft404RunState = 'idle';
+      soft404Progress = null;
+      setStatus(response.message, 'error');
+      return;
+    }
+    if (response.type !== 'SOFT_404_PROBE_RESULT') {
+      soft404RunState = 'idle';
+      soft404Progress = null;
+      setStatus('Unexpected soft-404 probe response.', 'error');
+      return;
+    }
+    soft404Result = response.result;
+    soft404RunState = response.result.cancelled ? 'cancelled' : 'done';
+    soft404Progress = null;
+    soft404ProbeUrl = response.result.probeUrl;
+    await rebuildCrawlSignals(tab);
+    renderWorkspace();
+    setStatus(
+      response.result.cancelled
+        ? 'Soft-404 probe cancelled.'
+        : `Soft-404 probe complete — ${response.result.observations.length} observation(s).`,
+      response.result.observations.length > 0 ? 'plain' : 'ok',
+    );
+  } finally {
+    soft404RequestId = null;
+    if (tab) await rebuildCrawlSignals(tab);
+    renderWorkspace();
+  }
+}
+
+async function cancelSoft404ProbeRun(): Promise<void> {
+  if (!soft404RequestId) return;
+  const response = await send<ExtensionResponse>({
+    type: 'CANCEL_SOFT_404_PROBE',
+    requestId: soft404RequestId,
+  });
+  if (response.type === 'SOFT_404_PROBE_CANCELLED' && response.cancelled) {
+    setStatus('Cancelling soft-404 probe…');
   }
 }
 
@@ -764,18 +962,47 @@ function findingsHeadingFocus(): void {
 }
 
 chrome.runtime.onMessage.addListener((message) => {
-  const progressMessage = message as HreflangClusterProgressMessage;
-  if (progressMessage.type !== 'HREFLANG_CLUSTER_PROGRESS') return;
-  if (!hreflangRequestId || progressMessage.progress.requestId !== hreflangRequestId) return;
-  hreflangProgress = {
-    completed: progressMessage.progress.completed,
-    total: progressMessage.progress.total,
-    currentUrl: progressMessage.progress.currentUrl,
-  };
-  if (progressMessage.progress.phase === 'cancelled') {
-    hreflangValidateState = 'cancelled';
+  const progressMessage = message as
+    | HreflangClusterProgressMessage
+    | UrlVariantTestsProgressMessage
+    | Soft404ProbeProgressMessage;
+  if (progressMessage.type === 'HREFLANG_CLUSTER_PROGRESS') {
+    if (!hreflangRequestId || progressMessage.progress.requestId !== hreflangRequestId) return;
+    hreflangProgress = {
+      completed: progressMessage.progress.completed,
+      total: progressMessage.progress.total,
+      currentUrl: progressMessage.progress.currentUrl,
+    };
+    if (progressMessage.progress.phase === 'cancelled') {
+      hreflangValidateState = 'cancelled';
+    }
+    renderWorkspace();
+    return;
   }
-  renderWorkspace();
+  if (progressMessage.type === 'URL_VARIANT_TESTS_PROGRESS') {
+    if (!variantRequestId || progressMessage.progress.requestId !== variantRequestId) return;
+    variantProgress = {
+      completed: progressMessage.progress.completed,
+      total: progressMessage.progress.total,
+      currentUrl: progressMessage.progress.currentUrl,
+    };
+    if (progressMessage.progress.phase === 'cancelled') {
+      variantRunState = 'cancelled';
+    }
+    renderWorkspace();
+    return;
+  }
+  if (progressMessage.type === 'SOFT_404_PROBE_PROGRESS') {
+    if (!soft404RequestId || progressMessage.progress.requestId !== soft404RequestId) return;
+    soft404Progress = {
+      phase: progressMessage.progress.phase,
+      currentUrl: progressMessage.progress.currentUrl,
+    };
+    if (progressMessage.progress.phase === 'cancelled') {
+      soft404RunState = 'cancelled';
+    }
+    renderWorkspace();
+  }
 });
 
 void refresh();

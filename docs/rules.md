@@ -58,6 +58,7 @@ becomes a pass.
 | `indexability-redirect-excessive`                     | indexability      | warning  | More than five redirect hops observed               |
 | `indexability-non-html-content`                       | indexability      | warning  | Content-Type is present and not HTML                |
 | `indexability-sitemap-robots-blocked`                 | indexability      | warning  | Sitemap lists URL blocked by robots.txt             |
+| `soft-404-possible`                                   | indexability      | warning  | Heuristic soft-404 probe observation (experiment)   |
 | `hreflang-invalid-url`                                | international     | error    | Alternate hreflang href does not resolve            |
 | `jsonld-malformed`                                    | structured-data   | warning  | JSON-LD script fails `JSON.parse`                   |
 | `jsonld-unevaluated`                                  | structured-data   | info     | JSON-LD capture was truncated                       |

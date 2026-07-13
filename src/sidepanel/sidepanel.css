@@ -737,3 +737,61 @@ section[hidden],
 .crawl-errors li {
   color: var(--danger);
 }
+
+.crawl-field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.crawl-field input[type='url'] {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.crawl-fieldset {
+  border: 2px solid var(--border);
+  padding: 0.5rem 0.65rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.crawl-fieldset legend {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0 0.25rem;
+}
+
+.crawl-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.crawl-table-wrap {
+  overflow-x: auto;
+}
+
+.crawl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.crawl-table th,
+.crawl-table td {
+  border: 2px solid var(--border);
+  padding: 0.25rem 0.35rem;
+  text-align: left;
+  vertical-align: top;
+  word-break: break-all;
+}
+
+.crawl-table tr.is-error td {
+  color: var(--danger);
+}

@@ -16,6 +16,19 @@ import type { AuditSession } from '../lib/schemas/audit';
 import { fetchSitemap, type SitemapFetchResult } from '../lib/sitemap/fetch-sitemap';
 import { SessionRepository } from '../lib/storage/session-repository';
 import { getActiveTabSnapshot, pingActiveTab, type ActiveTabSnapshot } from '../lib/tab-access';
+import {
+  cancelSoft404Probe,
+  runSoft404Probe,
+  type Soft404ProbeProgress,
+  type Soft404ProbeResult,
+} from '../lib/soft-404';
+import {
+  cancelVariantTests,
+  runVariantTests,
+  type VariantKindOptions,
+  type VariantTestProgress,
+  type VariantTestRunResult,
+} from '../lib/variants';
 import { navigationCapture } from './navigation-listeners';
 
 const repo = new SessionRepository();
@@ -39,7 +52,22 @@ export type ExtensionRequest =
       seedUrl: string;
       alternates: ClusterAlternateInput[];
     }
-  | { type: 'CANCEL_HREFLANG_CLUSTER'; requestId?: string };
+  | { type: 'CANCEL_HREFLANG_CLUSTER'; requestId?: string }
+  | {
+      type: 'RUN_URL_VARIANT_TESTS';
+      requestId: string;
+      baseUrl: string;
+      kindOptions: VariantKindOptions;
+      method?: 'HEAD' | 'GET';
+    }
+  | { type: 'CANCEL_URL_VARIANT_TESTS'; requestId?: string }
+  | {
+      type: 'RUN_SOFT_404_PROBE';
+      requestId: string;
+      auditedUrl: string;
+      probeUrl: string;
+    }
+  | { type: 'CANCEL_SOFT_404_PROBE'; requestId?: string };
 
 export type ExtensionResponse =
   | { type: 'ACTIVE_TAB_SNAPSHOT'; snapshot: ActiveTabSnapshot }
@@ -67,6 +95,10 @@ export type ExtensionResponse =
   | { type: 'SITEMAP_FETCH_RESULT'; result: SitemapFetchResult }
   | { type: 'HREFLANG_CLUSTER_RESULT'; result: HreflangClusterValidationResult }
   | { type: 'HREFLANG_CLUSTER_CANCELLED'; requestId?: string; cancelled: boolean }
+  | { type: 'URL_VARIANT_TESTS_RESULT'; result: VariantTestRunResult }
+  | { type: 'URL_VARIANT_TESTS_CANCELLED'; requestId?: string; cancelled: boolean }
+  | { type: 'SOFT_404_PROBE_RESULT'; result: Soft404ProbeResult }
+  | { type: 'SOFT_404_PROBE_CANCELLED'; requestId?: string; cancelled: boolean }
   | { type: 'ERROR'; message: string };
 
 /** Broadcast from the service worker while cluster validation runs. */
@@ -75,9 +107,41 @@ export type HreflangClusterProgressMessage = {
   progress: HreflangClusterProgress;
 };
 
+/** Broadcast from the service worker while URL variant tests run. */
+export type UrlVariantTestsProgressMessage = {
+  type: 'URL_VARIANT_TESTS_PROGRESS';
+  progress: VariantTestProgress;
+};
+
+/** Broadcast from the service worker while a soft-404 probe runs. */
+export type Soft404ProbeProgressMessage = {
+  type: 'SOFT_404_PROBE_PROGRESS';
+  progress: Soft404ProbeProgress;
+};
+
 function broadcastClusterProgress(progress: HreflangClusterProgress): void {
   const message: HreflangClusterProgressMessage = {
     type: 'HREFLANG_CLUSTER_PROGRESS',
+    progress,
+  };
+  void chrome.runtime.sendMessage(message).catch(() => {
+    // Side panel may be closed; progress is best-effort.
+  });
+}
+
+function broadcastVariantTestProgress(progress: VariantTestProgress): void {
+  const message: UrlVariantTestsProgressMessage = {
+    type: 'URL_VARIANT_TESTS_PROGRESS',
+    progress,
+  };
+  void chrome.runtime.sendMessage(message).catch(() => {
+    // Side panel may be closed; progress is best-effort.
+  });
+}
+
+function broadcastSoft404ProbeProgress(progress: Soft404ProbeProgress): void {
+  const message: Soft404ProbeProgressMessage = {
+    type: 'SOFT_404_PROBE_PROGRESS',
     progress,
   };
   void chrome.runtime.sendMessage(message).catch(() => {
@@ -207,6 +271,39 @@ export async function handleExtensionRequest(
         type: 'HREFLANG_CLUSTER_CANCELLED',
         requestId: message.requestId,
         cancelled: cancelClusterValidation(message.requestId),
+      };
+    case 'RUN_URL_VARIANT_TESTS':
+      return {
+        type: 'URL_VARIANT_TESTS_RESULT',
+        result: await runVariantTests({
+          requestId: message.requestId,
+          baseUrl: message.baseUrl,
+          kindOptions: message.kindOptions,
+          method: message.method,
+          onProgress: broadcastVariantTestProgress,
+        }),
+      };
+    case 'CANCEL_URL_VARIANT_TESTS':
+      return {
+        type: 'URL_VARIANT_TESTS_CANCELLED',
+        requestId: message.requestId,
+        cancelled: cancelVariantTests(message.requestId),
+      };
+    case 'RUN_SOFT_404_PROBE':
+      return {
+        type: 'SOFT_404_PROBE_RESULT',
+        result: await runSoft404Probe({
+          requestId: message.requestId,
+          auditedUrl: message.auditedUrl,
+          probeUrl: message.probeUrl,
+          onProgress: broadcastSoft404ProbeProgress,
+        }),
+      };
+    case 'CANCEL_SOFT_404_PROBE':
+      return {
+        type: 'SOFT_404_PROBE_CANCELLED',
+        requestId: message.requestId,
+        cancelled: cancelSoft404Probe(message.requestId),
       };
     default: {
       const _exhaustive: never = message;
