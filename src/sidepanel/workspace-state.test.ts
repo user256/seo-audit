@@ -72,6 +72,53 @@ describe('workspace-state', () => {
     expect(model.sessionId).toBe('sess-1');
   });
 
+  it('keeps a saved session only while the active tab URL stays the same', () => {
+    let model = withSavedAudit(
+      withTab(initialWorkspace(), {
+        status: 'ready',
+        tabId: 1,
+        url: 'https://example.com/a',
+        origin: 'https://example.com',
+        pattern: 'https://example.com/*',
+        granted: true,
+      }),
+      {
+        sessionId: 'sess-a',
+        findings: [baseFinding({})],
+        summary: {
+          totalFindings: 1,
+          bySeverity: { info: 0, warning: 0, error: 1, critical: 0 },
+          byCategory: { metadata: 1 },
+          indexability: { status: 'unknown', reason: 'no headers' },
+          captureNotes: [],
+        },
+      },
+    );
+
+    model = withTab(model, {
+      status: 'ready',
+      tabId: 1,
+      url: 'https://example.com/a',
+      origin: 'https://example.com',
+      pattern: 'https://example.com/*',
+      granted: true,
+    });
+    expect(model.phase).toBe('saved-audit');
+    expect(model.sessionId).toBe('sess-a');
+
+    model = withTab(model, {
+      status: 'ready',
+      tabId: 1,
+      url: 'https://example.com/b',
+      origin: 'https://example.com',
+      pattern: 'https://example.com/*',
+      granted: true,
+    });
+    expect(model.phase).toBe('ready-to-collect');
+    expect(model.sessionId).toBeNull();
+    expect(model.findings).toEqual([]);
+  });
+
   it('sorts findings by severity then category', () => {
     const sorted = sortFindings([
       baseFinding({ id: '2', severity: 'info', category: 'z', ruleId: 'b' }),

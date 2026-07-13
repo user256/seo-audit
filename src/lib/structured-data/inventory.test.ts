@@ -52,6 +52,44 @@ describe('inventoryJsonLdEntry', () => {
     });
   });
 
+  it('does not treat JSON-LD @id references as duplicate definitions', () => {
+    const inventory = inventoryJsonLdEntry({
+      index: 10,
+      parseStatus: 'ok',
+      raw: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'Organization',
+            '@id': 'https://example.test/#organization',
+            name: 'Example',
+          },
+          {
+            '@type': 'WebSite',
+            '@id': 'https://example.test/#website',
+            publisher: { '@id': 'https://example.test/#organization' },
+          },
+        ],
+      }),
+    });
+
+    expect(inventory.graphs[0]?.duplicateIds).toEqual([]);
+    expect(inventory.graphs[0]?.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'https://example.test/#organization',
+          types: ['Organization'],
+          graphNode: true,
+        }),
+        expect.objectContaining({
+          id: 'https://example.test/#organization',
+          types: [],
+          graphNode: false,
+        }),
+      ]),
+    );
+  });
+
   it('uses the @graph members as graph nodes and accepts mixed @type strings', () => {
     const inventory = inventoryJsonLdEntry({
       index: 2,

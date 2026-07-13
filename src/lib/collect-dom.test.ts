@@ -88,6 +88,7 @@ describe('collectDomForActiveTab', () => {
     const result = await collectDomForActiveTab(repo, new Set(['title-missing-or-duplicate']));
     expect(result.ok).toBe(true);
     if (result.ok) {
+      expect(result.checkSelection.selectedCheckIds).toEqual(['title-missing-or-duplicate']);
       const loaded = await repo.get(result.sessionId);
       expect(loaded.status).toBe('ok');
       if (loaded.status === 'ok') {

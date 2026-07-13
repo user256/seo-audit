@@ -10,6 +10,7 @@ import { buildAuditReport } from '../lib/report/audit-report';
 import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
 import { DEFAULT_DOM_COLLECT_LIMITS } from '../lib/schemas/dom-limits';
 import { availabilityFromEvidence, defaultCheckIds } from '../lib/rules/check-selection';
+import { buildPageSummary } from '../lib/rules/summary';
 import { requestOriginAccess } from '../lib/tab-access';
 import { renderCheckSelectionView } from './check-selection-view';
 import { renderSeoDashboard } from './dashboard-view';
@@ -262,6 +263,55 @@ async function ensureReportEditor(session: AuditSession): Promise<void> {
   );
 }
 
+async function applyRestoredSession(session: AuditSession): Promise<void> {
+  const latestSnapshot = session.snapshots[session.snapshots.length - 1];
+  evidenceById = new Map((latestSnapshot?.evidence ?? []).map((item) => [item.id, item] as const));
+  workspace = withSavedAudit(workspace, {
+    sessionId: session.id,
+    findings: session.findings,
+    summary: buildPageSummary({
+      findings: session.findings,
+      featureAvailability: session.featureAvailability,
+      captureErrors: session.captureErrors,
+    }),
+    captureErrors: session.captureErrors,
+  });
+  viewingReport = false;
+  const selection = session.checkSelection;
+  const selectionSummary = selection
+    ? ` · ${selection.selectedCheckIds.length} checks run, ${selection.skippedChecks.length} skipped`
+    : '';
+  collectSummaryEl.hidden = false;
+  collectSummaryEl.textContent = `Restored saved audit for ${session.finalUrl || session.tabUrl}${selectionSummary}`;
+  await ensureReportEditor(session);
+}
+
+async function restoreSessionForActiveTab(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted) {
+    collectSummaryEl.hidden = true;
+    collectSummaryEl.textContent = '';
+    return;
+  }
+  if (workspace.sessionId) {
+    return;
+  }
+
+  const response = await send<ExtensionResponse>({
+    type: 'FIND_LATEST_SESSION_FOR_URL',
+    url: tab.url,
+  });
+  if (response.type === 'ERROR' || response.type !== 'LATEST_SESSION_FOR_URL') {
+    return;
+  }
+  if (response.result.status !== 'ok') {
+    collectSummaryEl.hidden = true;
+    collectSummaryEl.textContent = '';
+    return;
+  }
+  await applyRestoredSession(response.result.session);
+}
+
 async function refresh(): Promise<void> {
   setStatus('Refreshing…');
   const response = await send<ExtensionResponse>({ type: 'GET_ACTIVE_TAB_SNAPSHOT' });
@@ -274,6 +324,11 @@ async function refresh(): Promise<void> {
     return;
   }
   workspace = withTab(workspace, response.snapshot);
+  if (!workspace.sessionId) {
+    collectSummaryEl.hidden = true;
+    collectSummaryEl.textContent = '';
+  }
+  await restoreSessionForActiveTab();
   await loadGlanceDashboard();
   renderWorkspace();
 }
@@ -372,19 +427,19 @@ async function collectDom(selectedCheckIds?: ReadonlySet<string>): Promise<void>
     });
     viewingReport = false;
     collectSummaryEl.hidden = false;
-    const loadedSelection = await send<ExtensionResponse>({
-      type: 'LOAD_SESSION',
-      sessionId: response.result.sessionId,
-    });
-    const selectionSummary =
-      loadedSelection.type === 'SESSION_LOADED' && loadedSelection.result.status === 'ok'
-        ? ` · ${loadedSelection.result.session.checkSelection.selectedCheckIds.length} checks run, ${loadedSelection.result.session.checkSelection.skippedChecks.length} skipped`
-        : '';
+    const selection = response.result.checkSelection;
+    const selectionSummary = selection
+      ? ` · ${selection.selectedCheckIds.length} checks run, ${selection.skippedChecks.length} skipped`
+      : '';
     collectSummaryEl.textContent = `Audit saved for ${response.result.snapshot.url}${selectionSummary}`;
 
     // Refresh glance from the same capture so the dashboard stays in sync.
     await loadGlanceDashboard();
 
+    const loadedSelection = await send<ExtensionResponse>({
+      type: 'LOAD_SESSION',
+      sessionId: response.result.sessionId,
+    });
     if (loadedSelection.type === 'SESSION_LOADED' && loadedSelection.result.status === 'ok') {
       await ensureReportEditor(loadedSelection.result.session);
     }

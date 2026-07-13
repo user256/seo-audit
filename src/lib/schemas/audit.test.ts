@@ -166,6 +166,26 @@ describe('audit schemas', () => {
         HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION,
       );
       expect(result.value.reportMarkdown).toBe('notes');
+      expect(result.value.checkSelection.recordingNote).toMatch(/historical/i);
+    }
+  });
+
+  it('backfills missing checkSelection on an otherwise current-schema session', () => {
+    const session = createEmptySession({
+      id: 'sess-no-selection',
+      tabUrl: 'https://example.com/',
+      finalUrl: 'https://example.com/',
+      extensionVersion: '0.1.0',
+    });
+    const raw = { ...session } as Record<string, unknown>;
+    delete raw.checkSelection;
+
+    const result = parseAuditSession(raw);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.checkSelection.selectedCheckIds).toEqual([]);
+      expect(result.value.checkSelection.skippedChecks).toEqual([]);
+      expect(result.value.checkSelection.recordingNote).toMatch(/not recorded/i);
     }
   });
 });

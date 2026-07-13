@@ -48,6 +48,47 @@ describe('SessionRepository', () => {
     });
   });
 
+  it('finds the latest matching session for a URL', async () => {
+    const older = createEmptySession({
+      id: 'older',
+      tabUrl: 'https://example.com/page',
+      finalUrl: 'https://example.com/page',
+      extensionVersion: '0.1.0',
+      captureTime: '2026-07-13T10:00:00.000Z',
+    });
+    older.updatedAt = '2026-07-13T10:00:00.000Z';
+    await repo.save(older);
+
+    const newer = createEmptySession({
+      id: 'newer',
+      tabUrl: 'https://example.com/page',
+      finalUrl: 'https://example.com/page',
+      extensionVersion: '0.1.0',
+      captureTime: '2026-07-13T11:00:00.000Z',
+    });
+    newer.updatedAt = '2026-07-13T11:00:00.000Z';
+    await repo.save(newer);
+
+    await repo.save(
+      createEmptySession({
+        id: 'other',
+        tabUrl: 'https://other.example/',
+        finalUrl: 'https://other.example/',
+        extensionVersion: '0.1.0',
+      }),
+    );
+
+    const found = await repo.findLatestForUrl('https://example.com/page');
+    expect(found).toMatchObject({ status: 'ok', session: { id: 'newer' } });
+
+    const byFinal = await repo.findLatestForUrl('https://example.com/page');
+    expect(byFinal.status).toBe('ok');
+
+    await expect(repo.findLatestForUrl('https://missing.example/')).resolves.toEqual({
+      status: 'none',
+    });
+  });
+
   it('quarantines invalid records instead of crashing', async () => {
     const db = await openAuditDb(factory);
     const tx = db.transaction('sessions', 'readwrite');

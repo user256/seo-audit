@@ -22,6 +22,18 @@ export type LoadSessionResult =
   | { status: 'missing'; id: string }
   | { status: 'quarantined'; record: QuarantinedRecord };
 
+export type FindLatestSessionResult = { status: 'ok'; session: AuditSession } | { status: 'none' };
+
+/** Compare document URLs after URL parsing so trailing-slash variants still match. */
+export function urlsReferToSameDocument(a: string, b: string): boolean {
+  if (a === b) return true;
+  try {
+    return new URL(a).href === new URL(b).href;
+  } catch {
+    return false;
+  }
+}
+
 function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -147,6 +159,22 @@ export class SessionRepository {
     } finally {
       db.close();
     }
+  }
+
+  /**
+   * Most recently updated session whose tab or final URL matches the active
+   * document URL. Used to reattach findings after the side panel remounts.
+   */
+  async findLatestForUrl(url: string): Promise<FindLatestSessionResult> {
+    const listed = await this.list();
+    const match = listed.find(
+      (item) =>
+        urlsReferToSameDocument(item.tabUrl, url) || urlsReferToSameDocument(item.finalUrl, url),
+    );
+    if (!match) return { status: 'none' };
+    const loaded = await this.get(match.id);
+    if (loaded.status !== 'ok') return { status: 'none' };
+    return { status: 'ok', session: loaded.session };
   }
 
   async delete(id: string): Promise<boolean> {
