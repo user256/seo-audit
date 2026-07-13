@@ -21,13 +21,26 @@ This document does not re-introduce a per-origin Allow NUX.
 (Ticket 201). Callers that need robots/sitemaps/hreflang cluster pages use
 `safeFetch` and show `source: extension-fetch`.
 
-Chrome constraints to record with Ticket 201 wiring:
+Chrome constraints (Ticket 201):
 
-- MV3 service worker + `webRequest` (and optionally `webNavigation`) for
-  main-frame correlation; confirm header visibility on Chrome 114+.
-- Incognito: host permissions and listener behaviour follow the extension’s
-  incognito install mode; document any gaps when 201 lands.
-- Extension pages / `chrome://` / `file://` stay unsupported (`evaluateUrl`).
+- MV3 service worker uses non-blocking `webRequest` (`onHeadersReceived`,
+  `onBeforeRedirect`, `onCompleted`, `onErrorOccurred`) for **main_frame** only,
+  with `responseHeaders` + `extraHeaders`. Requires the `webRequest` permission
+  plus Ticket 212 HTTP(S) `host_permissions`.
+- Listeners must be armed (`WATCH_TAB_NAVIGATION`) **before** navigation.
+  Side panel offers **Capture navigation (reload)** when the current load was
+  not observed.
+- Incognito follows the extension’s install mode; header visibility matches
+  Chrome 114+ webRequest behaviour. Extension / `chrome://` / `file://` URLs
+  stay unsupported.
+
+## Navigation capture (Ticket 201)
+
+Implementation: `src/lib/network/navigation-capture.ts` +
+`src/background/navigation-listeners.ts`.
+
+Observed results are always `source: browser-navigation`. Extension fetches
+remain `extension-fetch` via `safeFetch`.
 
 ## `safeFetch` contract
 

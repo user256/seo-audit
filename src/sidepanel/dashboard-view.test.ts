@@ -103,7 +103,7 @@ describe('renderSeoDashboard', () => {
     expect(host.textContent).toContain('Images: 2 (alt present 1, empty 0, missing 1)');
     expect(host.textContent).toContain('HTML5 landmarks');
     expect(host.textContent).toContain('Not captured yet');
-    expect(host.textContent).toContain('Response status/headers are not captured yet');
+    expect(host.textContent).toContain('Browser-navigation status/headers were not observed');
     expect(host.querySelectorAll('dd.is-warn').length).toBeGreaterThanOrEqual(1);
   });
 

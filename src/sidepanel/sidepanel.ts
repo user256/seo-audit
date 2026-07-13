@@ -38,6 +38,7 @@ const cancelCheckSelectionBtn = document.querySelector(
   '#cancel-check-selection',
 ) as HTMLButtonElement;
 const refreshBtn = document.querySelector('#refresh') as HTMLButtonElement;
+const captureNavBtn = document.querySelector('#capture-navigation') as HTMLButtonElement;
 const pingBtn = document.querySelector('#ping') as HTMLButtonElement;
 const openReportBtn = document.querySelector('#open-report') as HTMLButtonElement;
 const backToFindingsBtn = document.querySelector('#back-to-findings') as HTMLButtonElement;
@@ -85,11 +86,13 @@ function renderWorkspace(): void {
     tabUrlEl.textContent = view.urlLabel;
     accessStateEl.textContent = view.accessLabel;
     pingBtn.hidden = !view.showPing;
+    captureNavBtn.hidden = !view.showCollect;
     collectBtn.hidden = !(view.showCollect && workspace.phase !== 'collecting');
   } else {
     tabUrlEl.textContent = '—';
     accessStateEl.textContent = 'Unavailable';
     pingBtn.hidden = true;
+    captureNavBtn.hidden = true;
     collectBtn.hidden = true;
   }
 
@@ -147,6 +150,15 @@ async function loadGlanceDashboard(): Promise<void> {
   // Never show the pre-access “needs site access” shell once granted.
   dashboard = buildGrantedShellDashboard(tab.url, 'Loading DOM inventory…');
 
+  await send<ExtensionResponse>({ type: 'WATCH_TAB_NAVIGATION', tabId: tab.tabId });
+  const navResponse = await send<ExtensionResponse>({
+    type: 'GET_NAVIGATION_OBSERVATION',
+    tabId: tab.tabId,
+    requestedUrl: tab.url,
+  });
+  const navigation =
+    navResponse.type === 'NAVIGATION_OBSERVATION' ? navResponse.observation : undefined;
+
   const response = await send<ExtensionResponse>({ type: 'GLANCE_DOM_INVENTORY' });
   if (response.type === 'ERROR') {
     wizardEvidence = [];
@@ -190,6 +202,7 @@ async function loadGlanceDashboard(): Promise<void> {
   dashboard = buildGlanceDashboard({
     tabUrl: response.result.tabUrl,
     facts: response.result.facts,
+    navigation,
   });
   wizardEvidence = domFactsToPageSnapshot(
     response.result.facts,
@@ -201,6 +214,35 @@ async function loadGlanceDashboard(): Promise<void> {
     statusMessage: 'Page glance updated from the live tab.',
     statusKind: 'ok',
   };
+}
+
+async function captureNavigation(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted) return;
+  captureNavBtn.disabled = true;
+  setStatus('Reloading tab to observe browser navigation…');
+  try {
+    const response = await send<ExtensionResponse>({
+      type: 'RELOAD_AND_OBSERVE_NAVIGATION',
+      tabId: tab.tabId,
+    });
+    if (response.type === 'ERROR') {
+      setStatus(response.message, 'error');
+      return;
+    }
+    await loadGlanceDashboard();
+    renderWorkspace();
+    if (response.type === 'NAVIGATION_OBSERVATION' && response.observation.status === 'observed') {
+      setStatus(`Captured browser navigation — status ${response.observation.statusCode}.`, 'ok');
+    } else {
+      setStatus(
+        'Reload finished but navigation headers were not observed. Try Refresh, then reload again.',
+        'error',
+      );
+    }
+  } finally {
+    captureNavBtn.disabled = false;
+  }
 }
 
 async function send<T extends ExtensionResponse>(message: ExtensionRequest): Promise<T> {
@@ -372,6 +414,9 @@ async function collectDom(selectedCheckIds?: ReadonlySet<string>): Promise<void>
 
 refreshBtn.addEventListener('click', () => {
   void refresh();
+});
+captureNavBtn.addEventListener('click', () => {
+  void captureNavigation();
 });
 pingBtn.addEventListener('click', () => {
   void ping();

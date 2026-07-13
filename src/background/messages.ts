@@ -3,9 +3,11 @@ import {
   glanceDomInventoryForActiveTab,
   type GlanceInventoryResult,
 } from '../lib/dashboard/glance';
+import type { NavigationObservationStatus } from '../lib/network/types';
 import type { AuditSession } from '../lib/schemas/audit';
 import { SessionRepository } from '../lib/storage/session-repository';
 import { getActiveTabSnapshot, pingActiveTab, type ActiveTabSnapshot } from '../lib/tab-access';
+import { navigationCapture } from './navigation-listeners';
 
 const repo = new SessionRepository();
 
@@ -15,7 +17,10 @@ export type ExtensionRequest =
   | { type: 'GLANCE_DOM_INVENTORY' }
   | { type: 'COLLECT_DOM_SNAPSHOT'; selectedCheckIds?: string[] }
   | { type: 'LOAD_SESSION'; sessionId: string }
-  | { type: 'SAVE_REPORT_MARKDOWN'; sessionId: string; markdown: string };
+  | { type: 'SAVE_REPORT_MARKDOWN'; sessionId: string; markdown: string }
+  | { type: 'WATCH_TAB_NAVIGATION'; tabId: number }
+  | { type: 'GET_NAVIGATION_OBSERVATION'; tabId: number; requestedUrl?: string }
+  | { type: 'RELOAD_AND_OBSERVE_NAVIGATION'; tabId: number };
 
 export type ExtensionResponse =
   | { type: 'ACTIVE_TAB_SNAPSHOT'; snapshot: ActiveTabSnapshot }
@@ -33,7 +38,28 @@ export type ExtensionResponse =
         | { status: 'quarantined'; reason: string };
     }
   | { type: 'REPORT_SAVED'; sessionId: string }
+  | { type: 'NAVIGATION_WATCHING'; tabId: number }
+  | { type: 'NAVIGATION_OBSERVATION'; observation: NavigationObservationStatus }
   | { type: 'ERROR'; message: string };
+
+async function reloadAndObserve(tabId: number): Promise<NavigationObservationStatus> {
+  navigationCapture.watchTab(tabId);
+  const before = navigationCapture.getObservation(tabId);
+  const beforeKey = before.status === 'observed' ? `${before.finalUrl}|${before.observedAt}` : null;
+
+  await chrome.tabs.reload(tabId);
+
+  const deadline = Date.now() + 20_000;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 150));
+    const observation = navigationCapture.getObservation(tabId);
+    if (observation.status === 'observed') {
+      const key = `${observation.finalUrl}|${observation.observedAt}`;
+      if (key !== beforeKey) return observation;
+    }
+  }
+  return navigationCapture.getObservation(tabId);
+}
 
 export async function handleExtensionRequest(
   message: ExtensionRequest,
@@ -90,6 +116,20 @@ export async function handleExtensionRequest(
       await repo.save(loaded.session);
       return { type: 'REPORT_SAVED', sessionId: message.sessionId };
     }
+    case 'WATCH_TAB_NAVIGATION': {
+      navigationCapture.watchTab(message.tabId);
+      return { type: 'NAVIGATION_WATCHING', tabId: message.tabId };
+    }
+    case 'GET_NAVIGATION_OBSERVATION':
+      return {
+        type: 'NAVIGATION_OBSERVATION',
+        observation: navigationCapture.getObservation(message.tabId, message.requestedUrl),
+      };
+    case 'RELOAD_AND_OBSERVE_NAVIGATION':
+      return {
+        type: 'NAVIGATION_OBSERVATION',
+        observation: await reloadAndObserve(message.tabId),
+      };
     default: {
       const _exhaustive: never = message;
       return { type: 'ERROR', message: `Unhandled message: ${JSON.stringify(_exhaustive)}` };

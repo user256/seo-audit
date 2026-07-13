@@ -22,6 +22,6 @@ export default defineManifest({
   side_panel: {
     default_path: 'src/sidepanel/index.html',
   },
-  permissions: ['storage', 'activeTab', 'sidePanel', 'scripting', 'tabs'],
+  permissions: ['storage', 'activeTab', 'sidePanel', 'scripting', 'tabs', 'webRequest'],
   host_permissions: ['http://*/*', 'https://*/*'],
 });

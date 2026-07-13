@@ -26,3 +26,5 @@
 - [x] [Ticket 211: Register the Structured-Data Check](./211-register-structured-data-check.md)
 - [x] [Ticket 212: Broad Host Permissions (Drop Per-Origin Allow NUX)](./212-broad-host-permissions.md)
 - [x] [Ticket 206: Network Capture and Safe Fetch Foundation](./206-network-capture-and-safe-fetch-foundation.md)
+- [x] [Ticket 201: Response Metadata and Redirect Capture](./201-response-metadata-and-redirect-capture.md)
+- [x] [Ticket 202: Robots.txt Fetch, Parser, and Evaluator](./202-robots-txt-fetch-parser-and-evaluator.md)

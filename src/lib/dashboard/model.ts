@@ -1,4 +1,5 @@
 import type { DomFacts, FieldState } from '../../content/dom-collector';
+import type { NavigationObservationStatus } from '../network/types';
 
 export type SignalAvailability = 'present' | 'unavailable' | 'needs-access';
 
@@ -171,12 +172,13 @@ export function buildGrantedShellDashboard(tabUrl: string, detail: string): SeoD
   };
 }
 
-/** Glance dashboard from DOM inventory. Network rows stay unavailable until Ticket 201. */
+/** Glance dashboard from DOM inventory, optionally enriched with Ticket 201 navigation. */
 export function buildGlanceDashboard(input: {
   tabUrl: string;
   facts: DomFacts;
+  navigation?: NavigationObservationStatus;
 }): SeoDashboardModel {
-  const { facts, tabUrl } = input;
+  const { facts, tabUrl, navigation } = input;
   const headings =
     facts.headings.state === 'present'
       ? (facts.headings.value as {
@@ -191,31 +193,27 @@ export function buildGlanceDashboard(input: {
   const html5 =
     facts.html5.state === 'present' ? (facts.html5.value as SeoDashboardModel['html5']) : null;
 
+  const network = networkSlotsFromObservation(navigation, facts.documentUrl);
+
   return {
     tabUrl,
     documentUrl: facts.documentUrl,
     accessGranted: true,
-    status: {
-      availability: 'unavailable',
-      code: null,
-      detail: 'Response status/headers are not captured yet (Sprint 2 / Ticket 201).',
-    },
-    journey: {
-      availability: 'unavailable',
-      hops: [{ url: facts.documentUrl, status: null }],
-      detail: 'Showing the final document URL only. Redirect hops need Ticket 201 network capture.',
-    },
+    status: network.status,
+    journey: network.journey,
     indexability: {
-      status: 'unknown',
+      status: navigation?.status === 'observed' ? 'signals-partial' : 'unknown',
       summary:
-        'DOM signals only — headers and robots.txt are not captured, so crawl/index status stays unknown.',
+        navigation?.status === 'observed'
+          ? 'DOM + browser-navigation headers captured. robots.txt not fetched yet.'
+          : 'DOM signals only — browser-navigation headers were not observed (reload while the panel watches the tab). robots.txt not fetched.',
       rows: [
         { label: 'Document URL', value: facts.documentUrl, source: 'dom' },
         { label: 'Canonical', value: canonicalText(facts.canonical), source: 'dom' },
         { label: 'Meta robots', value: robotsText(facts.metaRobots), source: 'dom' },
         {
           label: 'HTTP headers / X-Robots-Tag',
-          value: 'unavailable',
+          value: network.xRobotsValue,
           source: 'network',
         },
         { label: 'robots.txt', value: 'not fetched', source: 'robots' },
@@ -228,6 +226,61 @@ export function buildGlanceDashboard(input: {
     links,
     images,
     inventoryLoaded: true,
+  };
+}
+
+function networkSlotsFromObservation(
+  navigation: NavigationObservationStatus | undefined,
+  fallbackUrl: string,
+): {
+  status: SeoDashboardModel['status'];
+  journey: SeoDashboardModel['journey'];
+  xRobotsValue: string;
+} {
+  if (!navigation || navigation.status === 'unavailable') {
+    const detail =
+      navigation?.message ?? 'Browser-navigation status/headers were not observed for this load.';
+    const recovery =
+      navigation?.recovery === 'reload-and-reobserve'
+        ? ' Use “Capture navigation (reload)” while this panel is open.'
+        : '';
+    return {
+      status: {
+        availability: 'unavailable',
+        code: null,
+        detail: `${detail}${recovery}`,
+      },
+      journey: {
+        availability: 'unavailable',
+        hops: [{ url: fallbackUrl, status: null }],
+        detail:
+          'Showing the final document URL only. Redirect hops require an observed browser navigation.',
+      },
+      xRobotsValue: 'unavailable',
+    };
+  }
+
+  const hops: { url: string; status: number | null }[] = [];
+  for (const hop of navigation.redirectHops) {
+    hops.push({ url: hop.fromUrl, status: hop.status });
+  }
+  hops.push({ url: navigation.finalUrl, status: navigation.statusCode });
+
+  return {
+    status: {
+      availability: 'present',
+      code: navigation.statusCode,
+      detail: `Observed browser navigation (not an extension fetch).`,
+    },
+    journey: {
+      availability: 'present',
+      hops,
+      detail:
+        navigation.redirectHops.length === 0
+          ? 'No redirects observed on the main-frame navigation.'
+          : `Recorded ${navigation.redirectHops.length} redirect hop(s) from browser navigation.`,
+    },
+    xRobotsValue: navigation.headers['x-robots-tag'] ?? '(absent)',
   };
 }
 

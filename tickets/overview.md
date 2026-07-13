@@ -47,11 +47,11 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 201: Response Metadata and Redirect Capture](./201-response-metadata-and-redirect-capture.md)
-2. [Ticket 202: Robots.txt Fetch, Parser, and Evaluator](./202-robots-txt-fetch-parser-and-evaluator.md)
+1. [Ticket 203: XML Sitemap and Hreflang Parser](./203-xml-sitemap-and-hreflang-parser.md)
+2. [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
 3. Parallel: finish Ticket 109 / 199 when an operator has bandwidth
 
-**Recommended next pick:** Ticket **201** (wire webRequest / reload-reobserve on top of 206).
+**Recommended next pick:** Ticket **203**.
 
 ---
 
@@ -112,8 +112,6 @@ be discovered, crawled, and indexed.
 
 **Tickets:**
 
-- [ ] [Ticket 201: Response Metadata and Redirect Capture](./201-response-metadata-and-redirect-capture.md)
-- [ ] [Ticket 202: Robots.txt Fetch, Parser, and Evaluator](./202-robots-txt-fetch-parser-and-evaluator.md)
 - [ ] [Ticket 203: XML Sitemap and Hreflang Parser](./203-xml-sitemap-and-hreflang-parser.md)
 - [ ] [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
 - [ ] [Ticket 213: Hreflang Page-Cluster Validation (Opt-In Fetch)](./213-hreflang-page-cluster-validation.md)

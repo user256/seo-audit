@@ -1,7 +1,7 @@
 # Ticket 202: Robots.txt Fetch, Parser, and Evaluator
 
 **Sprint:** 2 — Crawl and Index Signals  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** L
 
@@ -18,17 +18,17 @@ audited URL and declared crawler profiles.
 
 ## Acceptance criteria
 
-- [ ] Fetch `{origin}/robots.txt` with the granted origin permission; cache the
+- [x] Fetch `{origin}/robots.txt` with the granted origin permission; cache the
   result, fetch timestamp, status, final URL, and parse outcome per session.
-- [ ] Parse user-agent groups, Allow, Disallow, Sitemap, comments, blank lines,
+- [x] Parse user-agent groups, Allow, Disallow, Sitemap, comments, blank lines,
   `*`, end anchors, and longest matching path precedence; unknown directives
   are preserved as diagnostics.
-- [ ] Evaluate at least Googlebot and generic `*` profiles, reporting matched
+- [x] Evaluate at least Googlebot and generic `*` profiles, reporting matched
   directives and an explicit “unknown/unavailable” result for fetch or parse
   failure.
-- [ ] Redirected, HTML, non-200, oversized, malformed, and inaccessible robots
+- [x] Redirected, HTML, non-200, oversized, malformed, and inaccessible robots
   responses are bounded and represented as capture errors.
-- [ ] Fixture tests cover precedence, user-agent specificity, no matching group,
+- [x] Fixture tests cover precedence, user-agent specificity, no matching group,
   Unicode/percent-encoded paths, and a known sitemap directive.
 
 ## Out of scope
@@ -42,3 +42,4 @@ audited URL and declared crawler profiles.
 - **Blocks:** 203–205
 - **Blocked by:** 102, 199, 206
 - **External:** public robots fixtures
+- 2026-07-13 — Implemented parse/evaluate/fetch via safeFetch + session cache; collect-dom fetches robots per origin.
