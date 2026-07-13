@@ -38,9 +38,9 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | Blocked | Fresh Chrome 114+ smoke (Ticket 109), then Ticket 199 go/no-go |
-| **Sprint 2 — Crawl/index signals** | Planned | Add robots, headers, and sitemap inspection on the settled page contract |
-| **Sprint 3 — Comparisons and site checks** | Planned | Add bounded rendering and URL-variant experiments |
+| **Sprint 1 — Inspect one page** | Blocked | Tickets **109** / **199** need operator Chrome smoke + go/no-go |
+| **Sprint 2 — Crawl/index signals** | Implementation done | Tickets **212→213** closed on PR branch; **299** go/no-go needs operator |
+| **Sprint 3 — Comparisons and site checks** | Planned | Blocked on Sprint 2 **299** |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
 
 ---
