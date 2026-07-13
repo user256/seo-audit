@@ -4,12 +4,15 @@ import {
   type DomFacts,
 } from '../content/dom-collector';
 import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
+import { navigationCapture } from '../background/navigation-listeners';
+import { fetchRobotsForOrigin } from './robots/fetch-robots';
 import { evaluatePageSnapshot, type PageSummary } from './rules/engine';
 import { availabilityFromEvidence, resolveAuditCheckSelection } from './rules/check-selection';
 import type {
   AuditCheckSelection,
   AuditSession,
   CaptureError,
+  Evidence,
   Finding,
   PageSnapshot,
 } from './schemas/audit';
@@ -235,11 +238,90 @@ export async function collectDomForActiveTab(
       });
     }
 
+    navigationCapture.watchTab(tab.tabId);
+    const navigation = navigationCapture.getObservation(tab.tabId, urlBefore);
+    const networkEvidence: Evidence[] = [];
+    if (navigation.status === 'observed') {
+      networkEvidence.push({
+        id: newId('ev'),
+        kind: 'network',
+        source: 'browser-navigation',
+        value: {
+          statusCode: navigation.statusCode,
+          requestedUrl: navigation.requestedUrl,
+          finalUrl: navigation.finalUrl,
+          redirectHops: navigation.redirectHops,
+          headers: navigation.headers,
+          observedAt: navigation.observedAt,
+        },
+        capturedAt: navigation.observedAt,
+      });
+    } else {
+      captureErrors.push({
+        id: newId('cerr'),
+        code: navigation.code,
+        source: 'headerCapture',
+        message: `${navigation.message} Use Capture navigation (reload) before auditing if headers are required.`,
+        url: urlBefore,
+        capturedAt: new Date().toISOString(),
+      });
+    }
+
+    let robotsFetch: boolean | 'unavailable' = 'unavailable';
+    try {
+      const origin = new URL(urlBefore).origin;
+      const robots = await fetchRobotsForOrigin(origin);
+      if (robots.ok) {
+        robotsFetch = true;
+        networkEvidence.push({
+          id: newId('ev'),
+          kind: 'robots',
+          source: 'robots.txt',
+          value: {
+            origin,
+            finalUrl: robots.finalUrl,
+            status: robots.status,
+            fetchedAt: robots.fetchedAt,
+            sitemaps: robots.parsed.sitemaps,
+            groupCount: robots.parsed.groups.length,
+          },
+          capturedAt: robots.fetchedAt,
+        });
+      } else {
+        captureErrors.push({
+          id: newId('cerr'),
+          code: robots.error.code,
+          source: 'robotsFetch',
+          message: robots.error.message,
+          url: robots.error.url ?? urlBefore,
+          capturedAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      captureErrors.push({
+        id: newId('cerr'),
+        code: 'robots-fetch-failed',
+        source: 'robotsFetch',
+        message: err instanceof Error ? err.message : String(err),
+        url: urlBefore,
+        capturedAt: new Date().toISOString(),
+      });
+    }
+
+    if (networkEvidence.length > 0) {
+      snapshot = {
+        ...snapshot,
+        evidence: [...snapshot.evidence, ...networkEvidence],
+      };
+    }
+
     const extensionVersion = chrome.runtime.getManifest().version;
     const featureAvailability = {
       domCollector: true as const,
-      headerCapture: 'unavailable' as const,
-      robotsFetch: 'unavailable' as const,
+      headerCapture: (navigation.status === 'observed' ? true : 'unavailable') as
+        | true
+        | 'unavailable',
+      robotsFetch,
     };
     const checkSelection = resolveAuditCheckSelection({
       requestedCheckIds: selectedCheckIds,

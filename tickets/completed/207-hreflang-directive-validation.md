@@ -1,7 +1,7 @@
 # Ticket 207: Hreflang Directive Validation
 
 **Sprint:** 2 — Crawl and Index Signals  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** M
 
@@ -22,18 +22,18 @@ evidence-backed findings.
 
 ## Acceptance criteria
 
-- [ ] Parse and normalise BCP 47 language tags plus the special `x-default`
+- [x] Parse and normalise BCP 47 language tags plus the special `x-default`
   value; flag missing/invalid codes, malformed language-region combinations,
   and duplicate targets deterministically.
-- [ ] Treat empty href and self-resolving empty attributes as invalid directive
+- [x] Treat empty href and self-resolving empty attributes as invalid directive
   evidence rather than valid alternatives.
-- [ ] Compare same-page HTML alternates with sitemap `xhtml:link` annotations
+- [x] Compare same-page HTML alternates with sitemap `xhtml:link` annotations
   when both captures exist, reporting mismatches as partial evidence—not proof
   that a reciprocal target is missing on the live web.
-- [ ] Add findings/source references for invalid language, duplicate alternate,
+- [x] Add findings/source references for invalid language, duplicate alternate,
   invalid target, and HTML/sitemap mismatch, each linked to the exact captured
   evidence item.
-- [ ] Fixture tests cover language-only, language-region, x-default, invalid
+- [x] Fixture tests cover language-only, language-region, x-default, invalid
   values, duplicates, empty href, relative URLs, and partial/missing sitemap
   data.
 
@@ -74,3 +74,4 @@ Live page-cluster crawl behaviour from Hreflang Pro → Ticket 213 (not here).
 
 - 2026-07-13 — Plunder pass: structural validation marked for duplication here;
   product also wants live page-cluster validation → filed Ticket 213.
+- 2026-07-13 — Structural hreflang validation on captured HTML/sitemap evidence; interim lang/region allowlists.

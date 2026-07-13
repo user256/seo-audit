@@ -128,10 +128,11 @@ describe('evaluatePageSnapshot', () => {
     expect(findings.map((finding) => finding.ruleId)).toEqual(['canonical-multiple']);
   });
 
-  it('triggers robots noindex/nofollow from multiple meta robots', () => {
+  it('triggers noindex signal and nofollow from multiple meta robots', () => {
     const snapshot = snapshotFromFixture(FIXTURE_MULTIPLE_ROBOTS, 'https://example.com/page');
     const { findings } = evaluatePageSnapshot(snapshot);
-    expect(findings.some((f) => f.ruleId === 'robots-noindex')).toBe(true);
+    expect(findings.some((f) => f.ruleId === 'indexability-noindex-signal')).toBe(true);
+    expect(findings.some((f) => f.ruleId === 'robots-nofollow')).toBe(true);
   });
 
   it('triggers malformed JSON-LD', () => {
@@ -195,7 +196,9 @@ describe('evaluatePageSnapshot', () => {
     expect(first.findings.map((f) => f.id)).toEqual(second.findings.map((f) => f.id));
     const ids = first.findings.map((f) => f.ruleId);
     // At least two conflicting signal families: robots + canonical multiplicity
-    expect(ids).toEqual(expect.arrayContaining(['canonical-multiple', 'robots-noindex']));
+    expect(ids).toEqual(
+      expect.arrayContaining(['canonical-multiple', 'indexability-noindex-signal']),
+    );
     expect(ids).toEqual(expect.arrayContaining(['robots-nofollow']));
     expect(
       ids.filter((id) => id.startsWith('robots-') || id.startsWith('canonical-')).length,
@@ -244,5 +247,33 @@ describe('buildPageSummary', () => {
     });
     expect(summary.indexability.status).toBe('unknown');
     expect(JSON.stringify(summary)).not.toMatch(/"indexable"/);
+    expect(summary.indexability.reason).toMatch(/insufficient data/i);
+  });
+
+  it('uses observed-signal wording when blocking reconciliation findings exist', () => {
+    const summary = buildPageSummary({
+      findings: [
+        {
+          id: 'f1',
+          ruleId: 'indexability-noindex-signal',
+          severity: 'warning',
+          category: 'indexability',
+          affectedUrl: 'https://example.com/',
+          description: 'Observed noindex signal',
+          evidenceIds: ['ev1'],
+          recommendation: 'Review',
+          sourceRef: 'https://example.com',
+          capturedAt: '2026-07-12T12:00:00.000Z',
+        },
+      ],
+      featureAvailability: {
+        headerCapture: true,
+        robotsFetch: true,
+      },
+      evidenceSources: new Set(['browser-navigation', 'meta[name=robots|googlebot]']),
+    });
+    expect(summary.indexability.status).toBe('signals-partial');
+    expect(summary.indexability.reason).toMatch(/observed blocking crawl\/index signals/i);
+    expect(summary.indexability.reason).not.toMatch(/indexed by google/i);
   });
 });

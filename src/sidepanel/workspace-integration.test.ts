@@ -78,19 +78,9 @@ describe('side-panel workspace + report editor integration', () => {
     document.body.innerHTML = '';
   });
 
-  it('walks permission → collect → saved-audit and binds the report to that session', async () => {
+  it('walks ready → collect → saved-audit and binds the report to that session', async () => {
     let model: WorkspaceModel = initialWorkspace();
     expect(model.phase).toBe('empty-session');
-
-    model = withTab(model, {
-      status: 'ready',
-      tabId: 1,
-      url: 'https://example.com/page',
-      origin: 'https://example.com',
-      pattern: 'https://example.com/*',
-      granted: false,
-    });
-    expect(model.phase).toBe('permission-required');
 
     model = withTab(model, {
       status: 'ready',

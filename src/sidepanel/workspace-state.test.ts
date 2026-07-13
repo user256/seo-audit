@@ -25,7 +25,7 @@ const baseFinding = (overrides: Partial<Finding>): Finding => ({
 });
 
 describe('workspace-state', () => {
-  it('maps unsupported and permission phases from the active tab', () => {
+  it('maps unsupported tabs and treats ready HTTP(S) as collectable', () => {
     expect(
       phaseFromTab({
         status: 'unsupported',
@@ -40,9 +40,9 @@ describe('workspace-state', () => {
         url: 'https://example.com/',
         origin: 'https://example.com',
         pattern: 'https://example.com/*',
-        granted: false,
+        granted: true,
       }),
-    ).toBe('permission-required');
+    ).toBe('ready-to-collect');
   });
 
   it('enters collecting then saved-audit without dropping session id', () => {

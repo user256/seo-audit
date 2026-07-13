@@ -1,7 +1,7 @@
 # Ticket 204: Indexability Reconciliation Rules
 
 **Sprint:** 2 — Crawl and Index Signals  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** M
 
@@ -18,16 +18,16 @@ audited URL.
 
 ## Acceptance criteria
 
-- [ ] Add rules for noindex in HTML/header, conflicting robots directives,
+- [x] Add rules for noindex in HTML/header, conflicting robots directives,
   robots-blocked URL, canonical target mismatch, redirect-chain anomalies,
   non-HTML content, and sitemap URL blocked by robots.
-- [ ] Every reconciliation rule names each evidence source and emits
+- [x] Every reconciliation rule names each evidence source and emits
   “insufficient data” capture status when a required source is unavailable.
-- [ ] UI wording uses “signal” and “observed” rather than claiming a definitive
+- [x] UI wording uses “signal” and “observed” rather than claiming a definitive
   Google index state.
-- [ ] A reference matrix documents expected outcomes for common combinations of
+- [x] A reference matrix documents expected outcomes for common combinations of
   status, robots, meta/X-Robots, canonical, and sitemap membership.
-- [ ] Table-driven tests cover the reference matrix and preserve stable rule
+- [x] Table-driven tests cover the reference matrix and preserve stable rule
   IDs/severities.
 
 ## Out of scope
@@ -40,3 +40,4 @@ audited URL.
 - **Blocks:** 205, 402
 - **Blocked by:** 103, 104, 110, 201–203, 207
 - **External:** none
+- 2026-07-13 — Reconciliation rules + docs/indexability-matrix.md; observed-signal wording.

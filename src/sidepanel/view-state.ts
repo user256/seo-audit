@@ -37,13 +37,11 @@ export function viewFromSnapshot(snapshot: ActiveTabSnapshot): SidePanelView {
 
   return {
     urlLabel: snapshot.url,
-    accessLabel: snapshot.granted ? `Granted for ${snapshot.origin}` : 'Not granted',
-    status: snapshot.granted
-      ? 'Origin access is granted. Collect a DOM snapshot or test page injection.'
-      : 'Click “Allow this site” to grant access for this origin only.',
-    statusKind: snapshot.granted ? 'ok' : 'plain',
-    showAllow: !snapshot.granted,
-    showPing: snapshot.granted,
-    showCollect: snapshot.granted,
+    accessLabel: `HTTP(S) access ready for ${snapshot.origin}`,
+    status: 'Ready to audit this tab. Start an audit or refresh the page glance.',
+    statusKind: 'ok',
+    showAllow: false,
+    showPing: true,
+    showCollect: true,
   };
 }

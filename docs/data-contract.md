@@ -110,8 +110,18 @@ audits and later exports cannot overstate coverage. Preview HTML is never persis
   human-readable `reason` so the side panel can explain them without crashing.
 - Version-1 and version-2 sessions are rewritten to version 3 on successful `get`.
 
+## Network evidence (Ticket 206)
+
+Outbound HTTP(S) uses `safeFetch` (`src/lib/network/`). Results are always
+`source: extension-fetch` and must never be stored or shown as browser
+navigation. Navigation observation helpers return `unavailable` until Ticket
+201 attaches listeners (or the user reloads). Bodies are omitted unless a
+caller sets `includeBody` under the byte cap. See `docs/network.md`.
+
 ## Privacy invariants
 
 - Local IndexedDB only; no remote sync in this programme.
 - Feature availability records what could not run (`'unavailable'`) without
   inventing negative SEO conclusions from absent data.
+- Extension fetches omit credentials/cookies; do not persist arbitrary response
+  bodies by default.

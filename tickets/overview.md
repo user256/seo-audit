@@ -38,21 +38,20 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | Blocked | Fresh Chrome 114+ smoke (Ticket 109), then Ticket 199 go/no-go |
-| **Sprint 2 — Crawl/index signals** | Planned | Add robots, headers, and sitemap inspection on the settled page contract |
-| **Sprint 3 — Comparisons and site checks** | Planned | Add bounded rendering and URL-variant experiments |
+| **Sprint 1 — Inspect one page** | Blocked | Tickets **109** / **199** need operator Chrome smoke + go/no-go |
+| **Sprint 2 — Crawl/index signals** | Implementation done | Tickets **212→213** closed on PR branch; **299** go/no-go needs operator |
+| **Sprint 3 — Comparisons and site checks** | Planned | Blocked on Sprint 2 **299** |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
 
 ---
 
 # Current Priority Lane
 
-1. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — blocked externally on fresh Chrome 114+ smoke
-2. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
-3. After gate: [Ticket 212: Broad Host Permissions](./212-broad-host-permissions.md) then [206](./206-network-capture-and-safe-fetch-foundation.md)
+1. [Ticket 203: XML Sitemap and Hreflang Parser](./203-xml-sitemap-and-hreflang-parser.md)
+2. [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
+3. Parallel: finish Ticket 109 / 199 when an operator has bandwidth
 
-**Recommended next pick:** complete the Ticket 109 fresh-profile Chrome smoke
-record, then run Ticket 199. Sprint 2 starts with **212** (drop Allow NUX).
+**Recommended next pick:** Ticket **299** Sprint 2 go/no-go (needs operator). Also finish Sprint 1 **109/199** smoke.
 
 ---
 
@@ -93,8 +92,8 @@ useful from the side panel.
 
 **Exit criteria:**
 
-- A user can explicitly grant access to the current origin, open the side
-  panel, audit the active HTTP(S) page, and see the captured facts.
+- A user can open the side panel, audit the active HTTP(S) page (required
+  host permissions), and see the captured facts.
 - DOM facts and derived findings validate against versioned schemas and are
   saved in a local session.
 - The UI explains unavailable data rather than inferring a negative result.
@@ -113,15 +112,6 @@ be discovered, crawled, and indexed.
 
 **Tickets:**
 
-- [ ] [Ticket 212: Broad Host Permissions (Drop Per-Origin Allow NUX)](./212-broad-host-permissions.md)
-- [ ] [Ticket 206: Network Capture and Safe Fetch Foundation](./206-network-capture-and-safe-fetch-foundation.md)
-- [ ] [Ticket 201: Response Metadata and Redirect Capture](./201-response-metadata-and-redirect-capture.md)
-- [ ] [Ticket 202: Robots.txt Fetch, Parser, and Evaluator](./202-robots-txt-fetch-parser-and-evaluator.md)
-- [ ] [Ticket 203: XML Sitemap and Hreflang Parser](./203-xml-sitemap-and-hreflang-parser.md)
-- [ ] [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
-- [ ] [Ticket 213: Hreflang Page-Cluster Validation (Opt-In Fetch)](./213-hreflang-page-cluster-validation.md)
-- [ ] [Ticket 204: Indexability Reconciliation Rules](./204-indexability-reconciliation-rules.md)
-- [ ] [Ticket 205: Crawl Signals Workspace](./205-crawl-signals-workspace.md)
 - [ ] [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md)
 
 **Exit criteria:**

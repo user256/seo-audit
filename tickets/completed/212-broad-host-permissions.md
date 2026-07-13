@@ -1,7 +1,7 @@
 # Ticket 212: Broad Host Permissions (Drop Per-Origin Allow NUX)
 
 **Sprint:** 2 — Crawl and Index Signals  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** M
 
@@ -21,19 +21,19 @@ permissions and remove the Allow-this-site gate from the normal audit path.
 
 ## Acceptance criteria
 
-- [ ] Manifest declares required `host_permissions` for `http://*/*` and
+- [x] Manifest declares required `host_permissions` for `http://*/*` and
   `https://*/*` (or equivalent `<all_urls>` scoped to web origins only — prefer
   http(s) patterns so `chrome://` / `file://` stay unsupported).
-- [ ] Side panel no longer requires “Allow this site” before DOM collect,
+- [x] Side panel no longer requires “Allow this site” before DOM collect,
   glance, Start audit, or Sprint 2 fetches; unsupported URL types remain
   blocked with an explanation.
-- [ ] Ticket 206’s safe-fetch contract still enforces method, redirect cap,
+- [x] Ticket 206’s safe-fetch contract still enforces method, redirect cap,
   timeout, byte cap, concurrency, credential policy, and truncation — broad
   host access does **not** mean unbounded crawling.
-- [ ] README, `docs/architecture.md`, privacy/permissions wording, and
+- [x] README, `docs/architecture.md`, privacy/permissions wording, and
   `CLAUDE.md` product invariants match the new model (Store justification:
   multi-host sitemap/hreflang/robots inspection of the user’s chosen audit).
-- [ ] Tests and UI copy updated; `npm test`, lint, build, `package:check` pass.
+- [x] Tests and UI copy updated; `npm test`, lint, build, `package:check` pass.
 
 ## Out of scope
 
@@ -53,3 +53,5 @@ permissions and remove the Allow-this-site gate from the normal audit path.
 - 2026-07-13 — Product decision: per-origin Allow NUX is the wrong trade-off;
   adopt blanket HTTP(S) host access. Local-first / no-exfiltration invariants
   remain. Filed from Hreflang Pro plunder discussion.
+- 2026-07-13 — Implemented: required `host_permissions`, removed Allow NUX from
+  the side panel, ready HTTP(S) tabs are always `granted`, docs/tests updated.

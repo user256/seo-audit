@@ -1,20 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createChromeStub } from '../test/chrome-stub';
-import { getActiveTabSnapshot, pingActiveTab, requestOriginAccess } from './tab-access';
+import { getActiveTabSnapshot, pingActiveTab } from './tab-access';
 
 describe('getActiveTabSnapshot', () => {
   beforeEach(() => {
     Object.assign(globalThis, { chrome: createChromeStub() });
   });
 
-  it('reports ready + granted=false for an https tab without permission', async () => {
+  it('reports ready + granted for an https tab under required host_permissions', async () => {
     Object.assign(globalThis, {
       chrome: createChromeStub({
         tabs: {
           query: async () => [{ id: 7, url: 'https://example.com/page' }],
-        },
-        permissions: {
-          contains: async () => false,
         },
       }),
     });
@@ -25,11 +22,12 @@ describe('getActiveTabSnapshot', () => {
       url: 'https://example.com/page',
       origin: 'https://example.com',
       pattern: 'https://example.com/*',
-      granted: false,
+      granted: true,
     });
   });
 
-  it('explains unsupported chrome:// tabs without calling permissions.request', async () => {
+  it('explains unsupported chrome:// tabs without probing permissions', async () => {
+    const contains = vi.fn(async () => false);
     const request = vi.fn(async () => false);
     Object.assign(globalThis, {
       chrome: createChromeStub({
@@ -37,7 +35,7 @@ describe('getActiveTabSnapshot', () => {
           query: async () => [{ id: 3, url: 'chrome://settings' }],
         },
         permissions: {
-          contains: async () => false,
+          contains,
           request,
         },
       }),
@@ -45,24 +43,8 @@ describe('getActiveTabSnapshot', () => {
 
     const snapshot = await getActiveTabSnapshot();
     expect(snapshot.status).toBe('unsupported');
+    expect(contains).not.toHaveBeenCalled();
     expect(request).not.toHaveBeenCalled();
-  });
-});
-
-describe('requestOriginAccess', () => {
-  it('requests exactly the supplied origin pattern', async () => {
-    const request = vi.fn(async () => true);
-    Object.assign(globalThis, {
-      chrome: createChromeStub({
-        permissions: {
-          contains: async () => false,
-          request,
-        },
-      }),
-    });
-
-    await expect(requestOriginAccess('https://example.com/*')).resolves.toBe(true);
-    expect(request).toHaveBeenCalledWith({ origins: ['https://example.com/*'] });
   });
 });
 

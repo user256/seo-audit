@@ -1,18 +1,37 @@
-import type { ExtensionRequest, ExtensionResponse } from '../background/messages';
+import type {
+  ExtensionRequest,
+  ExtensionResponse,
+  HreflangClusterProgressMessage,
+} from '../background/messages';
+import {
+  buildCrawlSignalsModel,
+  buildSitemapCandidatesForOrigin,
+  type CrawlSignalsModel,
+  type HreflangClusterValidateState,
+} from '../lib/dashboard/crawl-signals-model';
 import {
   buildGlanceDashboard,
   buildGrantedShellDashboard,
   buildPreAccessDashboard,
   type SeoDashboardModel,
 } from '../lib/dashboard/model';
+import type { NavigationObservationStatus } from '../lib/network/types';
+import type { RobotsFetchResult } from '../lib/robots/fetch-robots';
 import type { AuditSession, Evidence } from '../lib/schemas/audit';
+import type { SitemapCandidate } from '../lib/sitemap/discover';
+import type { SitemapFetchResult } from '../lib/sitemap/fetch-sitemap';
+import {
+  ALTERNATES_SOURCE,
+  htmlAlternatesFromField,
+  type HreflangClusterValidationResult,
+} from '../lib/hreflang';
 import { buildAuditReport } from '../lib/report/audit-report';
 import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
 import { DEFAULT_DOM_COLLECT_LIMITS } from '../lib/schemas/dom-limits';
 import { availabilityFromEvidence, defaultCheckIds } from '../lib/rules/check-selection';
 import { buildPageSummary } from '../lib/rules/summary';
-import { requestOriginAccess } from '../lib/tab-access';
 import { renderCheckSelectionView } from './check-selection-view';
+import { renderCrawlSignalsPanel } from './crawl-signals-view';
 import { renderSeoDashboard } from './dashboard-view';
 import { renderFindingsPanel } from './findings-view';
 import { mountReportEditor, type ReportEditorController } from './report-editor';
@@ -31,7 +50,6 @@ const accessStateEl = document.querySelector('#access-state')!;
 const statusEl = document.querySelector('#status-message')!;
 const phaseEl = document.querySelector('#workspace-phase')!;
 const collectSummaryEl = document.querySelector('#collect-summary') as HTMLElement;
-const allowBtn = document.querySelector('#allow-site') as HTMLButtonElement;
 const collectBtn = document.querySelector('#collect-dom') as HTMLButtonElement;
 const chooseChecksBtn = document.querySelector('#choose-checks') as HTMLButtonElement;
 const startSelectedChecksBtn = document.querySelector(
@@ -41,10 +59,12 @@ const cancelCheckSelectionBtn = document.querySelector(
   '#cancel-check-selection',
 ) as HTMLButtonElement;
 const refreshBtn = document.querySelector('#refresh') as HTMLButtonElement;
+const captureNavBtn = document.querySelector('#capture-navigation') as HTMLButtonElement;
 const pingBtn = document.querySelector('#ping') as HTMLButtonElement;
 const openReportBtn = document.querySelector('#open-report') as HTMLButtonElement;
 const backToFindingsBtn = document.querySelector('#back-to-findings') as HTMLButtonElement;
 const dashboardSection = document.querySelector('#dashboard-section') as HTMLElement;
+const crawlSignalsSection = document.querySelector('#crawl-signals-section') as HTMLElement;
 const findingsSection = document.querySelector('#findings-section') as HTMLElement;
 const findingsSummaryEl = document.querySelector('#findings-summary')!;
 const findingsPanel = document.querySelector('#findings-panel') as HTMLElement;
@@ -58,6 +78,17 @@ let reportEditor: ReportEditorController | null = null;
 let evidenceById = new Map<string, Evidence>();
 let viewingReport = false;
 let dashboard: SeoDashboardModel | null = null;
+let crawlSignals: CrawlSignalsModel | null = null;
+let navigationObservation: NavigationObservationStatus | undefined;
+let robotsResult: RobotsFetchResult | null = null;
+let sitemapResult: SitemapFetchResult | null = null;
+let sitemapCandidates: SitemapCandidate[] = [];
+let robotsFetchBusy = false;
+let sitemapFetchBusy = false;
+let hreflangValidateState: HreflangClusterValidateState = 'idle';
+let hreflangProgress: CrawlSignalsModel['hreflangCluster']['progress'] = null;
+let hreflangResult: HreflangClusterValidationResult | null = null;
+let hreflangRequestId: string | null = null;
 let wizardEvidence: Evidence[] = [];
 let wizardOpen = false;
 let selectedWizardCheckIds = defaultCheckIds();
@@ -78,6 +109,22 @@ function setStatus(text: string, kind: 'plain' | 'ok' | 'error' = 'plain'): void
   statusEl.classList.toggle('is-error', kind === 'error');
 }
 
+function hreflangAlternatesFromEvidence(
+  evidence: readonly Evidence[],
+): { hreflang: string; href: string }[] {
+  const altEvidence = evidence.find((item) => item.source === ALTERNATES_SOURCE);
+  const captured = htmlAlternatesFromField(altEvidence?.value);
+  if (!captured || captured.length === 0) return [];
+  return captured.map((alt) => ({
+    hreflang: alt.hreflang,
+    href: alt.absolute ?? alt.href,
+  }));
+}
+
+function nextHreflangRequestId(): string {
+  return `hc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function renderWorkspace(): void {
   phaseEl.textContent = `State: ${PHASE_LABEL[workspace.phase]}`;
   const tab = workspace.tab;
@@ -87,14 +134,14 @@ function renderWorkspace(): void {
     showCollect = view.showCollect;
     tabUrlEl.textContent = view.urlLabel;
     accessStateEl.textContent = view.accessLabel;
-    allowBtn.hidden = !view.showAllow;
     pingBtn.hidden = !view.showPing;
+    captureNavBtn.hidden = !view.showCollect;
     collectBtn.hidden = !(view.showCollect && workspace.phase !== 'collecting');
   } else {
     tabUrlEl.textContent = '—';
     accessStateEl.textContent = 'Unavailable';
-    allowBtn.hidden = true;
     pingBtn.hidden = true;
+    captureNavBtn.hidden = true;
     collectBtn.hidden = true;
   }
 
@@ -123,6 +170,25 @@ function renderWorkspace(): void {
     renderSeoDashboard(dashboardSection, dashboard);
   }
 
+  const showCrawlSignals = Boolean(crawlSignals) && !viewingReport;
+  crawlSignalsSection.hidden = !showCrawlSignals;
+  if (showCrawlSignals && crawlSignals) {
+    renderCrawlSignalsPanel(crawlSignalsSection, crawlSignals, {
+      onFetchRobots: () => {
+        void fetchRobotsForTab();
+      },
+      onFetchSitemap: () => {
+        void fetchSitemapForTab();
+      },
+      onValidateHreflangCluster: () => {
+        void validateHreflangClusterForTab();
+      },
+      onCancelHreflangCluster: () => {
+        void cancelHreflangClusterValidation();
+      },
+    });
+  }
+
   findingsSection.hidden = !hasSession || viewingReport;
   reportSection.hidden = !hasSession || !viewingReport;
   openReportBtn.hidden = !hasSession || viewingReport;
@@ -137,20 +203,59 @@ function renderWorkspace(): void {
   }
 }
 
+async function rebuildCrawlSignals(tab: NonNullable<WorkspaceModel['tab']>): Promise<void> {
+  const origin = tab.status === 'ready' ? tab.origin : '';
+  const accessGranted = tab.status === 'ready' && tab.granted;
+  sitemapCandidates = buildSitemapCandidatesForOrigin(origin, robotsResult);
+  crawlSignals = buildCrawlSignalsModel({
+    tabUrl: tab.status === 'ready' ? tab.url : '—',
+    documentUrl: dashboard?.documentUrl ?? null,
+    origin,
+    accessGranted,
+    navigation: navigationObservation,
+    robots: robotsResult,
+    sitemap: sitemapResult,
+    sitemapCandidates,
+    robotsFetchBusy,
+    sitemapFetchBusy,
+    hreflangAlternates: hreflangAlternatesFromEvidence(wizardEvidence),
+    hreflangValidateState,
+    hreflangProgress,
+    hreflangResult,
+  });
+}
+
 async function loadGlanceDashboard(): Promise<void> {
   const tab = workspace.tab;
   if (!tab || tab.status !== 'ready') {
     dashboard = null;
+    crawlSignals = null;
+    navigationObservation = undefined;
     return;
   }
   if (!tab.granted) {
     wizardEvidence = [];
+    robotsResult = null;
+    sitemapResult = null;
+    navigationObservation = undefined;
     dashboard = buildPreAccessDashboard(tab.url);
+    await rebuildCrawlSignals(tab);
     return;
   }
 
   // Never show the pre-access “needs site access” shell once granted.
   dashboard = buildGrantedShellDashboard(tab.url, 'Loading DOM inventory…');
+  await rebuildCrawlSignals(tab);
+
+  await send<ExtensionResponse>({ type: 'WATCH_TAB_NAVIGATION', tabId: tab.tabId });
+  const navResponse = await send<ExtensionResponse>({
+    type: 'GET_NAVIGATION_OBSERVATION',
+    tabId: tab.tabId,
+    requestedUrl: tab.url,
+  });
+  navigationObservation =
+    navResponse.type === 'NAVIGATION_OBSERVATION' ? navResponse.observation : undefined;
+  await rebuildCrawlSignals(tab);
 
   const response = await send<ExtensionResponse>({ type: 'GLANCE_DOM_INVENTORY' });
   if (response.type === 'ERROR') {
@@ -159,6 +264,7 @@ async function loadGlanceDashboard(): Promise<void> {
       tab.url,
       `Glance failed: ${response.message}. Click Refresh to retry.`,
     );
+    await rebuildCrawlSignals(tab);
     workspace = {
       ...workspace,
       statusMessage: response.message,
@@ -172,6 +278,7 @@ async function loadGlanceDashboard(): Promise<void> {
       tab.url,
       'Glance returned an unexpected response. Reload the extension, then Refresh.',
     );
+    await rebuildCrawlSignals(tab);
     workspace = {
       ...workspace,
       statusMessage: 'Unexpected glance response from the service worker.',
@@ -185,6 +292,7 @@ async function loadGlanceDashboard(): Promise<void> {
       tab.url,
       `Glance failed (${response.result.code}): ${response.result.error}`,
     );
+    await rebuildCrawlSignals(tab);
     workspace = {
       ...workspace,
       statusMessage: response.result.error,
@@ -195,7 +303,9 @@ async function loadGlanceDashboard(): Promise<void> {
   dashboard = buildGlanceDashboard({
     tabUrl: response.result.tabUrl,
     facts: response.result.facts,
+    navigation: navigationObservation,
   });
+  await rebuildCrawlSignals(tab);
   wizardEvidence = domFactsToPageSnapshot(
     response.result.facts,
     'wizard-glance',
@@ -206,6 +316,186 @@ async function loadGlanceDashboard(): Promise<void> {
     statusMessage: 'Page glance updated from the live tab.',
     statusKind: 'ok',
   };
+}
+
+async function fetchRobotsForTab(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted || robotsFetchBusy) return;
+  robotsFetchBusy = true;
+  await rebuildCrawlSignals(tab);
+  renderWorkspace();
+  setStatus('Fetching robots.txt…');
+  try {
+    const response = await send<ExtensionResponse>({
+      type: 'FETCH_ROBOTS_FOR_ORIGIN',
+      origin: tab.origin,
+    });
+    if (response.type === 'ERROR') {
+      setStatus(response.message, 'error');
+      return;
+    }
+    if (response.type !== 'ROBOTS_FETCH_RESULT') {
+      setStatus('Unexpected robots fetch response.', 'error');
+      return;
+    }
+    robotsResult = response.result;
+    sitemapCandidates = buildSitemapCandidatesForOrigin(tab.origin, robotsResult);
+    await rebuildCrawlSignals(tab);
+    renderWorkspace();
+    if (response.result.ok) {
+      setStatus(`robots.txt fetched (HTTP ${response.result.status}).`, 'ok');
+    } else {
+      setStatus(`robots.txt capture issue: ${response.result.error.message}`, 'error');
+    }
+  } finally {
+    robotsFetchBusy = false;
+    if (tab) await rebuildCrawlSignals(tab);
+    renderWorkspace();
+  }
+}
+
+async function fetchSitemapForTab(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted || sitemapFetchBusy) return;
+  sitemapFetchBusy = true;
+  sitemapCandidates = buildSitemapCandidatesForOrigin(tab.origin, robotsResult);
+  await rebuildCrawlSignals(tab);
+  renderWorkspace();
+  setStatus('Discovering and fetching sitemap candidates…');
+  try {
+    const rootUrls = sitemapCandidates.map((candidate) => candidate.url);
+    if (rootUrls.length === 0) {
+      setStatus('No sitemap candidates to fetch for this origin.', 'error');
+      return;
+    }
+    const response = await send<ExtensionResponse>({
+      type: 'FETCH_SITEMAP',
+      rootUrls,
+    });
+    if (response.type === 'ERROR') {
+      setStatus(response.message, 'error');
+      return;
+    }
+    if (response.type !== 'SITEMAP_FETCH_RESULT') {
+      setStatus('Unexpected sitemap fetch response.', 'error');
+      return;
+    }
+    sitemapResult = response.result;
+    await rebuildCrawlSignals(tab);
+    renderWorkspace();
+    if (response.result.ok) {
+      const membership = crawlSignals?.sitemap.membership.state;
+      setStatus(
+        membership === 'present'
+          ? `Sitemap fetched — audited URL is listed (${response.result.entries.size} entries parsed).`
+          : `Sitemap fetched — audited URL not listed among ${response.result.entries.size} entries.`,
+        membership === 'present' ? 'ok' : 'plain',
+      );
+    } else {
+      setStatus(`Sitemap capture issue: ${response.result.error.message}`, 'error');
+    }
+  } finally {
+    sitemapFetchBusy = false;
+    if (tab) await rebuildCrawlSignals(tab);
+    renderWorkspace();
+  }
+}
+
+async function validateHreflangClusterForTab(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted || hreflangValidateState === 'busy') return;
+
+  const alternates = hreflangAlternatesFromEvidence(wizardEvidence);
+  if (alternates.length === 0) {
+    setStatus('No captured hreflang alternates to validate.', 'error');
+    return;
+  }
+
+  const seedUrl = dashboard?.documentUrl ?? tab.url;
+  hreflangRequestId = nextHreflangRequestId();
+  hreflangValidateState = 'busy';
+  hreflangProgress = { completed: 0, total: alternates.length };
+  hreflangResult = null;
+  await rebuildCrawlSignals(tab);
+  renderWorkspace();
+  setStatus('Validating hreflang cluster (opt-in fetch)…');
+
+  try {
+    const response = await send<ExtensionResponse>({
+      type: 'VALIDATE_HREFLANG_CLUSTER',
+      requestId: hreflangRequestId,
+      seedUrl,
+      alternates,
+    });
+    if (response.type === 'ERROR') {
+      hreflangValidateState = 'idle';
+      hreflangProgress = null;
+      setStatus(response.message, 'error');
+      return;
+    }
+    if (response.type !== 'HREFLANG_CLUSTER_RESULT') {
+      hreflangValidateState = 'idle';
+      hreflangProgress = null;
+      setStatus('Unexpected hreflang cluster response.', 'error');
+      return;
+    }
+    hreflangResult = response.result;
+    hreflangValidateState = response.result.cancelled ? 'cancelled' : 'done';
+    hreflangProgress = null;
+    await rebuildCrawlSignals(tab);
+    renderWorkspace();
+    const fetched = response.result.members.filter((member) => member.fetched).length;
+    setStatus(
+      response.result.cancelled
+        ? `Hreflang cluster validation cancelled (${fetched} member(s) fetched).`
+        : `Hreflang cluster validation complete — ${fetched} fetched, ${response.result.findings.length} finding(s), ${response.result.errors.length} error(s).`,
+      response.result.errors.length > 0 ? 'error' : 'ok',
+    );
+  } finally {
+    hreflangRequestId = null;
+    if (tab) await rebuildCrawlSignals(tab);
+    renderWorkspace();
+  }
+}
+
+async function cancelHreflangClusterValidation(): Promise<void> {
+  if (!hreflangRequestId) return;
+  const response = await send<ExtensionResponse>({
+    type: 'CANCEL_HREFLANG_CLUSTER',
+    requestId: hreflangRequestId,
+  });
+  if (response.type === 'HREFLANG_CLUSTER_CANCELLED' && response.cancelled) {
+    setStatus('Cancelling hreflang cluster validation…');
+  }
+}
+
+async function captureNavigation(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted) return;
+  captureNavBtn.disabled = true;
+  setStatus('Reloading tab to observe browser navigation…');
+  try {
+    const response = await send<ExtensionResponse>({
+      type: 'RELOAD_AND_OBSERVE_NAVIGATION',
+      tabId: tab.tabId,
+    });
+    if (response.type === 'ERROR') {
+      setStatus(response.message, 'error');
+      return;
+    }
+    await loadGlanceDashboard();
+    renderWorkspace();
+    if (response.type === 'NAVIGATION_OBSERVATION' && response.observation.status === 'observed') {
+      setStatus(`Captured browser navigation — status ${response.observation.statusCode}.`, 'ok');
+    } else {
+      setStatus(
+        'Reload finished but navigation headers were not observed. Try Refresh, then reload again.',
+        'error',
+      );
+    }
+  } finally {
+    captureNavBtn.disabled = false;
+  }
 }
 
 async function send<T extends ExtensionResponse>(message: ExtensionRequest): Promise<T> {
@@ -333,26 +623,6 @@ async function refresh(): Promise<void> {
   renderWorkspace();
 }
 
-async function allowSite(): Promise<void> {
-  const tab = workspace.tab;
-  if (!tab || tab.status !== 'ready') return;
-  allowBtn.disabled = true;
-  setStatus(`Requesting access to ${tab.origin}…`);
-  try {
-    const granted = await requestOriginAccess(tab.pattern);
-    if (!granted) {
-      setStatus('Permission was not granted.', 'error');
-      return;
-    }
-    await refresh();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    setStatus(message, 'error');
-  } finally {
-    allowBtn.disabled = false;
-  }
-}
-
 async function ping(): Promise<void> {
   const tab = workspace.tab;
   if (!tab || tab.status !== 'ready' || !tab.granted) return;
@@ -449,11 +719,11 @@ async function collectDom(selectedCheckIds?: ReadonlySet<string>): Promise<void>
   }
 }
 
-allowBtn.addEventListener('click', () => {
-  void allowSite();
-});
 refreshBtn.addEventListener('click', () => {
   void refresh();
+});
+captureNavBtn.addEventListener('click', () => {
+  void captureNavigation();
 });
 pingBtn.addEventListener('click', () => {
   void ping();
@@ -492,5 +762,20 @@ function findingsHeadingFocus(): void {
   heading?.setAttribute('tabindex', '-1');
   heading?.focus();
 }
+
+chrome.runtime.onMessage.addListener((message) => {
+  const progressMessage = message as HreflangClusterProgressMessage;
+  if (progressMessage.type !== 'HREFLANG_CLUSTER_PROGRESS') return;
+  if (!hreflangRequestId || progressMessage.progress.requestId !== hreflangRequestId) return;
+  hreflangProgress = {
+    completed: progressMessage.progress.completed,
+    total: progressMessage.progress.total,
+    currentUrl: progressMessage.progress.currentUrl,
+  };
+  if (progressMessage.progress.phase === 'cancelled') {
+    hreflangValidateState = 'cancelled';
+  }
+  renderWorkspace();
+});
 
 void refresh();

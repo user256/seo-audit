@@ -1,4 +1,11 @@
 import type { Finding } from '../schemas/audit';
+import {
+  ALTERNATES_SOURCE,
+  evaluateHreflangDirectives,
+  htmlAlternatesFromField,
+  parseSitemapHreflangEvidence,
+  SITEMAP_HREFLANG_SOURCE,
+} from '../hreflang';
 import { inventoryJsonLdEntries, type JsonLdCapturedEntry } from '../structured-data/inventory';
 import { fieldFromEvidence, makeFinding, type Rule } from './types';
 
@@ -6,19 +13,11 @@ const TITLE_SOURCE = 'title';
 const DESC_SOURCE = 'meta[name=description]';
 const ROBOTS_SOURCE = 'meta[name=robots|googlebot]';
 const CANONICAL_SOURCE = 'link[rel=canonical]';
-const ALTERNATES_SOURCE = 'link[rel=alternate][hreflang]';
 const LANG_SOURCE = 'html[lang]';
 const IMAGES_SOURCE = 'img';
 const JSONLD_SOURCE = 'script[type=application/ld+json]';
 
-/** Split robots content into directive tokens (comma / whitespace; includes `none`). */
-export function parseRobotsDirectiveTokens(content: string): string[] {
-  return content
-    .toLowerCase()
-    .split(/[,;\s]+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length > 0);
-}
+import { parseRobotsDirectiveTokens } from './robots-tokens';
 
 export function isHttpOrHttpsUrl(absolute: string): boolean {
   try {
@@ -291,26 +290,8 @@ export const robotsMetaDirectives: Rule = {
 
     const tokens = contents.flatMap(parseRobotsDirectiveTokens);
     const hasNone = tokens.includes('none');
-    const hasNoindex = hasNone || tokens.includes('noindex');
     const hasNofollow = hasNone || tokens.includes('nofollow');
 
-    if (hasNoindex) {
-      findings.push(
-        makeFinding({
-          ruleId: 'robots-noindex',
-          severity: 'warning',
-          category: 'indexability',
-          affectedUrl: ctx.pageUrl,
-          description: hasNone
-            ? 'Meta robots includes none (equivalent to noindex, nofollow; DOM signal only; headers/robots.txt not evaluated).'
-            : 'Meta robots includes noindex (DOM signal only; headers/robots.txt not evaluated).',
-          evidenceIds: [evidence.id],
-          recommendation: 'Remove noindex/none if the page should appear in search results.',
-          sourceRef: REF.robots,
-          capturedAt: ctx.capturedAt,
-        }),
-      );
-    }
     if (hasNofollow) {
       findings.push(
         makeFinding({
@@ -330,6 +311,33 @@ export const robotsMetaDirectives: Rule = {
       );
     }
     return findings;
+  },
+};
+
+export const hreflangDirectiveValidation: Rule = {
+  id: 'hreflang-directive-validation',
+  run(ctx) {
+    const htmlEvidence = ctx.evidenceBySource.get(ALTERNATES_SOURCE);
+    const sitemapEvidence = ctx.evidenceBySource.get(SITEMAP_HREFLANG_SOURCE);
+    if (!htmlEvidence && !sitemapEvidence) return [];
+
+    const htmlAlternates = htmlEvidence ? htmlAlternatesFromField(htmlEvidence.value) : undefined;
+    const sitemapParsed = sitemapEvidence
+      ? parseSitemapHreflangEvidence(sitemapEvidence.value)
+      : null;
+
+    const hasHtmlAlternates = (htmlAlternates?.length ?? 0) > 0;
+    const hasSitemapAlternates = (sitemapParsed?.alternates.length ?? 0) > 0;
+    if (!hasHtmlAlternates && !hasSitemapAlternates) return [];
+
+    return evaluateHreflangDirectives({
+      pageUrl: ctx.pageUrl,
+      capturedAt: ctx.capturedAt,
+      htmlEvidenceId: hasHtmlAlternates ? htmlEvidence!.id : undefined,
+      htmlAlternates,
+      sitemapEvidenceId: hasSitemapAlternates ? sitemapEvidence!.id : undefined,
+      sitemapAlternates: sitemapParsed?.alternates,
+    });
   },
 };
 
@@ -623,6 +631,3 @@ export const imagesEmptyAltAdvisory: Rule = {
     ];
   },
 };
-
-/** @deprecated Import the single registry from check-catalogue or engine instead. */
-export { PAGE_RULES } from './check-catalogue';
