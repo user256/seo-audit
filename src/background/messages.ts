@@ -3,6 +3,13 @@ import {
   glanceDomInventoryForActiveTab,
   type GlanceInventoryResult,
 } from '../lib/dashboard/glance';
+import {
+  cancelClusterValidation,
+  validateHreflangCluster,
+  type ClusterAlternateInput,
+  type HreflangClusterProgress,
+  type HreflangClusterValidationResult,
+} from '../lib/hreflang/cluster-validate';
 import type { NavigationObservationStatus } from '../lib/network/types';
 import { fetchRobotsForOrigin, type RobotsFetchResult } from '../lib/robots/fetch-robots';
 import type { AuditSession } from '../lib/schemas/audit';
@@ -24,7 +31,14 @@ export type ExtensionRequest =
   | { type: 'GET_NAVIGATION_OBSERVATION'; tabId: number; requestedUrl?: string }
   | { type: 'RELOAD_AND_OBSERVE_NAVIGATION'; tabId: number }
   | { type: 'FETCH_ROBOTS_FOR_ORIGIN'; origin: string; bypassCache?: boolean }
-  | { type: 'FETCH_SITEMAP'; rootUrls: string[] };
+  | { type: 'FETCH_SITEMAP'; rootUrls: string[] }
+  | {
+      type: 'VALIDATE_HREFLANG_CLUSTER';
+      requestId: string;
+      seedUrl: string;
+      alternates: ClusterAlternateInput[];
+    }
+  | { type: 'CANCEL_HREFLANG_CLUSTER'; requestId?: string };
 
 export type ExtensionResponse =
   | { type: 'ACTIVE_TAB_SNAPSHOT'; snapshot: ActiveTabSnapshot }
@@ -46,7 +60,25 @@ export type ExtensionResponse =
   | { type: 'NAVIGATION_OBSERVATION'; observation: NavigationObservationStatus }
   | { type: 'ROBOTS_FETCH_RESULT'; result: RobotsFetchResult }
   | { type: 'SITEMAP_FETCH_RESULT'; result: SitemapFetchResult }
+  | { type: 'HREFLANG_CLUSTER_RESULT'; result: HreflangClusterValidationResult }
+  | { type: 'HREFLANG_CLUSTER_CANCELLED'; requestId?: string; cancelled: boolean }
   | { type: 'ERROR'; message: string };
+
+/** Broadcast from the service worker while cluster validation runs. */
+export type HreflangClusterProgressMessage = {
+  type: 'HREFLANG_CLUSTER_PROGRESS';
+  progress: HreflangClusterProgress;
+};
+
+function broadcastClusterProgress(progress: HreflangClusterProgress): void {
+  const message: HreflangClusterProgressMessage = {
+    type: 'HREFLANG_CLUSTER_PROGRESS',
+    progress,
+  };
+  void chrome.runtime.sendMessage(message).catch(() => {
+    // Side panel may be closed; progress is best-effort.
+  });
+}
 
 async function reloadAndObserve(tabId: number): Promise<NavigationObservationStatus> {
   navigationCapture.watchTab(tabId);
@@ -147,6 +179,22 @@ export async function handleExtensionRequest(
       return {
         type: 'SITEMAP_FETCH_RESULT',
         result: await fetchSitemap(message.rootUrls),
+      };
+    case 'VALIDATE_HREFLANG_CLUSTER':
+      return {
+        type: 'HREFLANG_CLUSTER_RESULT',
+        result: await validateHreflangCluster({
+          requestId: message.requestId,
+          seedUrl: message.seedUrl,
+          alternates: message.alternates,
+          onProgress: broadcastClusterProgress,
+        }),
+      };
+    case 'CANCEL_HREFLANG_CLUSTER':
+      return {
+        type: 'HREFLANG_CLUSTER_CANCELLED',
+        requestId: message.requestId,
+        cancelled: cancelClusterValidation(message.requestId),
       };
     default: {
       const _exhaustive: never = message;

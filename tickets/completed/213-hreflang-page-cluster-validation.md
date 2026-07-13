@@ -1,7 +1,7 @@
 # Ticket 213: Hreflang Page-Cluster Validation (Opt-In Fetch)
 
 **Sprint:** 2 — Crawl and Index Signals  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** L
 
@@ -21,20 +21,20 @@ findings.
 
 ## Acceptance criteria
 
-- [ ] User action + up-front disclosure: what will be fetched, that it is not
+- [x] User action + up-front disclosure: what will be fetched, that it is not
   Googlebot parity, and that it can be cancelled.
-- [ ] Uses Ticket 206 safe fetch (and Ticket 212 host access): timeout, byte
+- [x] Uses Ticket 206 safe fetch (and Ticket 212 host access): timeout, byte
   cap, redirect cap, concurrency limit, no cookies/credentials by default.
-- [ ] For each alternate: record final URL, status, redirect hops, extracted
+- [x] For each alternate: record final URL, status, redirect hops, extracted
   return hreflang set, and CaptureErrors when a target fails — never invent
   pass/fail from a missing fetch alone without recording the error.
-- [ ] Findings cover missing return tags, invalid codes (reuse 207), duplicate
+- [x] Findings cover missing return tags, invalid codes (reuse 207), duplicate
   values, and self-reference issues among **fetched** cluster members.
-- [ ] Hard caps (max alternates / max bytes / max time) with honest truncation
+- [x] Hard caps (max alternates / max bytes / max time) with honest truncation
   evidence when the cluster is larger than the budget.
-- [ ] Fixture/mocked tests for reciprocity pass/fail, fetch failure,
+- [x] Fixture/mocked tests for reciprocity pass/fail, fetch failure,
   redirecting targets, and cancellation.
-- [ ] Plunder behaviour from Hreflang Pro’s page-mode cluster crawl; do **not**
+- [x] Plunder behaviour from Hreflang Pro’s page-mode cluster crawl; do **not**
   copy Twemoji CDN, score UI, or matrix PNG export unless separately ticketed.
 
 ## Out of scope
@@ -54,3 +54,4 @@ findings.
 - 2026-07-13 — Product decision during Hreflang Pro plunder: live page-cluster
   hreflang validation is desired. Ticket 207 stays structural/captured-evidence;
   this ticket owns the opt-in fetch path.
+- 2026-07-13 — Opt-in cluster validate via safeFetch + Crawl signals UI; caps + cancel.

@@ -662,6 +662,14 @@ section[hidden],
   gap: 0.5rem;
 }
 
+.crawl-disclosure {
+  font-size: 0.9rem;
+  color: var(--muted);
+  border-left: 3px solid var(--brand);
+  padding-left: 0.75rem;
+  margin: 0;
+}
+
 .crawl-panel-actions {
   display: flex;
   flex-wrap: wrap;

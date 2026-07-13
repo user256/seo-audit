@@ -1,8 +1,13 @@
-import type { ExtensionRequest, ExtensionResponse } from '../background/messages';
+import type {
+  ExtensionRequest,
+  ExtensionResponse,
+  HreflangClusterProgressMessage,
+} from '../background/messages';
 import {
   buildCrawlSignalsModel,
   buildSitemapCandidatesForOrigin,
   type CrawlSignalsModel,
+  type HreflangClusterValidateState,
 } from '../lib/dashboard/crawl-signals-model';
 import {
   buildGlanceDashboard,
@@ -15,6 +20,11 @@ import type { RobotsFetchResult } from '../lib/robots/fetch-robots';
 import type { AuditSession, Evidence } from '../lib/schemas/audit';
 import type { SitemapCandidate } from '../lib/sitemap/discover';
 import type { SitemapFetchResult } from '../lib/sitemap/fetch-sitemap';
+import {
+  ALTERNATES_SOURCE,
+  htmlAlternatesFromField,
+  type HreflangClusterValidationResult,
+} from '../lib/hreflang';
 import { buildAuditReport } from '../lib/report/audit-report';
 import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
 import { DEFAULT_DOM_COLLECT_LIMITS } from '../lib/schemas/dom-limits';
@@ -74,6 +84,10 @@ let sitemapResult: SitemapFetchResult | null = null;
 let sitemapCandidates: SitemapCandidate[] = [];
 let robotsFetchBusy = false;
 let sitemapFetchBusy = false;
+let hreflangValidateState: HreflangClusterValidateState = 'idle';
+let hreflangProgress: CrawlSignalsModel['hreflangCluster']['progress'] = null;
+let hreflangResult: HreflangClusterValidationResult | null = null;
+let hreflangRequestId: string | null = null;
 let wizardEvidence: Evidence[] = [];
 let wizardOpen = false;
 let selectedWizardCheckIds = defaultCheckIds();
@@ -92,6 +106,22 @@ function setStatus(text: string, kind: 'plain' | 'ok' | 'error' = 'plain'): void
   statusEl.textContent = text;
   statusEl.classList.toggle('is-ok', kind === 'ok');
   statusEl.classList.toggle('is-error', kind === 'error');
+}
+
+function hreflangAlternatesFromEvidence(
+  evidence: readonly Evidence[],
+): { hreflang: string; href: string }[] {
+  const altEvidence = evidence.find((item) => item.source === ALTERNATES_SOURCE);
+  const captured = htmlAlternatesFromField(altEvidence?.value);
+  if (!captured || captured.length === 0) return [];
+  return captured.map((alt) => ({
+    hreflang: alt.hreflang,
+    href: alt.absolute ?? alt.href,
+  }));
+}
+
+function nextHreflangRequestId(): string {
+  return `hc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function renderWorkspace(): void {
@@ -149,6 +179,12 @@ function renderWorkspace(): void {
       onFetchSitemap: () => {
         void fetchSitemapForTab();
       },
+      onValidateHreflangCluster: () => {
+        void validateHreflangClusterForTab();
+      },
+      onCancelHreflangCluster: () => {
+        void cancelHreflangClusterValidation();
+      },
     });
   }
 
@@ -181,6 +217,10 @@ async function rebuildCrawlSignals(tab: NonNullable<WorkspaceModel['tab']>): Pro
     sitemapCandidates,
     robotsFetchBusy,
     sitemapFetchBusy,
+    hreflangAlternates: hreflangAlternatesFromEvidence(wizardEvidence),
+    hreflangValidateState,
+    hreflangProgress,
+    hreflangResult,
   });
 }
 
@@ -357,6 +397,74 @@ async function fetchSitemapForTab(): Promise<void> {
     sitemapFetchBusy = false;
     if (tab) await rebuildCrawlSignals(tab);
     renderWorkspace();
+  }
+}
+
+async function validateHreflangClusterForTab(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted || hreflangValidateState === 'busy') return;
+
+  const alternates = hreflangAlternatesFromEvidence(wizardEvidence);
+  if (alternates.length === 0) {
+    setStatus('No captured hreflang alternates to validate.', 'error');
+    return;
+  }
+
+  const seedUrl = dashboard?.documentUrl ?? tab.url;
+  hreflangRequestId = nextHreflangRequestId();
+  hreflangValidateState = 'busy';
+  hreflangProgress = { completed: 0, total: alternates.length };
+  hreflangResult = null;
+  await rebuildCrawlSignals(tab);
+  renderWorkspace();
+  setStatus('Validating hreflang cluster (opt-in fetch)…');
+
+  try {
+    const response = await send<ExtensionResponse>({
+      type: 'VALIDATE_HREFLANG_CLUSTER',
+      requestId: hreflangRequestId,
+      seedUrl,
+      alternates,
+    });
+    if (response.type === 'ERROR') {
+      hreflangValidateState = 'idle';
+      hreflangProgress = null;
+      setStatus(response.message, 'error');
+      return;
+    }
+    if (response.type !== 'HREFLANG_CLUSTER_RESULT') {
+      hreflangValidateState = 'idle';
+      hreflangProgress = null;
+      setStatus('Unexpected hreflang cluster response.', 'error');
+      return;
+    }
+    hreflangResult = response.result;
+    hreflangValidateState = response.result.cancelled ? 'cancelled' : 'done';
+    hreflangProgress = null;
+    await rebuildCrawlSignals(tab);
+    renderWorkspace();
+    const fetched = response.result.members.filter((member) => member.fetched).length;
+    setStatus(
+      response.result.cancelled
+        ? `Hreflang cluster validation cancelled (${fetched} member(s) fetched).`
+        : `Hreflang cluster validation complete — ${fetched} fetched, ${response.result.findings.length} finding(s), ${response.result.errors.length} error(s).`,
+      response.result.errors.length > 0 ? 'error' : 'ok',
+    );
+  } finally {
+    hreflangRequestId = null;
+    if (tab) await rebuildCrawlSignals(tab);
+    renderWorkspace();
+  }
+}
+
+async function cancelHreflangClusterValidation(): Promise<void> {
+  if (!hreflangRequestId) return;
+  const response = await send<ExtensionResponse>({
+    type: 'CANCEL_HREFLANG_CLUSTER',
+    requestId: hreflangRequestId,
+  });
+  if (response.type === 'HREFLANG_CLUSTER_CANCELLED' && response.cancelled) {
+    setStatus('Cancelling hreflang cluster validation…');
   }
 }
 
@@ -599,5 +707,20 @@ function findingsHeadingFocus(): void {
   heading?.setAttribute('tabindex', '-1');
   heading?.focus();
 }
+
+chrome.runtime.onMessage.addListener((message) => {
+  const progressMessage = message as HreflangClusterProgressMessage;
+  if (progressMessage.type !== 'HREFLANG_CLUSTER_PROGRESS') return;
+  if (!hreflangRequestId || progressMessage.progress.requestId !== hreflangRequestId) return;
+  hreflangProgress = {
+    completed: progressMessage.progress.completed,
+    total: progressMessage.progress.total,
+    currentUrl: progressMessage.progress.currentUrl,
+  };
+  if (progressMessage.progress.phase === 'cancelled') {
+    hreflangValidateState = 'cancelled';
+  }
+  renderWorkspace();
+});
 
 void refresh();

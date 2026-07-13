@@ -304,4 +304,21 @@ describe('buildCrawlSignalsModel', () => {
     expect(model.sitemap.error?.code).toBe('sitemap-fetch-non-200');
     expect(model.sitemap.membership.state).toBe('unavailable');
   });
+
+  it('exposes hreflang cluster validation when alternates are captured', () => {
+    const model = buildCrawlSignalsModel({
+      tabUrl: TAB,
+      documentUrl: TAB,
+      origin: ORIGIN,
+      accessGranted: true,
+      hreflangAlternates: [
+        { hreflang: 'en', href: TAB },
+        { hreflang: 'de', href: `${ORIGIN}/de/widget` },
+      ],
+    });
+    expect(model.hreflangCluster.availability).toBe('present');
+    expect(model.hreflangCluster.declaredTotal).toBe(2);
+    expect(model.hreflangCluster.detail).toMatch(/not Googlebot/i);
+    expect(model.hreflangCluster.limits.maxAlternates).toBeGreaterThan(0);
+  });
 });

@@ -1,4 +1,10 @@
 import type { NavigationObservationStatus } from '../network/types';
+import type { HreflangClusterValidationResult } from '../hreflang/cluster-validate';
+import {
+  HREFLANG_CLUSTER_DISPLAY_LIMITS,
+  HREFLANG_CLUSTER_LIMITS,
+  type HreflangClusterLimits,
+} from '../hreflang/cluster-limits';
 import { evaluateRobotsForUrl, type RobotsProfileEvaluation } from '../robots/evaluate-robots';
 import type { RobotsCaptureError, RobotsFetchResult } from '../robots/fetch-robots';
 import { discoverSitemapCandidates, type SitemapCandidate } from '../sitemap/discover';
@@ -111,6 +117,22 @@ export type CrawlSignalsModel = {
   navigation: NavigationSignalsPanel;
   robots: RobotsSignalsPanel;
   sitemap: SitemapSignalsPanel;
+  hreflangCluster: HreflangClusterSignalsPanel;
+};
+
+export type HreflangClusterValidateState = 'idle' | 'busy' | 'done' | 'cancelled';
+
+export type HreflangClusterSignalsPanel = {
+  availability: SignalAvailability;
+  validateState: HreflangClusterValidateState;
+  seedUrl: string | null;
+  declaredAlternates: { hreflang: string; href: string }[];
+  declaredTotal: number;
+  declaredTruncated: boolean;
+  limits: HreflangClusterLimits;
+  progress: { completed: number; total: number; currentUrl?: string } | null;
+  result: HreflangClusterValidationResult | null;
+  detail: string;
 };
 
 function mapCaptureError(error: RobotsCaptureError | SitemapCaptureError): CrawlSignalError {
@@ -413,6 +435,79 @@ function buildSitemapPanel(
   };
 }
 
+function buildHreflangClusterPanel(input: {
+  accessGranted: boolean;
+  auditedUrl: string;
+  declaredAlternates: { hreflang: string; href: string }[];
+  validateState: HreflangClusterValidateState;
+  progress: HreflangClusterSignalsPanel['progress'];
+  result: HreflangClusterValidationResult | null;
+}): HreflangClusterSignalsPanel {
+  const declaredSlice = truncateList(
+    input.declaredAlternates,
+    HREFLANG_CLUSTER_DISPLAY_LIMITS.maxDeclaredAlternates,
+  );
+
+  if (!input.accessGranted) {
+    return {
+      availability: 'needs-access',
+      validateState: 'idle',
+      seedUrl: null,
+      declaredAlternates: [],
+      declaredTotal: 0,
+      declaredTruncated: false,
+      limits: HREFLANG_CLUSTER_LIMITS,
+      progress: null,
+      result: null,
+      detail:
+        'Hreflang cluster validation requires site access and captured alternate links on the active page.',
+    };
+  }
+
+  if (input.declaredAlternates.length === 0) {
+    return {
+      availability: 'unavailable',
+      validateState: 'idle',
+      seedUrl: input.auditedUrl,
+      declaredAlternates: [],
+      declaredTotal: 0,
+      declaredTruncated: false,
+      limits: HREFLANG_CLUSTER_LIMITS,
+      progress: null,
+      result: null,
+      detail:
+        'No hreflang alternates were captured on the active page. Run a glance or audit with hreflang evidence first.',
+    };
+  }
+
+  const busy = input.validateState === 'busy';
+  const done = input.validateState === 'done' || input.validateState === 'cancelled';
+
+  let detail =
+    'Opt-in network experiment: fetches alternate targets to verify return hreflang tags among successfully fetched members. Not Googlebot or crawler parity.';
+  if (busy && input.progress) {
+    detail = `Fetching alternates (${input.progress.completed}/${input.progress.total})${input.progress.currentUrl ? ` — ${input.progress.currentUrl}` : ''}.`;
+  } else if (done && input.result) {
+    const fetched = input.result.members.filter((member) => member.fetched).length;
+    detail = input.result.cancelled
+      ? `Cancelled after fetching ${fetched} member(s). ${input.result.findings.length} finding(s), ${input.result.errors.length} capture error(s).`
+      : `Validated ${fetched} fetched member(s). ${input.result.findings.length} finding(s), ${input.result.errors.length} capture error(s).`;
+  }
+
+  return {
+    availability: 'present',
+    validateState: input.validateState,
+    seedUrl: input.auditedUrl,
+    declaredAlternates: declaredSlice.shown,
+    declaredTotal: declaredSlice.total,
+    declaredTruncated: declaredSlice.truncated,
+    limits: HREFLANG_CLUSTER_LIMITS,
+    progress: input.progress,
+    result: input.result,
+    detail,
+  };
+}
+
 /** Build deduplicated sitemap candidates from robots directives and common paths. */
 export function buildSitemapCandidatesForOrigin(
   origin: string,
@@ -433,6 +528,10 @@ export function buildCrawlSignalsModel(input: {
   sitemapCandidates?: SitemapCandidate[];
   robotsFetchBusy?: boolean;
   sitemapFetchBusy?: boolean;
+  hreflangAlternates?: { hreflang: string; href: string }[];
+  hreflangValidateState?: HreflangClusterValidateState;
+  hreflangProgress?: HreflangClusterSignalsPanel['progress'];
+  hreflangResult?: HreflangClusterValidationResult | null;
 }): CrawlSignalsModel {
   const auditedUrl = input.documentUrl ?? input.tabUrl;
   const candidates =
@@ -457,5 +556,13 @@ export function buildCrawlSignalsModel(input: {
       input.sitemap,
       Boolean(input.sitemapFetchBusy),
     ),
+    hreflangCluster: buildHreflangClusterPanel({
+      accessGranted: input.accessGranted,
+      auditedUrl,
+      declaredAlternates: input.hreflangAlternates ?? [],
+      validateState: input.hreflangValidateState ?? 'idle',
+      progress: input.hreflangProgress ?? null,
+      result: input.hreflangResult ?? null,
+    }),
   };
 }

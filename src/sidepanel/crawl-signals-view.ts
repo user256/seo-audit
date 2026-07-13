@@ -1,8 +1,11 @@
 import type { CrawlSignalsModel } from '../lib/dashboard/crawl-signals-model';
+import { HREFLANG_CLUSTER_DISPLAY_LIMITS } from '../lib/hreflang/cluster-limits';
 
 export type CrawlSignalsViewHandlers = {
   onFetchRobots: () => void;
   onFetchSitemap: () => void;
+  onValidateHreflangCluster: () => void;
+  onCancelHreflangCluster: () => void;
 };
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -279,6 +282,152 @@ function buildSitemapPanel(
   return panel('crawl-panel-sitemap', 'Sitemap', model.availability, body, actions);
 }
 
+function buildHreflangClusterPanel(
+  model: CrawlSignalsModel['hreflangCluster'],
+  handlers: CrawlSignalsViewHandlers,
+): HTMLDetailsElement {
+  const body = el('div', 'crawl-panel-body');
+  body.append(el('p', 'lede', model.detail));
+
+  const disclosure = el('p', 'crawl-disclosure');
+  disclosure.textContent =
+    'This will fetch up to the capped alternate URLs via extension-initiated HTTP(S) requests (no cookies/credentials). It checks return hreflang tags among successfully fetched members only — not Googlebot or crawler parity. You can cancel while it runs.';
+  body.append(disclosure);
+
+  const rows: HTMLElement[] = [
+    row('Seed URL', model.seedUrl ?? '—'),
+    row(
+      'Declared alternates',
+      model.declaredTotal > 0 ? String(model.declaredTotal) : '—',
+      model.declaredTotal === 0 ? 'muted' : undefined,
+    ),
+    row(
+      'Fetch caps',
+      `≤ ${model.limits.maxAlternates} alternates · ≤ ${model.limits.maxWallTimeMs / 1000}s wall time`,
+      'muted',
+    ),
+  ];
+
+  if (model.progress && model.validateState === 'busy') {
+    rows.push(
+      row(
+        'Progress',
+        `${model.progress.completed} / ${model.progress.total}${model.progress.currentUrl ? ` — ${model.progress.currentUrl}` : ''}`,
+      ),
+    );
+  }
+
+  if (model.result) {
+    rows.push(
+      row(
+        'Fetched members',
+        String(model.result.members.filter((member) => member.fetched).length),
+      ),
+      row('Findings', String(model.result.findings.length)),
+      row(
+        'Capture errors',
+        String(model.result.errors.length),
+        model.result.errors.length ? 'error' : undefined,
+      ),
+    );
+    if (model.result.truncation.alternateCapHit) {
+      rows.push(row('Truncated', 'Alternate list exceeded fetch cap', 'warn'));
+    }
+    if (model.result.truncation.wallTimeExceeded) {
+      rows.push(row('Wall time', 'Budget exceeded before all targets were fetched', 'warn'));
+    }
+  }
+
+  appendDl(body, rows);
+
+  if (model.declaredAlternates.length > 0) {
+    const list = el('ul', 'dash-list');
+    for (const alt of model.declaredAlternates) {
+      list.append(el('li', undefined, `${alt.hreflang} → ${alt.href}`));
+    }
+    body.append(el('p', undefined, 'Captured alternates (fetch targets)'));
+    body.append(list);
+    appendTruncationNote(body, model.declaredAlternates.length, model.declaredTotal);
+  }
+
+  if (model.result?.members.length) {
+    const membersDetails = el('details', 'crawl-subpanel');
+    membersDetails.append(el('summary', undefined, 'Fetched member results'));
+    const memberDl = el('dl', 'dash-dl');
+    const shown = model.result.members.slice(0, HREFLANG_CLUSTER_DISPLAY_LIMITS.maxMemberRows);
+    for (const member of shown) {
+      const summary = member.fetched
+        ? `HTTP ${member.status ?? '—'} · ${member.alternates?.length ?? 0} return tag(s)`
+        : member.fetchError
+          ? `${member.fetchError.code}`
+          : 'not fetched';
+      memberDl.append(
+        row(
+          `${member.hreflang} · ${member.requestedUrl}`,
+          summary,
+          member.fetchError ? 'error' : member.fetched ? undefined : 'muted',
+        ),
+      );
+      if (member.finalUrl && member.finalUrl !== member.requestedUrl) {
+        memberDl.append(row('Final URL', member.finalUrl, 'muted'));
+      }
+    }
+    membersDetails.append(memberDl);
+    appendTruncationNote(membersDetails, shown.length, model.result.members.length);
+    body.append(membersDetails);
+  }
+
+  if (model.result?.findings.length) {
+    const findingsDetails = el('details', 'crawl-subpanel');
+    findingsDetails.append(el('summary', undefined, 'Cluster findings'));
+    const list = el('ul', 'dash-list');
+    const shown = model.result.findings.slice(0, HREFLANG_CLUSTER_DISPLAY_LIMITS.maxFindings);
+    for (const finding of shown) {
+      list.append(el('li', undefined, `${finding.severity}: ${finding.description}`));
+    }
+    findingsDetails.append(list);
+    appendTruncationNote(findingsDetails, shown.length, model.result.findings.length);
+    body.append(findingsDetails);
+  }
+
+  if (model.result?.errors.length) {
+    const errList = el('ul', 'dash-list crawl-errors');
+    const shown = model.result.errors.slice(0, HREFLANG_CLUSTER_DISPLAY_LIMITS.maxErrors);
+    for (const err of shown) {
+      errList.append(el('li', undefined, `${err.code}: ${err.message} (${err.url})`));
+    }
+    body.append(el('p', undefined, 'Fetch capture errors'));
+    body.append(errList);
+    appendTruncationNote(body, shown.length, model.result.errors.length);
+  }
+
+  const actions = el('div', 'crawl-panel-actions');
+  const validateBtn = el('button', 'secondary', 'Validate hreflang cluster') as HTMLButtonElement;
+  validateBtn.type = 'button';
+  validateBtn.id = 'validate-hreflang-cluster';
+  validateBtn.disabled =
+    model.validateState === 'busy' || model.availability !== 'present' || model.declaredTotal === 0;
+  validateBtn.setAttribute('aria-busy', model.validateState === 'busy' ? 'true' : 'false');
+  validateBtn.addEventListener('click', handlers.onValidateHreflangCluster);
+  actions.append(validateBtn);
+
+  if (model.validateState === 'busy') {
+    const cancelBtn = el('button', 'secondary', 'Cancel validation') as HTMLButtonElement;
+    cancelBtn.type = 'button';
+    cancelBtn.id = 'cancel-hreflang-cluster';
+    cancelBtn.addEventListener('click', handlers.onCancelHreflangCluster);
+    actions.append(cancelBtn);
+  }
+
+  return panel(
+    'crawl-panel-hreflang-cluster',
+    'Hreflang cluster',
+    model.availability,
+    body,
+    actions,
+  );
+}
+
 export function renderCrawlSignalsPanel(
   container: HTMLElement,
   model: CrawlSignalsModel,
@@ -309,6 +458,7 @@ export function renderCrawlSignalsPanel(
     buildNavigationPanel(model.navigation),
     buildRobotsPanel(model.robots, handlers),
     buildSitemapPanel(model.sitemap, handlers),
+    buildHreflangClusterPanel(model.hreflangCluster, handlers),
   );
   container.append(stack);
 }

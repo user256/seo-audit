@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createChromeStub } from '../test/chrome-stub';
+import { resetClusterValidationState } from '../lib/hreflang/cluster-validate';
 import { handleExtensionRequest } from './messages';
 
 describe('handleExtensionRequest', () => {
   beforeEach(() => {
+    resetClusterValidationState();
     Object.assign(globalThis, {
       chrome: createChromeStub({
         tabs: {
@@ -18,8 +20,16 @@ describe('handleExtensionRequest', () => {
             { result: { pong: true, href: 'https://shop.example/item' } },
           ],
         },
+        runtime: {
+          sendMessage: async () => undefined,
+        },
       }),
     });
+  });
+
+  afterEach(() => {
+    resetClusterValidationState();
+    vi.unstubAllGlobals();
   });
 
   it('returns an active-tab snapshot for GET_ACTIVE_TAB_SNAPSHOT', async () => {
@@ -46,5 +56,49 @@ describe('handleExtensionRequest', () => {
       type: 'PING_RESULT',
       result: { ok: true, pong: true, href: 'https://shop.example/item' },
     });
+  });
+
+  it('cancels an in-flight hreflang cluster validation by requestId', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) => {
+        const signal = init?.signal;
+        return new Promise<Response>((_resolve, reject) => {
+          signal?.addEventListener('abort', () => {
+            reject(new DOMException('aborted', 'AbortError'));
+          });
+        });
+      }),
+    );
+
+    const run = handleExtensionRequest({
+      type: 'VALIDATE_HREFLANG_CLUSTER',
+      requestId: 'cluster-cancel-test',
+      seedUrl: 'https://shop.example/en',
+      alternates: [
+        { hreflang: 'en', href: 'https://shop.example/en' },
+        { hreflang: 'de', href: 'https://shop.example/de' },
+      ],
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const cancel = await handleExtensionRequest({
+      type: 'CANCEL_HREFLANG_CLUSTER',
+      requestId: 'cluster-cancel-test',
+    });
+    expect(cancel).toEqual({
+      type: 'HREFLANG_CLUSTER_CANCELLED',
+      requestId: 'cluster-cancel-test',
+      cancelled: true,
+    });
+
+    const result = await run;
+    expect(result.type).toBe('HREFLANG_CLUSTER_RESULT');
+    if (result.type === 'HREFLANG_CLUSTER_RESULT') {
+      expect(result.result.cancelled).toBe(true);
+      expect(result.result.requestId).toBe('cluster-cancel-test');
+    }
+
+    vi.unstubAllGlobals();
   });
 });

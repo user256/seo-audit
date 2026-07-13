@@ -51,7 +51,7 @@ Constraints that shape the plan:
 2. [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
 3. Parallel: finish Ticket 109 / 199 when an operator has bandwidth
 
-**Recommended next pick:** Ticket **213** (opt-in hreflang cluster), then **299** go/no-go (needs operator).
+**Recommended next pick:** Ticket **299** Sprint 2 go/no-go (needs operator). Also finish Sprint 1 **109/199** smoke.
 
 ---
 
@@ -112,7 +112,6 @@ be discovered, crawled, and indexed.
 
 **Tickets:**
 
-- [ ] [Ticket 213: Hreflang Page-Cluster Validation (Opt-In Fetch)](./213-hreflang-page-cluster-validation.md)
 - [ ] [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md)
 
 **Exit criteria:**
