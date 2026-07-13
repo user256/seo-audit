@@ -24,3 +24,4 @@
 - [x] [Ticket 209: Check Catalogue and Availability Model](./209-check-catalogue-and-availability-model.md)
 - [x] [Ticket 210: Audit Wizard and Check Selection](./210-audit-wizard-and-check-selection.md)
 - [x] [Ticket 211: Register the Structured-Data Check](./211-register-structured-data-check.md)
+- [x] [Ticket 212: Broad Host Permissions (Drop Per-Origin Allow NUX)](./212-broad-host-permissions.md)

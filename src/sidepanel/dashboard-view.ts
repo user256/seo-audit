@@ -43,7 +43,7 @@ export function renderSeoDashboard(container: HTMLElement, model: SeoDashboardMo
       ? 'Inventory from the live tab. Start audit runs rule tests and saves a session.'
       : model.accessGranted
         ? 'Site access is granted — loading page inventory (or Refresh if this looks stuck).'
-        : 'Allow this site to load status, redirects, and page inventory.',
+        : 'Page inventory is unavailable until the active tab can be read.',
   );
   container.append(lede);
 

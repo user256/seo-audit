@@ -2,15 +2,15 @@ import { defineManifest } from '@crxjs/vite-plugin';
 import packageJson from './package.json';
 
 /**
- * MV3 shell + permission boundary (Ticket 101).
- * Host access is optional and requested per active origin at user action —
- * never declared as a required blanket host permission.
+ * MV3 shell + permission boundary (Ticket 212).
+ * Required HTTP(S) host access so multi-host Sprint 2 fetches work without a
+ * per-origin Allow NUX. Unsupported schemes stay blocked in evaluateUrl.
  */
 export default defineManifest({
   manifest_version: 3,
   name: 'SEO Audit Workbench',
   description:
-    'Local-first technical SEO inspector for the active browser tab. Access is requested per origin.',
+    'Local-first technical SEO inspector for the active browser tab. Reads HTTP(S) pages you open to capture page and related crawl signals locally.',
   version: packageJson.version,
   action: {
     default_title: 'SEO Audit Workbench',
@@ -23,7 +23,5 @@ export default defineManifest({
     default_path: 'src/sidepanel/index.html',
   },
   permissions: ['storage', 'activeTab', 'sidePanel', 'scripting', 'tabs'],
-  // optional_host_permissions reserved for documentation; runtime requests use
-  // chrome.permissions.request with an exact https://host/* or http://host/* pattern.
-  optional_host_permissions: ['http://*/*', 'https://*/*'],
+  host_permissions: ['http://*/*', 'https://*/*'],
 });

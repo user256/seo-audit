@@ -32,7 +32,7 @@ describe('handleExtensionRequest', () => {
         url: 'https://shop.example/item',
         origin: 'https://shop.example',
         pattern: 'https://shop.example/*',
-        granted: false,
+        granted: true,
       },
     });
   });

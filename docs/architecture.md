@@ -49,22 +49,21 @@ These are load-bearing for Ticket 404 packaging and the product privacy promise:
    `dist/`, never loaded from a CDN at runtime.
 4. **`package:check`.** Today a stub that asserts `dist/manifest.json` is MV3.
    Ticket 404 expands it to ZIP contents allow/deny lists and version stamping.
-5. **Host access policy (Tickets 101 → 212).** Sprint 1 shipped optional
-   per-origin grants. Product direction is now required HTTP(S)
-   `host_permissions` so multi-host Sprint 2 fetches avoid the Allow NUX
-   (Ticket 212). Until 212 lands, the live code still uses optional patterns in
-   `src/lib/origins.ts`. Unsupported schemes (`chrome://`, `file://`, …) stay
-   blocked. Safe-fetch caps (Ticket 206) still apply after broad host access.
+5. **Host access policy (Ticket 212).** Required HTTP(S) `host_permissions`
+   (`http://*/*`, `https://*/*`) so multi-host Sprint 2 fetches avoid a
+   per-origin Allow NUX. Unsupported schemes (`chrome://`, `file://`, …) stay
+   blocked in `evaluateUrl`. Safe-fetch caps (Ticket 206) still apply — broad
+   host access is not unbounded crawling.
 
-## Permission boundary (Ticket 101)
+## Permission boundary (Ticket 212)
 
-| Surface          | Behaviour                                                                                                      |
-| ---------------- | -------------------------------------------------------------------------------------------------------------- |
-| Toolbar action   | Opens the side panel (`openPanelOnActionClick`).                                                               |
-| Side panel       | Shows active tab URL, access state, and Allow / ping actions.                                                  |
-| Allow this site  | Calls `chrome.permissions.request` **in the side panel** (user gesture) for exactly the active origin pattern. |
-| Unsupported URLs | `chrome://`, `file://`, extension pages, etc. are explained; no request is made.                               |
-| Content ping     | After grant, `chrome.scripting.executeScript` injects a no-op ping and returns `location.href`.                |
+| Surface          | Behaviour                                                                                       |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| Toolbar action   | Opens the side panel (`openPanelOnActionClick`).                                                |
+| Side panel       | Shows active tab URL, access state, Start audit / ping / refresh.                               |
+| Host access      | Declared required `host_permissions` for HTTP(S); no per-origin Allow prompt on the audit path. |
+| Unsupported URLs | `chrome://`, `file://`, extension pages, etc. are explained; collect stays hidden.              |
+| Content ping     | `chrome.scripting.executeScript` injects a no-op ping and returns `location.href`.              |
 
 ## npm scripts (contract for later tickets)
 

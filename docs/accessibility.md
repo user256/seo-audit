@@ -31,12 +31,12 @@ Run after loading unpacked `dist/` in Chrome (see also
 `docs/sprint-1-smoke.md`):
 
 1. Open the side panel with the toolbar action.
-2. **Tab** through Allow / Start audit / Refresh / Test page access — each control
+2. **Tab** through Start audit / Refresh / Test page access — each control
    shows a visible `:focus-visible` ring.
 3. On an unsupported tab (`chrome://`), confirm the phase badge reads
-   “Unsupported tab” and Allow/Start audit stay hidden.
-4. On an https page without access, focus **Allow this site** and activate with
-   Enter/Space; after grant, **Start audit** is reachable by keyboard.
+   “Unsupported tab” and Start audit stays hidden.
+4. On an https page, **Start audit** is reachable by keyboard without an Allow
+   step (required HTTP(S) host permissions).
 5. After an audit, **Tab** into findings category `<summary>` elements; Space
    toggles expand/collapse.
 6. Open **Open report**, confirm focus moves to the Markdown textarea; edit text;

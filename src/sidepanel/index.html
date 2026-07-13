@@ -11,7 +11,9 @@
     <main id="workspace-main">
       <header>
         <h1>SEO Audit Workbench</h1>
-        <p class="lede">Inspect the active tab. Access is granted one origin at a time.</p>
+        <p class="lede">
+          Inspect the active tab. Audits and related HTTP(S) fetches stay on this machine.
+        </p>
       </header>
 
       <p id="workspace-phase" class="phase-badge" aria-live="polite"></p>
@@ -30,7 +32,6 @@
         </dl>
         <p id="status-message" class="status" role="status" aria-live="polite"></p>
         <div class="actions">
-          <button type="button" id="allow-site" hidden>Allow this site</button>
           <button type="button" id="collect-dom" hidden>Start audit</button>
           <button type="button" id="choose-checks" class="secondary" hidden>Choose checks</button>
           <button type="button" id="refresh" class="secondary">Refresh</button>

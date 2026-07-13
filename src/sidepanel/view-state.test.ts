@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { viewFromSnapshot } from './view-state';
 
 describe('viewFromSnapshot', () => {
-  it('shows Allow for an eligible tab without access', () => {
+  it('shows collect controls for a ready HTTP(S) tab', () => {
     expect(
       viewFromSnapshot({
         status: 'ready',
@@ -10,17 +10,17 @@ describe('viewFromSnapshot', () => {
         url: 'https://example.com/',
         origin: 'https://example.com',
         pattern: 'https://example.com/*',
-        granted: false,
+        granted: true,
       }),
     ).toMatchObject({
-      showAllow: true,
-      showPing: false,
-      showCollect: false,
-      accessLabel: 'Not granted',
+      showAllow: false,
+      showPing: true,
+      showCollect: true,
+      statusKind: 'ok',
     });
   });
 
-  it('hides Allow and explains unsupported URLs', () => {
+  it('hides collect controls and explains unsupported URLs', () => {
     expect(
       viewFromSnapshot({
         status: 'unsupported',

@@ -7,6 +7,7 @@ export type ActiveTabSnapshot =
       url: string;
       origin: string;
       pattern: string;
+      /** Always true for eligible HTTP(S) tabs under required host_permissions. */
       granted: boolean;
     }
   | {
@@ -25,17 +26,9 @@ export async function getActiveTab(): Promise<chrome.tabs.Tab | undefined> {
   return tabs[0];
 }
 
-export async function hasOriginAccess(pattern: string): Promise<boolean> {
-  return chrome.permissions.contains({ origins: [pattern] });
-}
-
-export async function requestOriginAccess(pattern: string): Promise<boolean> {
-  return chrome.permissions.request({ origins: [pattern] });
-}
-
 /**
- * Snapshot of the active tab plus whether optional host access is granted.
- * Never requests permission — callers must use requestOriginAccess on user action.
+ * Snapshot of the active tab. Eligible HTTP(S) tabs are treated as granted
+ * because the manifest declares required http(s) host_permissions (Ticket 212).
  */
 export async function getActiveTabSnapshot(): Promise<ActiveTabSnapshot> {
   const tab = await getActiveTab();
@@ -56,20 +49,19 @@ export async function getActiveTabSnapshot(): Promise<ActiveTabSnapshot> {
     };
   }
 
-  const granted = await hasOriginAccess(eligibility.pattern);
   return {
     status: 'ready',
     tabId: tab.id,
     url: eligibility.url,
     origin: eligibility.origin,
     pattern: eligibility.pattern,
-    granted,
+    granted: true,
   };
 }
 
 /**
  * Injects a no-op content script and awaits a round-trip response.
- * Requires prior origin access (or activeTab); returns a structured error otherwise.
+ * Requires host access for the tab URL (declared in the manifest for http(s)).
  */
 export async function pingActiveTab(
   tabId: number,

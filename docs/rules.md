@@ -27,8 +27,8 @@ experiment checks can declare opt-in without changing the runner.
 `resolveCheckAvailability({ accessGranted, evidenceBySource })` reports one of:
 
 - `available` when all required evidence rows can be used;
-- `needs-access` when a required row is absent and fresh per-origin access has
-  not been granted;
+- `needs-access` when a required row is absent and the active tab cannot yet be
+  read (unsupported scheme or missing tab);
 - `unavailable` when access exists but a source has not been captured, or a
   captured field is explicitly inaccessible.
 

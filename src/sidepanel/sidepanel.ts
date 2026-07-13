@@ -10,7 +10,6 @@ import { buildAuditReport } from '../lib/report/audit-report';
 import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
 import { DEFAULT_DOM_COLLECT_LIMITS } from '../lib/schemas/dom-limits';
 import { availabilityFromEvidence, defaultCheckIds } from '../lib/rules/check-selection';
-import { requestOriginAccess } from '../lib/tab-access';
 import { renderCheckSelectionView } from './check-selection-view';
 import { renderSeoDashboard } from './dashboard-view';
 import { renderFindingsPanel } from './findings-view';
@@ -30,7 +29,6 @@ const accessStateEl = document.querySelector('#access-state')!;
 const statusEl = document.querySelector('#status-message')!;
 const phaseEl = document.querySelector('#workspace-phase')!;
 const collectSummaryEl = document.querySelector('#collect-summary') as HTMLElement;
-const allowBtn = document.querySelector('#allow-site') as HTMLButtonElement;
 const collectBtn = document.querySelector('#collect-dom') as HTMLButtonElement;
 const chooseChecksBtn = document.querySelector('#choose-checks') as HTMLButtonElement;
 const startSelectedChecksBtn = document.querySelector(
@@ -86,13 +84,11 @@ function renderWorkspace(): void {
     showCollect = view.showCollect;
     tabUrlEl.textContent = view.urlLabel;
     accessStateEl.textContent = view.accessLabel;
-    allowBtn.hidden = !view.showAllow;
     pingBtn.hidden = !view.showPing;
     collectBtn.hidden = !(view.showCollect && workspace.phase !== 'collecting');
   } else {
     tabUrlEl.textContent = '—';
     accessStateEl.textContent = 'Unavailable';
-    allowBtn.hidden = true;
     pingBtn.hidden = true;
     collectBtn.hidden = true;
   }
@@ -278,26 +274,6 @@ async function refresh(): Promise<void> {
   renderWorkspace();
 }
 
-async function allowSite(): Promise<void> {
-  const tab = workspace.tab;
-  if (!tab || tab.status !== 'ready') return;
-  allowBtn.disabled = true;
-  setStatus(`Requesting access to ${tab.origin}…`);
-  try {
-    const granted = await requestOriginAccess(tab.pattern);
-    if (!granted) {
-      setStatus('Permission was not granted.', 'error');
-      return;
-    }
-    await refresh();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    setStatus(message, 'error');
-  } finally {
-    allowBtn.disabled = false;
-  }
-}
-
 async function ping(): Promise<void> {
   const tab = workspace.tab;
   if (!tab || tab.status !== 'ready' || !tab.granted) return;
@@ -394,9 +370,6 @@ async function collectDom(selectedCheckIds?: ReadonlySet<string>): Promise<void>
   }
 }
 
-allowBtn.addEventListener('click', () => {
-  void allowSite();
-});
 refreshBtn.addEventListener('click', () => {
   void refresh();
 });

@@ -77,7 +77,7 @@ describe('renderSeoDashboard', () => {
 
     expect(host.querySelector('#dashboard-heading')?.textContent).toBe('Page glance');
     expect(host.textContent).toContain(
-      'Allow this site to load status, redirects, and page inventory.',
+      'Page inventory is unavailable until the active tab can be read.',
     );
     expect(host.textContent).toContain('Needs site access');
     expect(host.textContent).toContain('HTTP status requires site access');

@@ -26,17 +26,17 @@ Notes:
 
 Load **`dist/`** via `chrome://extensions` → Developer mode → Load unpacked.
 
-| #   | Step                                                                                                             | Pass? | Notes |
-| --- | ---------------------------------------------------------------------------------------------------------------- | ----- | ----- |
-| 1   | Unsupported URL (`chrome://extensions`): phase “Unsupported tab”; Allow/Start hidden                             | ☐     |       |
-| 2   | HTTPS page without grant: “Allow this site” visible; Start audit hidden/disabled appropriately                   | ☐     |       |
-| 3   | Deny permission prompt: status explains denial; no findings invented                                             | ☐     |       |
-| 4   | Grant origin: Start audit available; collect produces findings + local session                                   | ☐     |       |
-| 5   | Close and reopen side panel: session/findings still available for the same audit flow                            | ☐     |       |
-| 6   | Open report: edit Markdown, preview strips images/raw HTML, autosave status updates                              | ☐     |       |
-| 7   | Start a second audit while typing (or mid-debounce): prior Markdown does not overwrite the new session           | ☐     |       |
-| 8   | Navigate the audited tab during collection: `navigation-race` (or equivalent) capture error, not a false finding | ☐     |       |
-| 9   | Keyboard: Tab order, focus rings, findings `<summary>` toggle, report focus return                               | ☐     |       |
+| #   | Step                                                                                                             | Pass? | Notes                                                             |
+| --- | ---------------------------------------------------------------------------------------------------------------- | ----- | ----------------------------------------------------------------- |
+| 1   | Unsupported URL (`chrome://extensions`): phase “Unsupported tab”; Allow/Start hidden                             | ☐     |                                                                   |
+| 2   | HTTPS page: Start audit available without an Allow gate (Ticket 212 host_permissions)                            | ☐     | Superseded Allow-NUX row; verify Start audit shows on first open. |
+| 3   | Deny permission prompt: status explains denial; no findings invented                                             | ☐     |                                                                   |
+| 4   | Grant origin: Start audit available; collect produces findings + local session                                   | ☐     |                                                                   |
+| 5   | Close and reopen side panel: session/findings still available for the same audit flow                            | ☐     |                                                                   |
+| 6   | Open report: edit Markdown, preview strips images/raw HTML, autosave status updates                              | ☐     |                                                                   |
+| 7   | Start a second audit while typing (or mid-debounce): prior Markdown does not overwrite the new session           | ☐     |                                                                   |
+| 8   | Navigate the audited tab during collection: `navigation-race` (or equivalent) capture error, not a false finding | ☐     |                                                                   |
+| 9   | Keyboard: Tab order, focus rings, findings `<summary>` toggle, report focus return                               | ☐     |                                                                   |
 
 Operator: **\*\***\_\_\_\_**\*\*** Date: **\_\_\_\_** Chrome version: **\_\_\_\_**
 

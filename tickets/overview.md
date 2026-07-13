@@ -47,12 +47,10 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — blocked externally on fresh Chrome 114+ smoke
-2. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
-3. After gate: [Ticket 212: Broad Host Permissions](./212-broad-host-permissions.md) then [206](./206-network-capture-and-safe-fetch-foundation.md)
+1. [Ticket 206: Network Capture and Safe Fetch Foundation](./206-network-capture-and-safe-fetch-foundation.md)
+2. Parallel: finish Ticket 109 / 199 when an operator has bandwidth
 
-**Recommended next pick:** complete the Ticket 109 fresh-profile Chrome smoke
-record, then run Ticket 199. Sprint 2 starts with **212** (drop Allow NUX).
+**Recommended next pick:** Ticket **206**.
 
 ---
 
@@ -113,7 +111,6 @@ be discovered, crawled, and indexed.
 
 **Tickets:**
 
-- [ ] [Ticket 212: Broad Host Permissions (Drop Per-Origin Allow NUX)](./212-broad-host-permissions.md)
 - [ ] [Ticket 206: Network Capture and Safe Fetch Foundation](./206-network-capture-and-safe-fetch-foundation.md)
 - [ ] [Ticket 201: Response Metadata and Redirect Capture](./201-response-metadata-and-redirect-capture.md)
 - [ ] [Ticket 202: Robots.txt Fetch, Parser, and Evaluator](./202-robots-txt-fetch-parser-and-evaluator.md)

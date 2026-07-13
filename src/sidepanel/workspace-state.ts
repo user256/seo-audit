@@ -26,9 +26,7 @@ export function phaseFromTab(tab: ActiveTabSnapshot): WorkspacePhase {
   if (tab.status === 'unsupported' || tab.status === 'missing') {
     return 'unsupported-tab';
   }
-  if (!tab.granted) {
-    return 'permission-required';
-  }
+  // Ready HTTP(S) tabs are always collectable under required host_permissions.
   return 'ready-to-collect';
 }
 
@@ -49,9 +47,7 @@ export function withTab(model: WorkspaceModel, tab: ActiveTabSnapshot): Workspac
   const phase = phaseFromTab(tab);
   const viewMessage =
     tab.status === 'ready'
-      ? tab.granted
-        ? 'Origin access is granted. Start an audit when ready.'
-        : 'Click “Allow this site” to grant access for this origin only.'
+      ? 'HTTP(S) host access is available. Start an audit when ready.'
       : tab.reason;
 
   return {
@@ -59,8 +55,7 @@ export function withTab(model: WorkspaceModel, tab: ActiveTabSnapshot): Workspac
     tab,
     phase: model.sessionId && phase === 'ready-to-collect' ? 'saved-audit' : phase,
     statusMessage: viewMessage,
-    statusKind:
-      tab.status === 'ready' && tab.granted ? 'ok' : tab.status === 'ready' ? 'plain' : 'error',
+    statusKind: tab.status === 'ready' ? 'ok' : 'error',
   };
 }
 

@@ -23,25 +23,25 @@ describe('collectDomForActiveTab', () => {
     });
   });
 
-  it('returns permission-denied CaptureError without calling scripting', async () => {
-    const executeScript = async () => [];
+  it('returns early for unsupported chrome:// tabs without calling scripting', async () => {
+    let scriptingCalls = 0;
     Object.assign(globalThis, {
       chrome: createChromeStub({
         tabs: {
-          query: async () => [{ id: 4, url: 'https://example.com/shop/item' }],
+          query: async () => [{ id: 4, url: 'chrome://extensions' }],
         },
-        permissions: {
-          contains: async () => false,
+        scripting: {
+          executeScript: async () => {
+            scriptingCalls += 1;
+            return [];
+          },
         },
-        scripting: { executeScript },
       }),
     });
 
     const result = await collectDomForActiveTab(new SessionRepository(new IDBFactory()));
     expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.captureError?.code).toBe('permission-denied');
-    }
+    expect(scriptingCalls).toBe(0);
   });
 
   it('saves a session when access is granted', async () => {
