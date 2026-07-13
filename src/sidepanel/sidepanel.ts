@@ -50,11 +50,25 @@ import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
 import { DEFAULT_DOM_COLLECT_LIMITS } from '../lib/schemas/dom-limits';
 import { availabilityFromEvidence, defaultCheckIds } from '../lib/rules/check-selection';
 import { buildPageSummary } from '../lib/rules/summary';
+import {
+  applyTheme,
+  clearCustomTheme,
+  DEFAULT_THEME_TOKENS,
+  loadResolvedTheme,
+  resetTheme,
+  saveCustomTheme,
+  THEME_PRESETS,
+  THEME_TOKEN_KEYS,
+  type ThemeMode,
+  type ThemeTokenKey,
+  type ThemeTokens,
+} from '../lib/theme';
 import { renderCheckSelectionView } from './check-selection-view';
 import { renderCrawlSignalsPanel } from './crawl-signals-view';
 import { renderSeoDashboard } from './dashboard-view';
 import { renderFindingsPanel } from './findings-view';
 import { mountReportEditor, type ReportEditorController } from './report-editor';
+import { renderThemeEditor } from './theme-editor-view';
 import { viewFromSnapshot } from './view-state';
 import {
   initialWorkspace,
@@ -92,6 +106,7 @@ const reportSection = document.querySelector('#report-section') as HTMLElement;
 const reportSessionLabel = document.querySelector('#report-session-label')!;
 const checkSelectionSection = document.querySelector('#check-selection-section') as HTMLElement;
 const checkSelectionList = document.querySelector('#check-selection-list') as HTMLElement;
+const themeEditorBody = document.querySelector('#theme-editor-body') as HTMLElement;
 
 let workspace: WorkspaceModel = initialWorkspace();
 let reportEditor: ReportEditorController | null = null;
@@ -129,6 +144,7 @@ let cssJsRequestId: string | null = null;
 let wizardEvidence: Evidence[] = [];
 let wizardOpen = false;
 let selectedWizardCheckIds = defaultCheckIds();
+let themeTokens: ThemeTokens = structuredClone(DEFAULT_THEME_TOKENS);
 
 const PHASE_LABEL: Record<WorkspaceModel['phase'], string> = {
   'unsupported-tab': 'Unsupported tab',
@@ -144,6 +160,48 @@ function setStatus(text: string, kind: 'plain' | 'ok' | 'error' = 'plain'): void
   statusEl.textContent = text;
   statusEl.classList.toggle('is-ok', kind === 'ok');
   statusEl.classList.toggle('is-error', kind === 'error');
+}
+
+function tokenSetsEqual(a: Record<string, string>, b: Record<string, string>): boolean {
+  return THEME_TOKEN_KEYS.every((key) => a[key].toLowerCase() === b[key].toLowerCase());
+}
+
+function themesEqual(a: ThemeTokens, b: ThemeTokens): boolean {
+  return tokenSetsEqual(a.light, b.light) && tokenSetsEqual(a.dark, b.dark);
+}
+
+function matchingPresetId(tokens: ThemeTokens): string | null {
+  return THEME_PRESETS.find((preset) => themesEqual(preset.tokens, tokens))?.id ?? null;
+}
+
+function renderThemeEditorPanel(): void {
+  renderThemeEditor(
+    themeEditorBody,
+    { tokens: themeTokens, activePresetId: matchingPresetId(themeTokens) },
+    {
+      onTokenChange: (mode: ThemeMode, key: ThemeTokenKey, value: string) => {
+        themeTokens = { ...themeTokens, [mode]: { ...themeTokens[mode], [key]: value } };
+        applyTheme(themeTokens);
+        void saveCustomTheme(themeTokens);
+        renderThemeEditorPanel();
+      },
+      onPresetSelect: (presetId: string) => {
+        const preset = THEME_PRESETS.find((candidate) => candidate.id === presetId);
+        if (!preset) return;
+        themeTokens = structuredClone(preset.tokens);
+        applyTheme(themeTokens);
+        void saveCustomTheme(themeTokens);
+        renderThemeEditorPanel();
+      },
+      onReset: () => {
+        themeTokens = structuredClone(DEFAULT_THEME_TOKENS);
+        resetTheme();
+        void clearCustomTheme();
+        renderThemeEditorPanel();
+        setStatus('Theme reset to the shipped default.', 'ok');
+      },
+    },
+  );
 }
 
 function hreflangAlternatesFromEvidence(
@@ -1198,6 +1256,11 @@ chrome.runtime.onMessage.addListener((message) => {
 });
 
 async function bootstrap(): Promise<void> {
+  const { resolved } = await loadResolvedTheme();
+  themeTokens = resolved;
+  applyTheme(themeTokens);
+  renderThemeEditorPanel();
+
   const preference = await loadUaProfilePreference();
   uaProfileId = preference.profileId;
   uaProfileCustomUserAgent = preference.customUserAgent;

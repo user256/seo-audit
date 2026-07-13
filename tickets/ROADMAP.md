@@ -37,10 +37,13 @@ They remain subject to the external Sprint 2 go/no-go gate (**299**).
 
 ## Release path — Sprint 4: durable audits
 
+Completed ahead of the settings surface: [405](./completed/405-user-defined-theme-editor.md).
+
 1. [401](./401-session-browser-and-historical-comparison.md).
 2. [402](./402-markdown-and-json-export.md) and [403](./403-error-states-privacy-controls-and-data-retention.md).
 3. [404](./404-quality-gates-and-release-packaging.md).
-4. [405](./405-user-defined-theme-editor.md) — user-defined colour themes on the existing CSS-variable token layer; lives in the 403 settings surface. Sprint-agnostic — pullable earlier if prioritised.
+4. [406](./406-theme-preference-write-ordering.md) — preserve the latest local
+   theme action, including Reset.
 5. [499](./499-sprint-4-review-and-release-go-no-go.md).
 
 ## Ordering rules
