@@ -53,6 +53,27 @@ Run after loading unpacked `dist/` in Chrome (see also
 11. Confirm availability badges (`present`, `unavailable`, `absent`, `error`,
     `needs access`) are exposed to screen readers via `role="status"` and
     `aria-label`.
+12. Expand **Appearance → Theme editor** (always visible, no site access
+    needed). Pick **High contrast**, confirm the whole panel re-skins
+    immediately; **Tab** through the colour inputs and confirm each has a
+    visible label and focus ring; click **Reset to default** and confirm the
+    shipped skin returns exactly.
+
+## Theme editor (Ticket 405)
+
+- Custom colours are applied only via injected `<style>` CSS custom
+  properties (`src/lib/theme/apply-theme.ts`) — never inline per-element
+  styles, so `:focus-visible` and other rules in `sidepanel.css` keep working
+  unchanged.
+- Every declared foreground/background pair (text/background, text/surface,
+  muted/background, link/background, and the four severity pairs) is checked
+  against WCAG AA on every edit (`src/lib/theme/contrast-check.ts`); failing
+  pairs render a visible, non-`aria-hidden` warning with the exact ratio —
+  saving is never blocked, so this is advisory rather than a hard gate.
+- All three shipped presets (Canonicals default, high contrast, neutral) pass
+  AA on every checked pair in both light and dark, asserted in
+  `contrast-check.test.ts`.
+- See `docs/theme-editor.md` for the full design.
 
 ## Crawl signals (Ticket 205)
 

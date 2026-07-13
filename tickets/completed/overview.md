@@ -43,3 +43,8 @@
 - [x] [Ticket 304: Googlebot-Style Render Experiment Spike](./304-googlebot-style-render-experiment-spike.md)
 - [x] [Ticket 305: User-Agent Profiles and Audit Disclosures](./305-user-agent-profiles-and-audit-disclosures.md)
 
+# Sprint 4: Durable Audits and Release Readiness
+
+**Tickets:**
+- [x] [Ticket 405: User-Defined Theme Editor](./405-user-defined-theme-editor.md)
+

@@ -41,7 +41,7 @@ Constraints that shape the plan:
 | **Sprint 1 — Inspect one page** | Blocked | Tickets **109** / **199** need operator Chrome smoke + go/no-go |
 | **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **299** needs its recorded public-site review and go/no-go |
 | **Sprint 3 — Comparisons and site checks** | In progress | Tickets **303**/**304**/**305**/**306** done (304: defer, see `docs/googlebot-style-experiment.md`; 305: network-probe-only UA profiles, see `docs/ua-profiles.md`); gate **299**/**399** still need operator |
-| **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
+| **Sprint 4 — Durable audits** | In progress | Ticket **405** done (theme editor, see `docs/theme-editor.md`); finish storage, export, accessibility, and release hardening |
 
 ---
 
@@ -168,13 +168,17 @@ cloaking detection claims, guarantees about Google’s renderer.
 
 **Theme:** Make audit sessions portable, understandable, and safe to ship.
 
+**Completed implementation:** [Ticket 405](./completed/405-user-defined-theme-editor.md)
+(pulled ahead of the settings surface per its own Approach note — see
+`docs/theme-editor.md`).
+
 **Tickets:**
 
 - [ ] [Ticket 401: Session Browser and Historical Comparison](./401-session-browser-and-historical-comparison.md)
 - [ ] [Ticket 402: Markdown and JSON Export](./402-markdown-and-json-export.md)
 - [ ] [Ticket 403: Error States, Privacy Controls, and Data Retention](./403-error-states-privacy-controls-and-data-retention.md)
 - [ ] [Ticket 404: Quality Gates and Release Packaging](./404-quality-gates-and-release-packaging.md)
-- [ ] [Ticket 405: User-Defined Theme Editor](./405-user-defined-theme-editor.md)
+- [ ] [Ticket 406: Theme Preference Write Ordering](./406-theme-preference-write-ordering.md)
 - [ ] [Ticket 499: Sprint 4 Review and Release Go/No-Go](./499-sprint-4-review-and-release-go-no-go.md)
 
 **Exit criteria:**
