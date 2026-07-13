@@ -1,7 +1,7 @@
 # Ticket 206: Network Capture and Safe Fetch Foundation
 
 **Sprint:** 2 — Crawl and Index Signals  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** L
 
@@ -25,25 +25,25 @@ access is broad.
 
 ## Acceptance criteria
 
-- [ ] Produce and implement a Chrome/MV3 capability decision for current-page
+- [x] Produce and implement a Chrome/MV3 capability decision for current-page
   headers/redirects: explicit reload/re-observe, clearly-labelled replay fetch,
   or an unavailable result. The UI/API must never label replay-fetch headers as
   the original browser navigation.
-- [ ] Define a shared request contract with method, redirect cap, timeout/abort,
+- [x] Define a shared request contract with method, redirect cap, timeout/abort,
   byte cap, MIME expectation, concurrency limit, and correlation/request ID;
   all later network features use it. Host access comes from Ticket 212 (required
   HTTP(S) permissions), not per-request `permissions.request`.
-- [ ] Fetches use an explicit credential/referrer/cache policy that prevents
+- [x] Fetches use an explicit credential/referrer/cache policy that prevents
   cookies, authentication, and ambient tab state from being sent or inferred;
   cross-origin hops are allowed under 212 but must still be recorded in evidence
   and respect redirect/byte caps.
-- [ ] Implement one normalised result/error shape retaining final URL, status,
+- [x] Implement one normalised result/error shape retaining final URL, status,
   redirect hops, selected response headers, timing, truncation, and method
   limitations without persisting bodies by default.
-- [ ] Add mocked tests for a navigation observed before and after permission,
+- [x] Add mocked tests for a navigation observed before and after permission,
   late listener attachment, redirect loops, cross-origin hops, timeout,
   cancellation, oversized body, and unsupported header visibility.
-- [ ] Document the manifest/API permissions and Chrome-version constraints
+- [x] Document the manifest/API permissions and Chrome-version constraints
   selected by the decision (coordinate with Ticket 212).
 
 ## Out of scope
@@ -74,3 +74,7 @@ grant friction; this ticket keeps the fetch *dangerous* parts bounded.
 - 2026-07-13 — Product decision: adopt broad HTTP(S) host permissions (Ticket
   212). Hreflang Pro’s `<all_urls>` UX is the model for access; this ticket
   retains caps/credential policy. Per-origin Allow is explicitly rejected.
+- 2026-07-13 — Implemented `src/lib/network/` (`safeFetch`, concurrency gate,
+  navigation-observation helpers) + `docs/network.md`. Decision: navigation
+  evidence requires attach-before-navigate or reload/re-observe (Ticket 201);
+  extension fetch is always `extension-fetch`.

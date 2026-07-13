@@ -29,9 +29,9 @@ entry on the relevant ticket.
 │   ├── background/        ← service worker
 │   ├── sidepanel/         ← side-panel HTML/CSS/TS
 │   ├── content/           ← page collectors (Ticket 103+)
-│   ├── lib/               ← schemas, storage, rules, parsers
+│   ├── lib/               ← schemas, storage, rules, parsers, network (206)
 │   └── test/              ← chrome stub + vitest setup
-├── docs/                  ← architecture, rules, privacy
+├── docs/                  ← architecture, rules, privacy, network
 └── dist/                  ← loadable unpacked extension (gitignored)
 ```
 
@@ -64,6 +64,18 @@ These are load-bearing for Ticket 404 packaging and the product privacy promise:
 | Host access      | Declared required `host_permissions` for HTTP(S); no per-origin Allow prompt on the audit path. |
 | Unsupported URLs | `chrome://`, `file://`, extension pages, etc. are explained; collect stays hidden.              |
 | Content ping     | `chrome.scripting.executeScript` injects a no-op ping and returns `location.href`.              |
+
+## Network observation vs extension fetch (Ticket 206)
+
+See [`docs/network.md`](./network.md). Summary:
+
+- **Browser navigation** headers/redirects require listeners attached before
+  navigation (or an explicit reload/re-observe). Implemented as helpers now;
+  `webRequest` wiring is Ticket 201.
+- **`safeFetch`** is the only shared outbound HTTP(S) path for robots, sitemaps,
+  hreflang clusters, etc. Always labelled `extension-fetch`. Caps, `credentials:
+omit`, and header allowlisting apply even with Ticket 212 host access.
+- Never present a replay fetch as the original navigation.
 
 ## npm scripts (contract for later tickets)
 

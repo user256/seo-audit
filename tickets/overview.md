@@ -47,10 +47,11 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-1. [Ticket 206: Network Capture and Safe Fetch Foundation](./206-network-capture-and-safe-fetch-foundation.md)
-2. Parallel: finish Ticket 109 / 199 when an operator has bandwidth
+1. [Ticket 201: Response Metadata and Redirect Capture](./201-response-metadata-and-redirect-capture.md)
+2. [Ticket 202: Robots.txt Fetch, Parser, and Evaluator](./202-robots-txt-fetch-parser-and-evaluator.md)
+3. Parallel: finish Ticket 109 / 199 when an operator has bandwidth
 
-**Recommended next pick:** Ticket **206**.
+**Recommended next pick:** Ticket **201** (wire webRequest / reload-reobserve on top of 206).
 
 ---
 
@@ -111,7 +112,6 @@ be discovered, crawled, and indexed.
 
 **Tickets:**
 
-- [ ] [Ticket 206: Network Capture and Safe Fetch Foundation](./206-network-capture-and-safe-fetch-foundation.md)
 - [ ] [Ticket 201: Response Metadata and Redirect Capture](./201-response-metadata-and-redirect-capture.md)
 - [ ] [Ticket 202: Robots.txt Fetch, Parser, and Evaluator](./202-robots-txt-fetch-parser-and-evaluator.md)
 - [ ] [Ticket 203: XML Sitemap and Hreflang Parser](./203-xml-sitemap-and-hreflang-parser.md)
