@@ -1,4 +1,5 @@
 import type { RedirectHop } from '../network/types';
+import type { UaProfileResult } from '../ua-profiles/types';
 import type { VariantTestLimits } from './limits';
 
 export type VariantKind = 'base' | 'scheme' | 'www' | 'trailing-slash' | 'case' | 'index-filename';
@@ -91,6 +92,8 @@ export type VariantTestRunResult = {
   results: VariantTestRow[];
   finalGroups: VariantFinalGroup[];
   observations: VariantObservation[];
+  /** User-agent profile applied to every fetch in this run (Ticket 305). Absent on runs saved before Ticket 305. */
+  uaProfile?: UaProfileResult;
   limitations: string[];
   truncation: {
     totalGenerated: number;

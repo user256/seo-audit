@@ -215,6 +215,7 @@ export async function safeFetch(request: SafeFetchRequest): Promise<SafeFetchRes
           referrerPolicy: 'no-referrer',
           cache: 'no-store',
           signal: hopController.signal,
+          ...(request.userAgent ? { headers: { 'User-Agent': request.userAgent } } : {}),
         });
       } catch (err) {
         const aborted =

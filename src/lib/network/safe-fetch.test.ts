@@ -241,4 +241,32 @@ describe('safeFetch', () => {
       expect(result.bodyText).toBeUndefined();
     }
   });
+
+  it('sets a User-Agent header override when requested (Ticket 305)', async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      expect(headers.get('User-Agent')).toBe('Test-UA/1.0');
+      return new Response('ok', { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await safeFetch({
+      url: 'https://example.com/page',
+      userAgent: 'Test-UA/1.0',
+    });
+    expect(result.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('omits the User-Agent header entirely when no override is given', async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      expect(headers.has('User-Agent')).toBe(false);
+      return new Response('ok', { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await safeFetch({ url: 'https://example.com/page' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

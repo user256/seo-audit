@@ -46,6 +46,19 @@ export const RedirectHopSchema = z.object({
   status: z.number().int(),
 });
 
+/**
+ * Ticket 305 user-agent profile disclosure attached to variant/soft-404 runs.
+ * Optional in the persisted schema so sessions saved before Ticket 305 still
+ * validate on load (there is nothing to migrate — the field was simply absent).
+ */
+export const UaProfileResultSchema = z.object({
+  profileId: z.enum(['browser-default', 'googlebot-style', 'custom']),
+  label: z.string().min(1),
+  userAgent: z.string().nullable(),
+  method: z.enum(['extension-fetch-header', 'none']),
+  limitations: z.array(z.string()),
+});
+
 export const VariantFetchErrorSchema = z.object({
   code: z.string().min(1),
   message: z.string().min(1),
@@ -122,6 +135,8 @@ export const VariantTestRunResultSchema = rejectRawResponseBodies(
     results: z.array(VariantTestRowSchema),
     finalGroups: z.array(VariantFinalGroupSchema),
     observations: z.array(VariantObservationSchema),
+    /** Optional: absent on sessions saved before Ticket 305. */
+    uaProfile: UaProfileResultSchema.optional(),
     limitations: z.array(z.string()),
     truncation: z.object({
       totalGenerated: z.number().int().nonnegative(),
@@ -191,6 +206,8 @@ export const Soft404ProbeResultSchema = rejectRawResponseBodies(
     probe: Soft404PageCaptureSchema,
     audited: Soft404PageCaptureSchema,
     observations: z.array(Soft404ObservationSchema),
+    /** Optional: absent on sessions saved before Ticket 305. */
+    uaProfile: UaProfileResultSchema.optional(),
     limitations: z.array(z.string()),
   }),
 );
@@ -251,6 +268,13 @@ export function sampleVariantTestRunResult(
       },
     ],
     observations: [],
+    uaProfile: {
+      profileId: 'browser-default',
+      label: 'Browser default',
+      userAgent: null,
+      method: 'none',
+      limitations: ['Uses the extension fetch default User-Agent header (no override attempted).'],
+    },
     limitations: ['Extension fetch only.'],
     truncation: {
       totalGenerated: 1,
@@ -298,6 +322,13 @@ export function sampleSoft404ProbeResult(
     probe: emptyCapture('probe', 'https://example.com/missing-probe'),
     audited: emptyCapture('audited', 'https://example.com/product'),
     observations: [],
+    uaProfile: {
+      profileId: 'browser-default',
+      label: 'Browser default',
+      userAgent: null,
+      method: 'none',
+      limitations: ['Uses the extension fetch default User-Agent header (no override attempted).'],
+    },
     limitations: ['Heuristic comparison only.'],
     ...overrides,
   };

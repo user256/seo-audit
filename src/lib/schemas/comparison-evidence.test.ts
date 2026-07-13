@@ -51,6 +51,31 @@ describe('comparison-evidence schemas', () => {
     expect(parseSoft404ProbeResult(probe).success).toBe(true);
   });
 
+  it('accepts pre-Ticket-305 runs that lack uaProfile', () => {
+    const { uaProfile: _omittedVariant, ...variantWithoutUaProfile } = sampleVariantTestRunResult();
+    expect(parseVariantTestRunResult(variantWithoutUaProfile).success).toBe(true);
+
+    const { uaProfile: _omittedProbe, ...probeWithoutUaProfile } = sampleSoft404ProbeResult();
+    expect(parseSoft404ProbeResult(probeWithoutUaProfile).success).toBe(true);
+  });
+
+  it('records the resolved user-agent profile on variant and soft-404 runs', () => {
+    const variant = sampleVariantTestRunResult({
+      uaProfile: {
+        profileId: 'googlebot-style',
+        label: 'Googlebot-style (static)',
+        userAgent: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+        method: 'extension-fetch-header',
+        limitations: ['Best-effort only.'],
+      },
+    });
+    const parsedVariant = parseVariantTestRunResult(variant);
+    expect(parsedVariant.success).toBe(true);
+    if (parsedVariant.success) {
+      expect(parsedVariant.data.uaProfile?.profileId).toBe('googlebot-style');
+    }
+  });
+
   it('rejects raw response body fields anywhere in the payload', () => {
     const withBodyText = {
       ...sampleVariantTestRunResult(),

@@ -22,15 +22,18 @@ Merged remediations on this lane: 113–115 (PR #22).
 
 ## Then — Sprint 3: bounded experiments
 
-Completed implementation: [301](./completed/301-url-variant-and-redirect-test-runner.md)
-and [302](./completed/302-soft-404-probe.md). They remain subject to the
-external Sprint 2 go/no-go gate.
+Completed implementation: [301](./completed/301-url-variant-and-redirect-test-runner.md),
+[302](./completed/302-soft-404-probe.md),
+[303](./completed/303-css-and-javascript-comparison-experiment.md),
+[304](./completed/304-googlebot-style-render-experiment-spike.md) (spike outcome: **defer**,
+see `docs/googlebot-style-experiment.md`),
+[305](./completed/305-user-agent-profiles-and-audit-disclosures.md) (network-probe-only UA
+profiles now that 304 deferred debugger-backed rendering; see `docs/ua-profiles.md`),
+[306](./completed/306-sprint-3-quality-gate-remediation.md).
+They remain subject to the external Sprint 2 go/no-go gate (**299**).
 
-1. [306](./306-sprint-3-quality-gate-remediation.md) — retain comparison-run
-   evidence before session comparison/export work.
-2. [303](./303-css-and-javascript-comparison-experiment.md) and [304](./304-googlebot-style-render-experiment-spike.md).
-3. [305](./305-user-agent-profiles-and-audit-disclosures.md), after 301 and 304.
-4. [399](./399-sprint-3-review.md).
+1. [399](./399-sprint-3-review.md) — only remaining Sprint 3 ticket, gated on
+   an operator review.
 
 ## Release path — Sprint 4: durable audits
 

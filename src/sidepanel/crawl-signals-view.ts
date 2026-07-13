@@ -4,10 +4,13 @@ import { HREFLANG_CLUSTER_DISPLAY_LIMITS } from '../lib/hreflang/cluster-limits'
 import { SOFT_404_DISPLAY_LIMITS } from '../lib/soft-404';
 import { VARIANT_TEST_DISPLAY_LIMITS } from '../lib/variants';
 import type { VariantKindOptions } from '../lib/variants';
+import type { UaProfileId, UaProfileResult } from '../lib/ua-profiles/types';
 
 export type CrawlSignalsViewHandlers = {
   onFetchRobots: () => void;
   onFetchSitemap: () => void;
+  onUaProfileSelectionChange: (profileId: UaProfileId) => void;
+  onUaProfileCustomUaChange: (customUserAgent: string) => void;
   onValidateHreflangCluster: () => void;
   onCancelHreflangCluster: () => void;
   onRunVariantTests: () => void;
@@ -295,6 +298,107 @@ function buildSitemapPanel(
   return panel('crawl-panel-sitemap', 'Sitemap', model.availability, body, actions);
 }
 
+/** Shown wherever a completed network-probe result recorded a UA profile (Ticket 305). */
+function appendUaProfileSummary(body: HTMLElement, result: UaProfileResult | undefined): void {
+  if (!result) return;
+  const details = el('details', 'crawl-subpanel');
+  details.append(
+    el(
+      'summary',
+      undefined,
+      `User-Agent profile used: ${result.label}${result.userAgent ? ` — ${result.userAgent}` : ' (no header override)'}`,
+    ),
+  );
+  const list = el('ul', 'dash-list');
+  for (const limitation of result.limitations) {
+    list.append(el('li', undefined, limitation));
+  }
+  details.append(list);
+  body.append(details);
+}
+
+function buildUaProfilePanel(
+  model: CrawlSignalsModel['uaProfile'],
+  handlers: CrawlSignalsViewHandlers,
+): HTMLDetailsElement {
+  const body = el('div', 'crawl-panel-body');
+  body.append(el('p', 'lede', model.detail));
+
+  const disclosure = el('p', 'crawl-disclosure');
+  disclosure.textContent =
+    'Changes the HTTP User-Agent header on extension fetches only. Does not change the browser ' +
+    'tab or navigator.userAgent. This is never a claim of Googlebot rendering/crawling parity.';
+  body.append(disclosure);
+
+  const selectField = el('div', 'crawl-field');
+  const selectLabel = el('label', undefined, 'User-Agent profile') as HTMLLabelElement;
+  selectLabel.htmlFor = 'ua-profile-select';
+  const select = el('select') as HTMLSelectElement;
+  select.id = 'ua-profile-select';
+  select.name = 'ua-profile-select';
+  select.disabled = model.availability !== 'present';
+  for (const definition of model.definitions) {
+    const option = el('option', undefined, definition.label) as HTMLOptionElement;
+    option.value = definition.id;
+    option.selected = definition.id === model.selection;
+    option.title = definition.shortDescription;
+    select.append(option);
+  }
+  select.addEventListener('change', () => {
+    handlers.onUaProfileSelectionChange(select.value as UaProfileId);
+  });
+  selectField.append(selectLabel, select);
+  body.append(selectField);
+
+  if (model.selection === 'custom') {
+    const customField = el('div', 'crawl-field');
+    const customLabel = el('label', undefined, 'Custom User-Agent') as HTMLLabelElement;
+    customLabel.htmlFor = 'ua-profile-custom';
+    const customInput = el('input') as HTMLInputElement;
+    customInput.type = 'text';
+    customInput.id = 'ua-profile-custom';
+    customInput.name = 'ua-profile-custom';
+    customInput.value = model.customUserAgent;
+    customInput.maxLength = model.limits.maxCustomUaChars;
+    customInput.autocomplete = 'off';
+    customInput.spellcheck = false;
+    customInput.disabled = model.availability !== 'present';
+    customInput.setAttribute('aria-describedby', 'ua-profile-custom-hint');
+    customInput.addEventListener('change', () => {
+      handlers.onUaProfileCustomUaChange(customInput.value);
+    });
+    customField.append(customLabel, customInput);
+    const hint = el(
+      'p',
+      'muted',
+      `Local-only, up to ${model.limits.maxCustomUaChars} characters. Never applied automatically to background browsing.`,
+    );
+    hint.id = 'ua-profile-custom-hint';
+    customField.append(hint);
+    body.append(customField);
+  }
+
+  const rows: HTMLElement[] = [
+    row(
+      'Would apply',
+      `${model.resolved.userAgent ?? '(no header override)'} · method: ${model.resolved.method}`,
+      model.resolved.method === 'none' ? 'muted' : undefined,
+    ),
+  ];
+  appendDl(body, rows);
+
+  const limitationsDetails = el('details', 'crawl-subpanel');
+  limitationsDetails.append(el('summary', undefined, 'Profile limitations'));
+  const limitationsList = el('ul', 'dash-list');
+  for (const limitation of model.resolved.limitations) {
+    limitationsList.append(el('li', undefined, limitation));
+  }
+  limitationsDetails.append(limitationsList);
+  body.append(limitationsDetails);
+
+  return panel('crawl-panel-ua-profile', 'User-Agent profile', model.availability, body);
+}
+
 function buildHreflangClusterPanel(
   model: CrawlSignalsModel['hreflangCluster'],
   handlers: CrawlSignalsViewHandlers,
@@ -413,6 +517,8 @@ function buildHreflangClusterPanel(
     body.append(errList);
     appendTruncationNote(body, shown.length, model.result.errors.length);
   }
+
+  appendUaProfileSummary(body, model.result?.uaProfile);
 
   const actions = el('div', 'crawl-panel-actions');
   const validateBtn = el('button', 'secondary', 'Validate hreflang cluster') as HTMLButtonElement;
@@ -572,6 +678,8 @@ function buildVariantTestsPanel(
     body.append(obsDetails);
   }
 
+  appendUaProfileSummary(body, model.result?.uaProfile);
+
   const actions = el('div', 'crawl-panel-actions');
   const runBtn = el('button', 'secondary', 'Run variant tests') as HTMLButtonElement;
   runBtn.type = 'button';
@@ -673,6 +781,8 @@ function buildSoft404ProbePanel(
     }
     body.append(list);
   }
+
+  appendUaProfileSummary(body, model.result?.uaProfile);
 
   const actions = el('div', 'crawl-panel-actions');
   const runBtn = el('button', 'secondary', 'Run soft-404 probe') as HTMLButtonElement;
@@ -895,6 +1005,7 @@ export function renderCrawlSignalsPanel(
     buildNavigationPanel(model.navigation),
     buildRobotsPanel(model.robots, handlers),
     buildSitemapPanel(model.sitemap, handlers),
+    buildUaProfilePanel(model.uaProfile, handlers),
     buildHreflangClusterPanel(model.hreflangCluster, handlers),
     buildVariantTestsPanel(model.variantTests, handlers),
     buildSoft404ProbePanel(model.soft404Probe, handlers),

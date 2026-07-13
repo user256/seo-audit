@@ -18,6 +18,7 @@ import {
 } from '../lib/hreflang/cluster-validate';
 import type { NavigationObservationStatus } from '../lib/network/types';
 import { fetchRobotsForOrigin, type RobotsFetchResult } from '../lib/robots/fetch-robots';
+import type { UaProfileSelection } from '../lib/ua-profiles/types';
 import type { AuditSession } from '../lib/schemas/audit';
 import { fetchSitemap, type SitemapFetchResult } from '../lib/sitemap/fetch-sitemap';
 import { SessionRepository } from '../lib/storage/session-repository';
@@ -67,6 +68,7 @@ export type ExtensionRequest =
       requestId: string;
       seedUrl: string;
       alternates: ClusterAlternateInput[];
+      uaProfile?: UaProfileSelection;
     }
   | { type: 'CANCEL_HREFLANG_CLUSTER'; requestId?: string }
   | {
@@ -75,6 +77,7 @@ export type ExtensionRequest =
       baseUrl: string;
       kindOptions: VariantKindOptions;
       method?: 'HEAD' | 'GET';
+      uaProfile?: UaProfileSelection;
     }
   | { type: 'CANCEL_URL_VARIANT_TESTS'; requestId?: string }
   | {
@@ -82,6 +85,7 @@ export type ExtensionRequest =
       requestId: string;
       auditedUrl: string;
       probeUrl: string;
+      uaProfile?: UaProfileSelection;
     }
   | { type: 'CANCEL_SOFT_404_PROBE'; requestId?: string }
   | {
@@ -328,6 +332,7 @@ export async function handleExtensionRequest(
           requestId: message.requestId,
           seedUrl: message.seedUrl,
           alternates: message.alternates,
+          uaProfile: message.uaProfile,
           onProgress: broadcastClusterProgress,
         }),
       };
@@ -345,6 +350,7 @@ export async function handleExtensionRequest(
           baseUrl: message.baseUrl,
           kindOptions: message.kindOptions,
           method: message.method,
+          uaProfile: message.uaProfile,
           onProgress: broadcastVariantTestProgress,
         }),
       };
@@ -361,6 +367,7 @@ export async function handleExtensionRequest(
           requestId: message.requestId,
           auditedUrl: message.auditedUrl,
           probeUrl: message.probeUrl,
+          uaProfile: message.uaProfile,
           onProgress: broadcastSoft404ProbeProgress,
         }),
       };

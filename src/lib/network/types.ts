@@ -21,6 +21,14 @@ export type SafeFetchRequest = {
   limits?: Partial<SafeFetchLimits>;
   /** Optional AbortSignal from the caller (combined with the per-hop timeout). */
   signal?: AbortSignal;
+  /**
+   * Best-effort `User-Agent` header override for this fetch only (Ticket 305).
+   * Chrome does not guarantee this header reaches the destination server
+   * unmodified without the `declarativeNetRequest` permission (not requested
+   * by this extension). Never changes the active tab or navigator.userAgent —
+   * see `src/lib/ua-profiles/`.
+   */
+  userAgent?: string;
 };
 
 export type RedirectHop = {

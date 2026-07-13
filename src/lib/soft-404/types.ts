@@ -1,4 +1,5 @@
 import type { RedirectHop } from '../network/types';
+import type { UaProfileResult } from '../ua-profiles/types';
 import type { Soft404ProbeLimits } from './limits';
 
 export const SOFT_404_PROBE_FETCH_SOURCE = 'extension-fetch' as const;
@@ -59,5 +60,7 @@ export type Soft404ProbeResult = {
   probe: Soft404PageCapture;
   audited: Soft404PageCapture;
   observations: Soft404Observation[];
+  /** User-agent profile applied to both fetches in this run (Ticket 305). Absent on runs saved before Ticket 305. */
+  uaProfile?: UaProfileResult;
   limitations: string[];
 };
