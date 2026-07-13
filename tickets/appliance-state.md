@@ -5,7 +5,8 @@
 
 ## Pull-request triage
 
-- No open GitHub pull requests or issues were present at the 2026-07-13 review.
+- PR #26 (Sprint 3: 299 go + 301 URL variants + 302 soft-404) passed local
+  review on 2026-07-13; merge is pending its GitHub Actions result.
 - PR #110 was excluded as requested; it is already closed and no action was taken.
 - Merged after review: #11 (111), #17 (110), #18 (112), #19 (209), #20 (210), #21 (208), #22 (113–115), #23 (bug fixes), and #25 (206).
 - Original stacked PRs #12–#16 were superseded when GitHub closed PRs targeting the deleted base branch.
@@ -13,11 +14,10 @@
 
 ## Current review outcome
 
-- The uncommitted Ticket 301/302 implementation is not an open PR and was not
-  merged. Its full test suite fails because the soft-404 cancellation test
-  times out; Ticket 306 records the focused quality-gate remediation.
-- `npm run lint` and `npm run build` pass after the current local changes;
-  `npm test` is not green, so no complete quality gate is recorded.
+- PR #26 passes local `npm test` (49 files / 291 tests), `npm run lint`,
+  `npm run build`, and `npm run package:check`.
+- Ticket 306 records the remaining small remediation: comparison-run evidence
+  must be retained in the local audit session rather than only panel memory.
 
 ## Verified quality gate (merged PR #22)
 
@@ -34,4 +34,5 @@
 - Ticket 109 remains blocked on the fresh Chrome 114+ smoke record.
 - Ticket 199 is blocked by Ticket 109; all code remediations through 115 are complete.
 - Ticket 299 remains the externally blocked Sprint 2 go/no-go gate and blocks
-  Sprint 3 acceptance. Tickets 301/302 remain unaccepted pending Ticket 306.
+  Sprint 3 acceptance. Tickets 301/302 are implemented; Ticket 306 is next
+  before session comparison/export work.

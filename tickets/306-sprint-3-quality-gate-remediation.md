@@ -1,4 +1,4 @@
-# Ticket 306: Sprint 3 Comparison-Runner Quality-Gate Remediation
+# Ticket 306: Persist Sprint 3 Comparison-Runner Evidence
 
 **Sprint:** 3 — Bounded Comparisons and Site Checks  
 **Status:** Not started  
@@ -7,29 +7,31 @@
 
 ## Context
 
-The pending local implementation for Tickets 301 and 302 is substantially in
-scope, but it did not pass the required automated quality gate on 2026-07-13:
-the soft-404 cancellation test times out because its fetch double never settles
-when the supplied abort signal fires. The implementation must have a reliable
-test of that cancellation contract before either ticket is accepted.
+Tickets 301 and 302 present bounded results in the side panel, but those result
+objects currently live only in panel memory. Closing or reopening the panel
+loses the exact redirect/probe evidence. Ticket 301 requires the selected
+variant tests to be retained, and later session comparison/export work needs a
+bounded local representation of both experiments.
 
 ## Goal
 
-Restore a reliable, passing quality gate for the Sprint 3 comparison runners
-without weakening their cancellation guarantees.
+Persist bounded variant-test and soft-404-probe results with their audit
+session, then restore them when that session is reopened.
 
 ## Acceptance criteria
 
-- [ ] Make the soft-404 in-flight cancellation test settle from the request
-  `AbortSignal`, then assert the returned result is cancelled and records the
-  cancellation limitation.
-- [ ] Retain coverage of the service-worker cancellation route and verify no
-  cancelled run continues to start another fetch.
+- [ ] Version the local audit/session contract to store completed or cancelled
+  variant-test and soft-404-probe results, including their existing caps,
+  limitations, and fetch-error evidence; do not persist raw response bodies.
+- [ ] Save the result after each user-started run and restore it when the audit
+  session is reopened in the side panel.
+- [ ] Add repository and UI integration coverage for save/restore, cancellation,
+  and bounded-data behaviour.
 - [ ] Run and record passing `npm test`, `npm run lint`, `npm run build`, and
   `npm run package:check` results.
 
 ## Dependencies
 
-- **Blocks:** acceptance of 301 and 302; 399
+- **Blocks:** 399, 401, 402
 - **Blocked by:** 301, 302
 - **External:** none

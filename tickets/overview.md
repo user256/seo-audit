@@ -40,7 +40,7 @@ Constraints that shape the plan:
 |---|---|---|
 | **Sprint 1 — Inspect one page** | Blocked | Tickets **109** / **199** need operator Chrome smoke + go/no-go |
 | **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **299** needs its recorded public-site review and go/no-go |
-| **Sprint 3 — Comparisons and site checks** | Blocked | Ticket **299**; Ticket **306** remediates the pending 301/302 quality gate |
+| **Sprint 3 — Comparisons and site checks** | Blocked | Ticket **299**; Ticket **306** persists the completed 301/302 evidence |
 | **Sprint 4 — Durable audits** | Planned | Finish storage, export, accessibility, and release hardening |
 
 ---
@@ -48,11 +48,11 @@ Constraints that shape the plan:
 # Current Priority Lane
 
 1. [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md) — operator review of the implemented Sprint 2 flow.
-2. [Ticket 306: Sprint 3 Comparison-Runner Quality-Gate Remediation](./306-sprint-3-quality-gate-remediation.md) — after the pending 301/302 work is ready for re-review.
+2. [Ticket 306: Persist Sprint 3 Comparison-Runner Evidence](./306-sprint-3-quality-gate-remediation.md) — retain completed 301/302 evidence locally.
 3. Parallel: finish Ticket 109 / 199 when an operator has bandwidth.
 
-**Recommended next pick:** Ticket **299**. Do not accept or merge the pending
-301/302 implementation until Ticket **306** and the full quality gate pass.
+**Recommended next pick:** Ticket **299**. Then take Ticket **306** before
+session comparison or export work.
 
 ---
 
@@ -136,6 +136,9 @@ emulation, external SEO services.
 
 **Theme:** Offer opt-in experiments that reveal redirect and rendering risks,
 without hiding their limits.
+
+**Completed implementation:** [Ticket 301](./completed/301-url-variant-and-redirect-test-runner.md)
+and [Ticket 302](./completed/302-soft-404-probe.md).
 
 **Tickets:**
 

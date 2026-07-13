@@ -22,11 +22,15 @@ Merged remediations on this lane: 113–115 (PR #22).
 
 ## Then — Sprint 3: bounded experiments
 
-1. [301](./301-url-variant-and-redirect-test-runner.md) and [302](./302-soft-404-probe.md), after 299.
-2. [306](./306-sprint-3-quality-gate-remediation.md) — required before accepting 301/302.
-3. [303](./303-css-and-javascript-comparison-experiment.md) and [304](./304-googlebot-style-render-experiment-spike.md).
-4. [305](./305-user-agent-profiles-and-audit-disclosures.md), after 301 and 304.
-5. [399](./399-sprint-3-review.md).
+Completed implementation: [301](./completed/301-url-variant-and-redirect-test-runner.md)
+and [302](./completed/302-soft-404-probe.md). They remain subject to the
+external Sprint 2 go/no-go gate.
+
+1. [306](./306-sprint-3-quality-gate-remediation.md) — retain comparison-run
+   evidence before session comparison/export work.
+2. [303](./303-css-and-javascript-comparison-experiment.md) and [304](./304-googlebot-style-render-experiment-spike.md).
+3. [305](./305-user-agent-profiles-and-audit-disclosures.md), after 301 and 304.
+4. [399](./399-sprint-3-review.md).
 
 ## Release path — Sprint 4: durable audits
 
