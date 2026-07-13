@@ -5,8 +5,10 @@
 
 ## Pull-request triage
 
-- PR #26 (Sprint 3: 299 go + 301 URL variants + 302 soft-404) passed local
-  review on 2026-07-13; merge is pending its GitHub Actions result.
+- No open GitHub pull requests or issues remained after the 2026-07-13 review.
+- PR #26 (Sprint 3: 299 go + 301 URL variants + 302 soft-404) passed review
+  and GitHub Actions, then merged to `main`.
+- PR #27 merged the Ticket 306 and roadmap reconciliation to `main`.
 - PR #110 was excluded as requested; it is already closed and no action was taken.
 - Merged after review: #11 (111), #17 (110), #18 (112), #19 (209), #20 (210), #21 (208), #22 (113–115), #23 (bug fixes), and #25 (206).
 - Original stacked PRs #12–#16 were superseded when GitHub closed PRs targeting the deleted base branch.
@@ -14,8 +16,8 @@
 
 ## Current review outcome
 
-- PR #26 passes local `npm test` (49 files / 291 tests), `npm run lint`,
-  `npm run build`, and `npm run package:check`.
+- PR #26 passed `npm test` (49 files / 291 tests), `npm run lint`,
+  `npm run build`, and `npm run package:check` before merge.
 - Ticket 306 records the remaining small remediation: comparison-run evidence
   must be retained in the local audit session rather than only panel memory.
 
