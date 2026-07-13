@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Soft404ProbeResultSchema, VariantTestRunResultSchema } from './comparison-evidence';
 import {
   DOM_EVIDENCE_SCHEMA_VERSION,
   HISTORICAL_DOM_EVIDENCE_SCHEMA_VERSION,
@@ -7,7 +8,7 @@ import {
 import { DOM_LIMITS } from './dom-limits';
 
 /** Bump when the persisted shape changes; see docs/data-contract.md. */
-export const AUDIT_SCHEMA_VERSION = 3 as const;
+export const AUDIT_SCHEMA_VERSION = 4 as const;
 
 export const SeveritySchema = z.enum(['info', 'warning', 'error', 'critical']);
 export type Severity = z.infer<typeof SeveritySchema>;
@@ -159,6 +160,10 @@ export const AuditSessionSchema = z.object({
   checkSelection: AuditCheckSelectionSchema,
   /** Markdown source for the session report (Ticket 105). Preview HTML is never persisted. */
   reportMarkdown: z.string().default(''),
+  /** Bounded URL variant redirect test run (Ticket 306). No raw response bodies. */
+  variantTestRun: VariantTestRunResultSchema.optional(),
+  /** Bounded soft-404 probe run (Ticket 306). No raw response bodies. */
+  soft404ProbeRun: Soft404ProbeResultSchema.optional(),
 });
 export type AuditSession = z.infer<typeof AuditSessionSchema>;
 
@@ -212,8 +217,11 @@ export function migrateAuditSessionToCurrent(input: unknown): unknown {
   const raw = input as Record<string, unknown>;
 
   let candidate: Record<string, unknown> =
-    raw.schemaVersion === 1 || raw.schemaVersion === 2
+    raw.schemaVersion === 1 || raw.schemaVersion === 2 || raw.schemaVersion === 3
       ? (() => {
+          if (raw.schemaVersion === 3) {
+            return { ...raw, schemaVersion: AUDIT_SCHEMA_VERSION };
+          }
           const snapshots =
             raw.schemaVersion === 1 && Array.isArray(raw.snapshots)
               ? raw.snapshots.map((snap) => {

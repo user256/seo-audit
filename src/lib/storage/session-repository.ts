@@ -177,6 +177,36 @@ export class SessionRepository {
     return { status: 'ok', session: loaded.session };
   }
 
+  async saveSoft404ProbeRun(
+    sessionId: string,
+    soft404ProbeRun: NonNullable<AuditSession['soft404ProbeRun']>,
+  ): Promise<AuditSession> {
+    const loaded = await this.get(sessionId);
+    if (loaded.status !== 'ok') {
+      throw new Error(
+        loaded.status === 'missing'
+          ? `Session ${sessionId} was not found.`
+          : `Session ${sessionId} is quarantined and cannot be updated.`,
+      );
+    }
+    return this.save({ ...loaded.session, soft404ProbeRun });
+  }
+
+  async saveVariantTestRun(
+    sessionId: string,
+    variantTestRun: NonNullable<AuditSession['variantTestRun']>,
+  ): Promise<AuditSession> {
+    const loaded = await this.get(sessionId);
+    if (loaded.status !== 'ok') {
+      throw new Error(
+        loaded.status === 'missing'
+          ? `Session ${sessionId} was not found.`
+          : `Session ${sessionId} is quarantined and cannot be updated.`,
+      );
+    }
+    return this.save({ ...loaded.session, variantTestRun });
+  }
+
   async delete(id: string): Promise<boolean> {
     const db = await this.db();
     try {

@@ -1,18 +1,22 @@
 import type {
+  CssJsComparisonProgressMessage,
   ExtensionRequest,
   ExtensionResponse,
   HreflangClusterProgressMessage,
   Soft404ProbeProgressMessage,
   UrlVariantTestsProgressMessage,
 } from '../background/messages';
+import type { CssJsComparisonResult } from '../lib/css-js-compare';
 import {
   buildCrawlSignalsModel,
   buildSitemapCandidatesForOrigin,
   type CrawlSignalsModel,
+  type CssJsComparisonRunState,
   type HreflangClusterValidateState,
   type Soft404ProbeRunState,
   type VariantTestsRunState,
 } from '../lib/dashboard/crawl-signals-model';
+import { comparisonEvidenceFromSession } from '../lib/dashboard/restore-comparison-evidence';
 import {
   buildGlanceDashboard,
   buildGrantedShellDashboard,
@@ -110,6 +114,10 @@ let soft404RunState: Soft404ProbeRunState = 'idle';
 let soft404Progress: CrawlSignalsModel['soft404Probe']['progress'] = null;
 let soft404Result: Soft404ProbeResult | null = null;
 let soft404RequestId: string | null = null;
+let cssJsRunState: CssJsComparisonRunState = 'idle';
+let cssJsProgress: CrawlSignalsModel['cssJsComparison']['progress'] = null;
+let cssJsResult: CssJsComparisonResult | null = null;
+let cssJsRequestId: string | null = null;
 let wizardEvidence: Evidence[] = [];
 let wizardOpen = false;
 let selectedWizardCheckIds = defaultCheckIds();
@@ -152,6 +160,67 @@ function nextVariantRequestId(): string {
 
 function nextSoft404RequestId(): string {
   return `sf-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function nextCssJsRequestId(): string {
+  return `cj-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function resetComparisonEvidenceState(): void {
+  variantBaseUrl = '';
+  variantKindOptions = { ...DEFAULT_VARIANT_KIND_OPTIONS };
+  variantRunState = 'idle';
+  variantProgress = null;
+  variantResult = null;
+  variantRequestId = null;
+  soft404ProbeUrl = '';
+  soft404RunState = 'idle';
+  soft404Progress = null;
+  soft404Result = null;
+  soft404RequestId = null;
+  cssJsRunState = 'idle';
+  cssJsProgress = null;
+  cssJsResult = null;
+  cssJsRequestId = null;
+}
+
+function restoreComparisonEvidenceFromSession(session: AuditSession, auditedUrl: string): void {
+  const restored = comparisonEvidenceFromSession(session, auditedUrl);
+  variantBaseUrl = restored.variantBaseUrl;
+  variantKindOptions = restored.variantKindOptions;
+  variantRunState = restored.variantRunState;
+  variantProgress = null;
+  variantResult = restored.variantResult;
+  soft404ProbeUrl = restored.soft404ProbeUrl;
+  soft404RunState = restored.soft404RunState;
+  soft404Progress = null;
+  soft404Result = restored.soft404Result;
+}
+
+async function persistVariantTestRun(result: VariantTestRunResult): Promise<void> {
+  const sessionId = workspace.sessionId;
+  if (!sessionId) return;
+  const response = await send<ExtensionResponse>({
+    type: 'SAVE_VARIANT_TEST_RUN',
+    sessionId,
+    result,
+  });
+  if (response.type === 'ERROR') {
+    setStatus(`Variant test results were not saved: ${response.message}`, 'error');
+  }
+}
+
+async function persistSoft404ProbeRun(result: Soft404ProbeResult): Promise<void> {
+  const sessionId = workspace.sessionId;
+  if (!sessionId) return;
+  const response = await send<ExtensionResponse>({
+    type: 'SAVE_SOFT_404_PROBE_RUN',
+    sessionId,
+    result,
+  });
+  if (response.type === 'ERROR') {
+    setStatus(`Soft-404 probe results were not saved: ${response.message}`, 'error');
+  }
 }
 
 function renderWorkspace(): void {
@@ -236,6 +305,12 @@ function renderWorkspace(): void {
       onSoft404ProbeUrlChange: (probeUrl) => {
         soft404ProbeUrl = probeUrl;
       },
+      onRunCssJsComparison: () => {
+        void runCssJsComparisonForTab();
+      },
+      onCancelCssJsComparison: () => {
+        void cancelCssJsComparisonRun();
+      },
     });
   }
 
@@ -289,6 +364,9 @@ async function rebuildCrawlSignals(tab: NonNullable<WorkspaceModel['tab']>): Pro
     soft404RunState,
     soft404Progress,
     soft404Result,
+    cssJsRunState,
+    cssJsProgress,
+    cssJsResult,
   });
 }
 
@@ -573,6 +651,7 @@ async function runVariantTestsForTab(): Promise<void> {
     variantRunState = response.result.cancelled ? 'cancelled' : 'done';
     variantProgress = null;
     variantBaseUrl = response.result.baseUrl;
+    await persistVariantTestRun(response.result);
     await rebuildCrawlSignals(tab);
     renderWorkspace();
     setStatus(
@@ -641,6 +720,7 @@ async function runSoft404ProbeForTab(): Promise<void> {
     soft404RunState = response.result.cancelled ? 'cancelled' : 'done';
     soft404Progress = null;
     soft404ProbeUrl = response.result.probeUrl;
+    await persistSoft404ProbeRun(response.result);
     await rebuildCrawlSignals(tab);
     renderWorkspace();
     setStatus(
@@ -664,6 +744,68 @@ async function cancelSoft404ProbeRun(): Promise<void> {
   });
   if (response.type === 'SOFT_404_PROBE_CANCELLED' && response.cancelled) {
     setStatus('Cancelling soft-404 probe…');
+  }
+}
+
+async function runCssJsComparisonForTab(): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || !tab.granted || cssJsRunState === 'busy') return;
+
+  const auditedUrl = dashboard?.documentUrl ?? tab.url;
+  cssJsRequestId = nextCssJsRequestId();
+  cssJsRunState = 'busy';
+  cssJsProgress = { phase: 'capturing-baseline' };
+  cssJsResult = null;
+  await rebuildCrawlSignals(tab);
+  renderWorkspace();
+  setStatus('Running CSS comparison (opens a new background tab)…');
+
+  try {
+    const response = await send<ExtensionResponse>({
+      type: 'RUN_CSS_JS_COMPARISON',
+      requestId: cssJsRequestId,
+      activeTabId: tab.tabId,
+      auditedUrl,
+    });
+    if (response.type === 'ERROR') {
+      cssJsRunState = 'idle';
+      cssJsProgress = null;
+      setStatus(response.message, 'error');
+      return;
+    }
+    if (response.type !== 'CSS_JS_COMPARISON_RESULT') {
+      cssJsRunState = 'idle';
+      cssJsProgress = null;
+      setStatus('Unexpected CSS/JS comparison response.', 'error');
+      return;
+    }
+    cssJsResult = response.result;
+    cssJsRunState = response.result.cancelled ? 'cancelled' : 'done';
+    cssJsProgress = null;
+    await rebuildCrawlSignals(tab);
+    renderWorkspace();
+    const changed = response.result.diffs.filter((diff) => diff.changed).length;
+    setStatus(
+      response.result.cancelled
+        ? 'CSS comparison cancelled; the comparison tab was closed.'
+        : `CSS comparison complete — ${changed} field(s) changed.`,
+      changed > 0 ? 'plain' : 'ok',
+    );
+  } finally {
+    cssJsRequestId = null;
+    if (tab) await rebuildCrawlSignals(tab);
+    renderWorkspace();
+  }
+}
+
+async function cancelCssJsComparisonRun(): Promise<void> {
+  if (!cssJsRequestId) return;
+  const response = await send<ExtensionResponse>({
+    type: 'CANCEL_CSS_JS_COMPARISON',
+    requestId: cssJsRequestId,
+  });
+  if (response.type === 'CSS_JS_COMPARISON_CANCELLED' && response.cancelled) {
+    setStatus('Cancelling CSS comparison…');
   }
 }
 
@@ -771,6 +913,7 @@ async function applyRestoredSession(session: AuditSession): Promise<void> {
     : '';
   collectSummaryEl.hidden = false;
   collectSummaryEl.textContent = `Restored saved audit for ${session.finalUrl || session.tabUrl}${selectionSummary}`;
+  restoreComparisonEvidenceFromSession(session, session.finalUrl || session.tabUrl);
   await ensureReportEditor(session);
 }
 
@@ -888,6 +1031,7 @@ async function collectDom(selectedCheckIds?: ReadonlySet<string>): Promise<void>
     evidenceById = new Map(
       response.result.snapshot.evidence.map((item) => [item.id, item] as const),
     );
+    resetComparisonEvidenceState();
     workspace = withSavedAudit(workspace, {
       sessionId: response.result.sessionId,
       findings: response.result.findings,
@@ -965,7 +1109,8 @@ chrome.runtime.onMessage.addListener((message) => {
   const progressMessage = message as
     | HreflangClusterProgressMessage
     | UrlVariantTestsProgressMessage
-    | Soft404ProbeProgressMessage;
+    | Soft404ProbeProgressMessage
+    | CssJsComparisonProgressMessage;
   if (progressMessage.type === 'HREFLANG_CLUSTER_PROGRESS') {
     if (!hreflangRequestId || progressMessage.progress.requestId !== hreflangRequestId) return;
     hreflangProgress = {
@@ -1000,6 +1145,18 @@ chrome.runtime.onMessage.addListener((message) => {
     };
     if (progressMessage.progress.phase === 'cancelled') {
       soft404RunState = 'cancelled';
+    }
+    renderWorkspace();
+    return;
+  }
+  if (progressMessage.type === 'CSS_JS_COMPARISON_PROGRESS') {
+    if (!cssJsRequestId || progressMessage.progress.requestId !== cssJsRequestId) return;
+    cssJsProgress = {
+      phase: progressMessage.progress.phase,
+      detail: progressMessage.progress.detail,
+    };
+    if (progressMessage.progress.phase === 'cancelled') {
+      cssJsRunState = 'cancelled';
     }
     renderWorkspace();
   }

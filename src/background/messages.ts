@@ -1,5 +1,11 @@
 import { collectDomForActiveTab, type CollectDomResult } from '../lib/collect-dom';
 import {
+  cancelCssJsComparison,
+  runCssJsComparison,
+  type CssJsComparisonProgress,
+  type CssJsComparisonResult,
+} from '../lib/css-js-compare';
+import {
   glanceDomInventoryForActiveTab,
   type GlanceInventoryResult,
 } from '../lib/dashboard/glance';
@@ -41,6 +47,16 @@ export type ExtensionRequest =
   | { type: 'LOAD_SESSION'; sessionId: string }
   | { type: 'FIND_LATEST_SESSION_FOR_URL'; url: string }
   | { type: 'SAVE_REPORT_MARKDOWN'; sessionId: string; markdown: string }
+  | {
+      type: 'SAVE_VARIANT_TEST_RUN';
+      sessionId: string;
+      result: VariantTestRunResult;
+    }
+  | {
+      type: 'SAVE_SOFT_404_PROBE_RUN';
+      sessionId: string;
+      result: Soft404ProbeResult;
+    }
   | { type: 'WATCH_TAB_NAVIGATION'; tabId: number }
   | { type: 'GET_NAVIGATION_OBSERVATION'; tabId: number; requestedUrl?: string }
   | { type: 'RELOAD_AND_OBSERVE_NAVIGATION'; tabId: number }
@@ -67,7 +83,14 @@ export type ExtensionRequest =
       auditedUrl: string;
       probeUrl: string;
     }
-  | { type: 'CANCEL_SOFT_404_PROBE'; requestId?: string };
+  | { type: 'CANCEL_SOFT_404_PROBE'; requestId?: string }
+  | {
+      type: 'RUN_CSS_JS_COMPARISON';
+      requestId: string;
+      activeTabId: number;
+      auditedUrl: string;
+    }
+  | { type: 'CANCEL_CSS_JS_COMPARISON'; requestId?: string };
 
 export type ExtensionResponse =
   | { type: 'ACTIVE_TAB_SNAPSHOT'; snapshot: ActiveTabSnapshot }
@@ -89,6 +112,8 @@ export type ExtensionResponse =
       result: { status: 'ok'; session: AuditSession } | { status: 'none' };
     }
   | { type: 'REPORT_SAVED'; sessionId: string }
+  | { type: 'VARIANT_TEST_RUN_SAVED'; sessionId: string }
+  | { type: 'SOFT_404_PROBE_RUN_SAVED'; sessionId: string }
   | { type: 'NAVIGATION_WATCHING'; tabId: number }
   | { type: 'NAVIGATION_OBSERVATION'; observation: NavigationObservationStatus }
   | { type: 'ROBOTS_FETCH_RESULT'; result: RobotsFetchResult }
@@ -99,6 +124,8 @@ export type ExtensionResponse =
   | { type: 'URL_VARIANT_TESTS_CANCELLED'; requestId?: string; cancelled: boolean }
   | { type: 'SOFT_404_PROBE_RESULT'; result: Soft404ProbeResult }
   | { type: 'SOFT_404_PROBE_CANCELLED'; requestId?: string; cancelled: boolean }
+  | { type: 'CSS_JS_COMPARISON_RESULT'; result: CssJsComparisonResult }
+  | { type: 'CSS_JS_COMPARISON_CANCELLED'; requestId?: string; cancelled: boolean }
   | { type: 'ERROR'; message: string };
 
 /** Broadcast from the service worker while cluster validation runs. */
@@ -117,6 +144,12 @@ export type UrlVariantTestsProgressMessage = {
 export type Soft404ProbeProgressMessage = {
   type: 'SOFT_404_PROBE_PROGRESS';
   progress: Soft404ProbeProgress;
+};
+
+/** Broadcast from the service worker while a CSS/JS comparison runs. */
+export type CssJsComparisonProgressMessage = {
+  type: 'CSS_JS_COMPARISON_PROGRESS';
+  progress: CssJsComparisonProgress;
 };
 
 function broadcastClusterProgress(progress: HreflangClusterProgress): void {
@@ -142,6 +175,16 @@ function broadcastVariantTestProgress(progress: VariantTestProgress): void {
 function broadcastSoft404ProbeProgress(progress: Soft404ProbeProgress): void {
   const message: Soft404ProbeProgressMessage = {
     type: 'SOFT_404_PROBE_PROGRESS',
+    progress,
+  };
+  void chrome.runtime.sendMessage(message).catch(() => {
+    // Side panel may be closed; progress is best-effort.
+  });
+}
+
+function broadcastCssJsComparisonProgress(progress: CssJsComparisonProgress): void {
+  const message: CssJsComparisonProgressMessage = {
+    type: 'CSS_JS_COMPARISON_PROGRESS',
     progress,
   };
   void chrome.runtime.sendMessage(message).catch(() => {
@@ -230,6 +273,28 @@ export async function handleExtensionRequest(
       await repo.save(loaded.session);
       return { type: 'REPORT_SAVED', sessionId: message.sessionId };
     }
+    case 'SAVE_VARIANT_TEST_RUN': {
+      try {
+        await repo.saveVariantTestRun(message.sessionId, message.result);
+        return { type: 'VARIANT_TEST_RUN_SAVED', sessionId: message.sessionId };
+      } catch (error) {
+        return {
+          type: 'ERROR',
+          message: error instanceof Error ? error.message : 'Failed to save variant test run.',
+        };
+      }
+    }
+    case 'SAVE_SOFT_404_PROBE_RUN': {
+      try {
+        await repo.saveSoft404ProbeRun(message.sessionId, message.result);
+        return { type: 'SOFT_404_PROBE_RUN_SAVED', sessionId: message.sessionId };
+      } catch (error) {
+        return {
+          type: 'ERROR',
+          message: error instanceof Error ? error.message : 'Failed to save soft-404 probe run.',
+        };
+      }
+    }
     case 'WATCH_TAB_NAVIGATION': {
       navigationCapture.watchTab(message.tabId);
       return { type: 'NAVIGATION_WATCHING', tabId: message.tabId };
@@ -304,6 +369,22 @@ export async function handleExtensionRequest(
         type: 'SOFT_404_PROBE_CANCELLED',
         requestId: message.requestId,
         cancelled: cancelSoft404Probe(message.requestId),
+      };
+    case 'RUN_CSS_JS_COMPARISON':
+      return {
+        type: 'CSS_JS_COMPARISON_RESULT',
+        result: await runCssJsComparison({
+          requestId: message.requestId,
+          activeTabId: message.activeTabId,
+          auditedUrl: message.auditedUrl,
+          onProgress: broadcastCssJsComparisonProgress,
+        }),
+      };
+    case 'CANCEL_CSS_JS_COMPARISON':
+      return {
+        type: 'CSS_JS_COMPARISON_CANCELLED',
+        requestId: message.requestId,
+        cancelled: cancelCssJsComparison(message.requestId),
       };
     default: {
       const _exhaustive: never = message;
