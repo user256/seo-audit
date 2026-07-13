@@ -1,7 +1,7 @@
 # Ticket 203: XML Sitemap and Hreflang Parser
 
 **Sprint:** 2 — Crawl and Index Signals  
-**Status:** Not started  
+**Status:** Done  
 **Owner:** unassigned  
 **Estimate:** L
 
@@ -19,17 +19,17 @@ sitemap hreflang annotations relevant to the current audit.
 
 ## Acceptance criteria
 
-- [ ] Discover candidate sitemaps from parsed robots directives and common
+- [x] Discover candidate sitemaps from parsed robots directives and common
   same-origin locations; present candidates for the user to select (including
   pasted URLs).
-- [ ] Parse `urlset` and `sitemapindex` XML with a non-executing parser, hard
+- [x] Parse `urlset` and `sitemapindex` XML with a non-executing parser, hard
   response-size/depth/entry limits, namespace-aware fields, and explicit errors.
-- [ ] Record `loc`, `lastmod`, `changefreq`, `priority`, and `xhtml:link`
+- [x] Record `loc`, `lastmod`, `changefreq`, `priority`, and `xhtml:link`
   alternate annotations; normalise URLs without discarding original evidence.
-- [ ] A selected sitemap reports whether the audited final URL appears, and its
+- [x] A selected sitemap reports whether the audited final URL appears, and its
   URL entries can be compared against Robots evaluation without fetching every
   entry.
-- [ ] Tests cover URL sets, indexes, namespaces, malformed XML, cross-host
+- [x] Tests cover URL sets, indexes, namespaces, malformed XML, cross-host
   sitemap URLs, recursion/limit handling, and hreflang alternates.
 
 ## Out of scope
@@ -76,3 +76,4 @@ regex is only a behaviour reference, not the shipped parser.
 - 2026-07-13 — Plunder pass against Hreflang Pro Slight Return: marked the table
   above for duplication; fetch stays behind 206; host access via 212 (broad
   HTTP(S), not per-origin Allow).
+- 2026-07-13 — Implemented src/lib/sitemap parse/discover/fetch with caps; tests green.

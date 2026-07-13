@@ -51,7 +51,7 @@ Constraints that shape the plan:
 2. [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
 3. Parallel: finish Ticket 109 / 199 when an operator has bandwidth
 
-**Recommended next pick:** Ticket **203**.
+**Recommended next pick:** Ticket **207**, then **204** / **205**.
 
 ---
 
@@ -112,7 +112,6 @@ be discovered, crawled, and indexed.
 
 **Tickets:**
 
-- [ ] [Ticket 203: XML Sitemap and Hreflang Parser](./203-xml-sitemap-and-hreflang-parser.md)
 - [ ] [Ticket 207: Hreflang Directive Validation](./207-hreflang-directive-validation.md)
 - [ ] [Ticket 213: Hreflang Page-Cluster Validation (Opt-In Fetch)](./213-hreflang-page-cluster-validation.md)
 - [ ] [Ticket 204: Indexability Reconciliation Rules](./204-indexability-reconciliation-rules.md)
