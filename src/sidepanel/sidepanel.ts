@@ -7,6 +7,7 @@ import type {
   UrlVariantTestsProgressMessage,
 } from '../background/messages';
 import type { CssJsComparisonResult } from '../lib/css-js-compare';
+import type { DomFacts } from '../content/dom-collector';
 import {
   buildCrawlSignalsModel,
   buildSitemapCandidatesForOrigin,
@@ -115,8 +116,9 @@ let viewingReport = false;
 let dashboard: SeoDashboardModel | null = null;
 let crawlSignals: CrawlSignalsModel | null = null;
 let navigationObservation: NavigationObservationStatus | undefined;
-/** One auto reload-and-observe per tab URL per panel session (avoids reload loops). */
-let autoNavAttemptKey: string | null = null;
+/** Last successful glance facts — used to rebuild the dashboard when crawl data arrives. */
+let lastGlanceFacts: DomFacts | null = null;
+let lastGlanceTabUrl: string | null = null;
 let robotsResult: RobotsFetchResult | null = null;
 let sitemapResult: SitemapFetchResult | null = null;
 let sitemapCandidates: SitemapCandidate[] = [];
@@ -468,6 +470,8 @@ async function loadGlanceDashboard(): Promise<void> {
     dashboard = null;
     crawlSignals = null;
     navigationObservation = undefined;
+    lastGlanceFacts = null;
+    lastGlanceTabUrl = null;
     return;
   }
   if (!tab.granted) {
@@ -475,6 +479,8 @@ async function loadGlanceDashboard(): Promise<void> {
     robotsResult = null;
     sitemapResult = null;
     navigationObservation = undefined;
+    lastGlanceFacts = null;
+    lastGlanceTabUrl = null;
     dashboard = buildPreAccessDashboard(tab.url);
     await rebuildCrawlSignals(tab);
     return;
@@ -492,23 +498,6 @@ async function loadGlanceDashboard(): Promise<void> {
   });
   navigationObservation =
     navResponse.type === 'NAVIGATION_OBSERVATION' ? navResponse.observation : undefined;
-
-  // Browser navigation can only be observed if we were attached before the load.
-  // On panel open that almost never happened — reload once so status/headers populate
-  // without making the user click “Capture navigation”.
-  const autoNavKey = `${tab.tabId}|${tab.url}`;
-  if (navigationObservation?.status !== 'observed' && autoNavAttemptKey !== autoNavKey) {
-    autoNavAttemptKey = autoNavKey;
-    setStatus('Observing navigation (reloading the tab once)…');
-    const reloadResponse = await send<ExtensionResponse>({
-      type: 'RELOAD_AND_OBSERVE_NAVIGATION',
-      tabId: tab.tabId,
-    });
-    if (reloadResponse.type === 'NAVIGATION_OBSERVATION') {
-      navigationObservation = reloadResponse.observation;
-    }
-  }
-
   await rebuildCrawlSignals(tab);
 
   const response = await send<ExtensionResponse>({ type: 'GLANCE_DOM_INVENTORY' });
@@ -560,6 +549,8 @@ async function loadGlanceDashboard(): Promise<void> {
     navigation: navigationObservation,
     robots: robotsResult,
   });
+  lastGlanceFacts = response.result.facts;
+  lastGlanceTabUrl = response.result.tabUrl;
   await rebuildCrawlSignals(tab);
   wizardEvidence = domFactsToPageSnapshot(
     response.result.facts,
@@ -571,6 +562,109 @@ async function loadGlanceDashboard(): Promise<void> {
     statusMessage: 'Page glance updated from the live tab.',
     statusKind: 'ok',
   };
+
+  // Background crawl fills (robots → sitemap) update the sidebar when they land —
+  // no page reload.
+  void hydrateCrawlSignalsInBackground(tab);
+}
+
+/**
+ * Quietly fill robots + sitemap after glance. Re-renders as each result arrives.
+ * Never reloads the page.
+ */
+async function hydrateCrawlSignalsInBackground(
+  tab: Extract<NonNullable<WorkspaceModel['tab']>, { status: 'ready' }>,
+): Promise<void> {
+  if (!tab.granted) return;
+  const originAtStart = tab.origin;
+  const tabIdAtStart = tab.tabId;
+
+  const stillSameTab = (): boolean => {
+    const current = workspace.tab;
+    return (
+      !!current &&
+      current.status === 'ready' &&
+      current.tabId === tabIdAtStart &&
+      current.origin === originAtStart
+    );
+  };
+
+  if (!robotsResult && !robotsFetchBusy) {
+    robotsFetchBusy = true;
+    try {
+      await rebuildCrawlSignals(tab);
+      renderWorkspace();
+      const response = await send<ExtensionResponse>({
+        type: 'FETCH_ROBOTS_FOR_ORIGIN',
+        origin: originAtStart,
+      });
+      if (stillSameTab() && response.type === 'ROBOTS_FETCH_RESULT') {
+        robotsResult = response.result;
+        sitemapCandidates = buildSitemapCandidatesForOrigin(originAtStart, robotsResult);
+        rebuildDashboardFromCache();
+        await rebuildCrawlSignals(workspace.tab!);
+        renderWorkspace();
+        openCrawlPanelAfterCapture(robotsResult, null);
+      }
+    } finally {
+      robotsFetchBusy = false;
+      if (stillSameTab()) {
+        await rebuildCrawlSignals(workspace.tab!);
+        renderWorkspace();
+      }
+    }
+  }
+
+  if (!stillSameTab() || sitemapFetchBusy || sitemapResult) return;
+
+  const current = workspace.tab!;
+  sitemapCandidates = buildSitemapCandidatesForOrigin(current.origin, robotsResult);
+  const rootUrls = sitemapCandidates.map((c) => c.url);
+  if (rootUrls.length === 0) return;
+
+  sitemapFetchBusy = true;
+  try {
+    await rebuildCrawlSignals(current);
+    renderWorkspace();
+    const response = await send<ExtensionResponse>({
+      type: 'FETCH_SITEMAP',
+      rootUrls,
+    });
+    if (stillSameTab() && response.type === 'SITEMAP_FETCH_RESULT') {
+      sitemapResult = reviveSitemapFetchResult(response.result);
+      await rebuildCrawlSignals(workspace.tab!);
+      renderWorkspace();
+      openCrawlPanelAfterCapture(robotsResult, sitemapResult);
+    }
+  } finally {
+    sitemapFetchBusy = false;
+    if (stillSameTab()) {
+      await rebuildCrawlSignals(workspace.tab!);
+      renderWorkspace();
+    }
+  }
+}
+
+function rebuildDashboardFromCache(): void {
+  if (!lastGlanceFacts || !lastGlanceTabUrl) return;
+  dashboard = buildGlanceDashboard({
+    tabUrl: lastGlanceTabUrl,
+    facts: lastGlanceFacts,
+    navigation: navigationObservation,
+    robots: robotsResult,
+  });
+}
+
+async function applySilentNavigationUpdate(
+  tabId: number,
+  observation: NavigationObservationStatus,
+): Promise<void> {
+  const tab = workspace.tab;
+  if (!tab || tab.status !== 'ready' || tab.tabId !== tabId) return;
+  navigationObservation = observation;
+  rebuildDashboardFromCache();
+  await rebuildCrawlSignals(tab);
+  renderWorkspace();
 }
 
 async function fetchRobotsForTab(): Promise<void> {
@@ -1260,7 +1354,16 @@ chrome.runtime.onMessage.addListener((message) => {
     | HreflangClusterProgressMessage
     | UrlVariantTestsProgressMessage
     | Soft404ProbeProgressMessage
-    | CssJsComparisonProgressMessage;
+    | CssJsComparisonProgressMessage
+    | {
+        type: 'NAVIGATION_OBSERVATION_UPDATED';
+        tabId: number;
+        observation: NavigationObservationStatus;
+      };
+  if (progressMessage.type === 'NAVIGATION_OBSERVATION_UPDATED') {
+    void applySilentNavigationUpdate(progressMessage.tabId, progressMessage.observation);
+    return;
+  }
   if (progressMessage.type === 'HREFLANG_CLUSTER_PROGRESS') {
     if (!hreflangRequestId || progressMessage.progress.requestId !== hreflangRequestId) return;
     hreflangProgress = {
