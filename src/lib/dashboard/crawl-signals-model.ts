@@ -32,6 +32,7 @@ import { discoverSitemapCandidates, type SitemapCandidate } from '../sitemap/dis
 import { SITEMAP_LIMITS } from '../sitemap/limits';
 import {
   sitemapContainsAuditedUrl,
+  reviveSitemapFetchResult,
   type SitemapCaptureError,
   type SitemapFetchResult,
 } from '../sitemap/fetch-sitemap';
@@ -421,6 +422,7 @@ function buildSitemapPanel(
   sitemap: SitemapFetchResult | null | undefined,
   fetchBusy: boolean,
 ): SitemapSignalsPanel {
+  const revived = sitemap ? reviveSitemapFetchResult(sitemap) : sitemap;
   const candidateSlice = truncateList(
     candidates,
     CRAWL_SIGNALS_DISPLAY_LIMITS.maxSitemapCandidates,
@@ -456,9 +458,9 @@ function buildSitemapPanel(
       : 'Sitemap fetch requires site access for the active tab origin.',
   };
 
-  if (!accessGranted || !sitemap) return base;
+  if (!accessGranted || !revived) return base;
 
-  const fileRows = sitemap.fetchedFiles.map((file) => ({
+  const fileRows = revived.fetchedFiles.map((file) => ({
     url: file.requestedUrl,
     finalUrl: file.finalUrl,
     kind: file.kind,
@@ -467,11 +469,11 @@ function buildSitemapPanel(
   }));
   const fileSlice = truncateList(fileRows, CRAWL_SIGNALS_DISPLAY_LIMITS.maxFetchedFiles);
   const errors = truncateList(
-    sitemap.errors.map(mapCaptureError),
+    revived.errors.map(mapCaptureError),
     CRAWL_SIGNALS_DISPLAY_LIMITS.maxErrors,
   );
 
-  if (!sitemap.ok) {
+  if (!revived.ok) {
     return {
       ...base,
       availability: 'error',
@@ -480,12 +482,12 @@ function buildSitemapPanel(
       fetchedFilesTotal: fileSlice.total,
       fetchedFilesTruncated: fileSlice.truncated,
       errors: errors.shown,
-      error: mapCaptureError(sitemap.error),
+      error: mapCaptureError(revived.error),
       detail: 'Sitemap fetch or parse failed — this is capture evidence, not a pass/fail finding.',
     };
   }
 
-  const membership = sitemapContainsAuditedUrl(sitemap.entries, auditedUrl);
+  const membership = sitemapContainsAuditedUrl(revived.entries, auditedUrl);
   const membershipState: SitemapMembershipState = membership.present ? 'present' : 'absent';
 
   return {
@@ -501,18 +503,18 @@ function buildSitemapPanel(
       lastmod: membership.entry?.lastmod ?? null,
       detail: membership.present
         ? `Audited URL matched sitemap entry ${membership.matchedLoc ?? auditedUrl}.`
-        : `Audited URL was not found among ${sitemap.entries.size} parsed sitemap entries (within fetch limits).`,
+        : `Audited URL was not found among ${revived.entries.size} parsed sitemap entries (within fetch limits).`,
     },
     fetchedFiles: fileSlice.shown,
     fetchedFilesTotal: fileSlice.total,
     fetchedFilesTruncated: fileSlice.truncated,
-    entryCount: sitemap.entries.size,
-    parseTruncated: sitemap.truncated,
+    entryCount: revived.entries.size,
+    parseTruncated: revived.truncated,
     errors: errors.shown,
     error: errors.shown[0] ?? null,
-    detail: sitemap.truncated
+    detail: revived.truncated
       ? `Sitemap walk hit parser or file limits (max ${SITEMAP_LIMITS.maxFiles} files, ${SITEMAP_LIMITS.maxEntries} entries).`
-      : `Fetched ${sitemap.fetchedFiles.length} sitemap file(s) via extension fetch.`,
+      : `Fetched ${revived.fetchedFiles.length} sitemap file(s) via extension fetch.`,
   };
 }
 
