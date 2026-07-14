@@ -4,7 +4,7 @@ import {
   type DomFacts,
 } from '../content/dom-collector';
 import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
-import { navigationCapture } from '../background/navigation-listeners';
+import { navigationCapture, reloadAndObserveNavigation } from '../background/navigation-listeners';
 import { buildCrawlNetworkEvidence } from './crawl/build-crawl-evidence';
 import { fetchRobotsForOrigin, type RobotsFetchResult } from './robots/fetch-robots';
 import { discoverSitemapCandidates } from './sitemap/discover';
@@ -27,6 +27,7 @@ import {
 } from './schemas/dom-limits';
 import { createEmptySession, SessionRepository } from './storage/session-repository';
 import { getActiveTabSnapshot } from './tab-access';
+import { clipUrl } from './network/headers';
 
 export type CollectDomResult =
   | {
@@ -246,7 +247,30 @@ export async function collectDomForActiveTab(
     }
 
     navigationCapture.watchTab(tab.tabId);
-    const navigation = navigationCapture.getObservation(tab.tabId, urlBefore);
+    let navigation = navigationCapture.getObservation(tab.tabId, clipUrl(urlBefore));
+    if (navigation.status !== 'observed') {
+      // Panel open may already have captured this; if not, reload once so
+      // Start audit still gets status / X-Robots without a separate button click.
+      navigation = await reloadAndObserveNavigation(tab.tabId);
+      if (navigation.status === 'observed') {
+        const tabAfterReload = await getActiveTabSnapshot();
+        if (tabAfterReload.status === 'ready' && !sameDocumentUrl(urlBefore, tabAfterReload.url)) {
+          const captureError: CaptureError = {
+            id: newId('cerr'),
+            code: 'navigation-race',
+            source: 'headerCapture',
+            message: `Active tab navigated during capture reload (before: ${urlBefore}; after: ${tabAfterReload.url}).`,
+            url: tabAfterReload.url,
+            capturedAt: new Date().toISOString(),
+          };
+          return { ok: false, error: captureError.message, captureError };
+        }
+        navigation = navigationCapture.getObservation(
+          tab.tabId,
+          clipUrl(tabAfterReload.status === 'ready' ? tabAfterReload.url : urlBefore),
+        );
+      }
+    }
     const networkEvidence: Evidence[] = [];
     if (navigation.status === 'observed') {
       networkEvidence.push({

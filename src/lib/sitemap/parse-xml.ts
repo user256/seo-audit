@@ -1,4 +1,12 @@
 import { SITEMAP_LIMITS, type SitemapLimits } from './limits';
+import {
+  parseSimpleXml,
+  simpleChildByLocalName,
+  simpleElementRawText,
+  simpleElementText,
+  simpleElementsByLocalName,
+  type SimpleElement,
+} from './simple-xml';
 
 function mergeLimits(overrides?: Partial<SitemapLimits>): SitemapLimits {
   return { ...SITEMAP_LIMITS, ...overrides };
@@ -50,43 +58,11 @@ export type SitemapParseFailure = {
 
 export type SitemapParseResult = SitemapParseSuccess | SitemapParseFailure;
 
-function textContent(el: Element | null | undefined): string | undefined {
-  if (!el) return undefined;
-  const value = el.textContent ?? '';
-  const trimmed = value.trim();
-  return trimmed === '' ? undefined : trimmed;
+function parseLinkAttributes(tag: SimpleElement): Record<string, string> {
+  return { ...tag.attributes };
 }
 
-function elementsByLocalName(parent: Element | Document, localName: string): Element[] {
-  const out: Element[] = [];
-  const walk = (node: Element): void => {
-    if (node.localName === localName) out.push(node);
-    for (const child of node.children) walk(child);
-  };
-  if (parent instanceof Document) {
-    if (parent.documentElement) walk(parent.documentElement);
-  } else {
-    walk(parent);
-  }
-  return out;
-}
-
-function childByLocalName(parent: Element, localName: string): Element | undefined {
-  for (const child of parent.children) {
-    if (child.localName === localName) return child;
-  }
-  return undefined;
-}
-
-function parseLinkAttributes(tag: Element): Record<string, string> {
-  const attrs: Record<string, string> = {};
-  for (const attr of tag.attributes) {
-    attrs[attr.name] = attr.value;
-  }
-  return attrs;
-}
-
-function extractAlternates(urlBlock: Element): SitemapAlternate[] {
+function extractAlternates(urlBlock: SimpleElement): SitemapAlternate[] {
   const alternates: SitemapAlternate[] = [];
   for (const child of urlBlock.children) {
     if (child.localName !== 'link') continue;
@@ -133,7 +109,31 @@ export function sanitizeSitemapXml(
   return { ok: true, xml: trimmed };
 }
 
-function parserErrorMessage(doc: Document): string | null {
+function parseXmlDocument(
+  xml: string,
+): { ok: true; root: SimpleElement } | { ok: false; error: string } {
+  if (typeof DOMParser !== 'undefined') {
+    try {
+      const doc = new DOMParser().parseFromString(xml, 'application/xml');
+      const domErr = domParserErrorMessage(doc);
+      if (domErr) return { ok: false, error: domErr };
+      const root = doc.documentElement;
+      if (!root) return { ok: false, error: 'XML document has no root element.' };
+      return { ok: true, root: domElementToSimple(root) };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { ok: false, error: message };
+    }
+  }
+
+  const parsed = parseSimpleXml(xml);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+  const root = parsed.doc.documentElement;
+  if (!root) return { ok: false, error: 'XML document has no root element.' };
+  return { ok: true, root };
+}
+
+function domParserErrorMessage(doc: Document): string | null {
   const root = doc.documentElement;
   if (!root) return 'XML document has no root element.';
   if (root.localName === 'parsererror' || root.tagName === 'parsererror') {
@@ -142,6 +142,30 @@ function parserErrorMessage(doc: Document): string | null {
   const err = doc.querySelector('parsererror');
   if (err) return (err.textContent ?? 'XML parse error').trim();
   return null;
+}
+
+function domElementToSimple(el: Element): SimpleElement {
+  const attributes: Record<string, string> = {};
+  for (const attr of el.attributes) {
+    attributes[attr.name] = attr.value;
+  }
+  const children: SimpleElement[] = [];
+  for (const child of el.children) {
+    children.push(domElementToSimple(child));
+  }
+  let directText = '';
+  for (const node of el.childNodes) {
+    if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.CDATA_SECTION_NODE) {
+      directText += node.textContent ?? '';
+    }
+  }
+  return {
+    tagName: el.tagName,
+    localName: el.localName,
+    attributes,
+    children,
+    directText,
+  };
 }
 
 /**
@@ -167,24 +191,17 @@ export function parseSitemapXml(
     return { ok: false, error: sanitized.error, diagnostics: [sanitized.error] };
   }
 
-  let doc: Document;
-  try {
-    doc = new DOMParser().parseFromString(sanitized.xml, 'application/xml');
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, error: `XML parser failed: ${message}`, diagnostics: [message] };
+  const parsed = parseXmlDocument(sanitized.xml);
+  if (!parsed.ok) {
+    const message = parsed.error;
+    return {
+      ok: false,
+      error: `Malformed sitemap XML: ${message}`,
+      diagnostics: [message],
+    };
   }
 
-  const parseErr = parserErrorMessage(doc);
-  if (parseErr) {
-    return { ok: false, error: `Malformed sitemap XML: ${parseErr}`, diagnostics: [parseErr] };
-  }
-
-  const root = doc.documentElement;
-  if (!root) {
-    return { ok: false, error: 'Sitemap XML has no root element.', diagnostics: [] };
-  }
-
+  const root = parsed.root;
   const rootLocal = root.localName;
   if (rootLocal !== 'urlset' && rootLocal !== 'sitemapindex') {
     return {
@@ -200,10 +217,10 @@ export function parseSitemapXml(
   let truncated = false;
 
   if (isIndex) {
-    const blocks = elementsByLocalName(root, 'sitemap');
+    const blocks = simpleElementsByLocalName(root, 'sitemap');
     for (const block of blocks) {
-      const locEl = childByLocalName(block, 'loc');
-      const locRaw = locEl?.textContent ?? '';
+      const locEl = simpleChildByLocalName(block, 'loc');
+      const locRaw = simpleElementRawText(locEl);
       const loc = locRaw.trim();
       if (!loc) {
         diagnostics.push('sitemapindex entry missing <loc>.');
@@ -212,11 +229,11 @@ export function parseSitemapXml(
       childSitemaps.push({
         loc,
         locRaw,
-        lastmod: textContent(childByLocalName(block, 'lastmod')),
+        lastmod: simpleElementText(simpleChildByLocalName(block, 'lastmod')),
       });
     }
   } else {
-    const blocks = elementsByLocalName(root, 'url');
+    const blocks = simpleElementsByLocalName(root, 'url');
     for (const block of blocks) {
       if (entries.size >= limits.maxEntries) {
         truncated = true;
@@ -225,8 +242,8 @@ export function parseSitemapXml(
         );
         break;
       }
-      const locEl = childByLocalName(block, 'loc');
-      const locRaw = locEl?.textContent ?? '';
+      const locEl = simpleChildByLocalName(block, 'loc');
+      const locRaw = simpleElementRawText(locEl);
       const loc = locRaw.trim();
       if (!loc) {
         diagnostics.push('url entry missing <loc>.');
@@ -235,9 +252,9 @@ export function parseSitemapXml(
       const entry: SitemapUrlEntry = {
         loc,
         locRaw,
-        lastmod: textContent(childByLocalName(block, 'lastmod')),
-        changefreq: textContent(childByLocalName(block, 'changefreq')),
-        priority: textContent(childByLocalName(block, 'priority')),
+        lastmod: simpleElementText(simpleChildByLocalName(block, 'lastmod')),
+        changefreq: simpleElementText(simpleChildByLocalName(block, 'changefreq')),
+        priority: simpleElementText(simpleChildByLocalName(block, 'priority')),
         alternates: extractAlternates(block),
       };
       if (!entries.has(loc)) {
