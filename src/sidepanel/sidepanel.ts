@@ -602,14 +602,18 @@ async function hydrateCrawlSignalsInBackground(
         robotsResult = response.result;
         sitemapCandidates = buildSitemapCandidatesForOrigin(originAtStart, robotsResult);
         rebuildDashboardFromCache();
-        await rebuildCrawlSignals(workspace.tab!);
-        renderWorkspace();
-        openCrawlPanelAfterCapture(robotsResult, null);
+        const live = workspace.tab;
+        if (live?.status === 'ready') {
+          await rebuildCrawlSignals(live);
+          renderWorkspace();
+          openCrawlPanelAfterCapture(robotsResult, null);
+        }
       }
     } finally {
       robotsFetchBusy = false;
-      if (stillSameTab()) {
-        await rebuildCrawlSignals(workspace.tab!);
+      const live = workspace.tab;
+      if (live?.status === 'ready' && stillSameTab()) {
+        await rebuildCrawlSignals(live);
         renderWorkspace();
       }
     }
@@ -617,7 +621,8 @@ async function hydrateCrawlSignalsInBackground(
 
   if (!stillSameTab() || sitemapFetchBusy || sitemapResult) return;
 
-  const current = workspace.tab!;
+  const current = workspace.tab;
+  if (!current || current.status !== 'ready') return;
   sitemapCandidates = buildSitemapCandidatesForOrigin(current.origin, robotsResult);
   const rootUrls = sitemapCandidates.map((c) => c.url);
   if (rootUrls.length === 0) return;
@@ -631,15 +636,18 @@ async function hydrateCrawlSignalsInBackground(
       rootUrls,
     });
     if (stillSameTab() && response.type === 'SITEMAP_FETCH_RESULT') {
+      const live = workspace.tab;
+      if (!live || live.status !== 'ready') return;
       sitemapResult = reviveSitemapFetchResult(response.result);
-      await rebuildCrawlSignals(workspace.tab!);
+      await rebuildCrawlSignals(live);
       renderWorkspace();
       openCrawlPanelAfterCapture(robotsResult, sitemapResult);
     }
   } finally {
     sitemapFetchBusy = false;
-    if (stillSameTab()) {
-      await rebuildCrawlSignals(workspace.tab!);
+    const live = workspace.tab;
+    if (live?.status === 'ready' && stillSameTab()) {
+      await rebuildCrawlSignals(live);
       renderWorkspace();
     }
   }
