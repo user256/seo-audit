@@ -53,6 +53,18 @@ export function registerNavigationWebRequestListeners(): void {
       statusCode: details.statusCode,
       type: details.type,
     });
+    if (details.type !== 'main_frame' || details.tabId < 0) return;
+    const observation = navigationCapture.getObservation(details.tabId);
+    if (observation.status !== 'observed') return;
+    void chrome.runtime
+      .sendMessage({
+        type: 'NAVIGATION_OBSERVATION_UPDATED',
+        tabId: details.tabId,
+        observation,
+      })
+      .catch(() => {
+        // Side panel may be closed; observation stays in SW memory.
+      });
   }, FILTER);
 
   chrome.webRequest.onErrorOccurred.addListener((details) => {
@@ -68,7 +80,7 @@ export function registerNavigationWebRequestListeners(): void {
 
 /**
  * Reload the tab once while watching so main-frame status/headers are observed.
- * Used on panel open and before audit when no prior observation exists.
+ * Only for the explicit Capture navigation control — never auto-called on panel open.
  */
 export async function reloadAndObserveNavigation(
   tabId: number,
