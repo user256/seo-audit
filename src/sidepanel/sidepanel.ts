@@ -115,6 +115,8 @@ let viewingReport = false;
 let dashboard: SeoDashboardModel | null = null;
 let crawlSignals: CrawlSignalsModel | null = null;
 let navigationObservation: NavigationObservationStatus | undefined;
+/** One auto reload-and-observe per tab URL per panel session (avoids reload loops). */
+let autoNavAttemptKey: string | null = null;
 let robotsResult: RobotsFetchResult | null = null;
 let sitemapResult: SitemapFetchResult | null = null;
 let sitemapCandidates: SitemapCandidate[] = [];
@@ -490,6 +492,23 @@ async function loadGlanceDashboard(): Promise<void> {
   });
   navigationObservation =
     navResponse.type === 'NAVIGATION_OBSERVATION' ? navResponse.observation : undefined;
+
+  // Browser navigation can only be observed if we were attached before the load.
+  // On panel open that almost never happened — reload once so status/headers populate
+  // without making the user click “Capture navigation”.
+  const autoNavKey = `${tab.tabId}|${tab.url}`;
+  if (navigationObservation?.status !== 'observed' && autoNavAttemptKey !== autoNavKey) {
+    autoNavAttemptKey = autoNavKey;
+    setStatus('Observing navigation (reloading the tab once)…');
+    const reloadResponse = await send<ExtensionResponse>({
+      type: 'RELOAD_AND_OBSERVE_NAVIGATION',
+      tabId: tab.tabId,
+    });
+    if (reloadResponse.type === 'NAVIGATION_OBSERVATION') {
+      navigationObservation = reloadResponse.observation;
+    }
+  }
+
   await rebuildCrawlSignals(tab);
 
   const response = await send<ExtensionResponse>({ type: 'GLANCE_DOM_INVENTORY' });

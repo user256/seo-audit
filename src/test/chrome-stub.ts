@@ -45,6 +45,7 @@ export function createChromeStub(overrides: ChromeStubOverrides = {}): typeof ch
     tabs: {
       query: async () => [],
       get: async () => ({ id: 1, url: 'https://example.com/' }),
+      reload: async () => undefined,
       ...overrides.tabs,
     },
     scripting: {

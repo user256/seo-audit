@@ -1,12 +1,32 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { IDBFactory } from 'fake-indexeddb';
+import { navigationCapture } from '../background/navigation-listeners';
 import { createChromeStub } from '../test/chrome-stub';
 import { collectDomForActiveTab } from './collect-dom';
 import { SessionRepository } from './storage/session-repository';
 import { collectDomFactsInPage } from '../content/dom-collector';
 import { FIXTURE_RELATIVE_URLS } from '../content/fixtures';
 import { DOM_LIMITS } from './schemas/dom-limits';
+
+function seedObservedNavigation(tabId: number, url: string): void {
+  navigationCapture.watchTab(tabId);
+  navigationCapture.onHeadersReceived({
+    tabId,
+    requestId: `req-${tabId}`,
+    url,
+    statusCode: 200,
+    type: 'main_frame',
+    responseHeaders: [{ name: 'content-type', value: 'text/html' }],
+  });
+  navigationCapture.onCompleted({
+    tabId,
+    requestId: `req-${tabId}`,
+    url,
+    statusCode: 200,
+    type: 'main_frame',
+  });
+}
 
 describe('collectDomForActiveTab', () => {
   beforeEach(() => {
@@ -45,10 +65,12 @@ describe('collectDomForActiveTab', () => {
   });
 
   it('saves a session when access is granted', async () => {
+    seedObservedNavigation(4, 'https://example.com/shop/item');
     Object.assign(globalThis, {
       chrome: createChromeStub({
         tabs: {
           query: async () => [{ id: 4, url: 'https://example.com/shop/item' }],
+          reload: async () => undefined,
         },
         permissions: {
           contains: async () => true,
@@ -70,10 +92,12 @@ describe('collectDomForActiveTab', () => {
   });
 
   it('runs and records exactly the selected subset of checks', async () => {
+    seedObservedNavigation(4, 'https://example.com/shop/item');
     Object.assign(globalThis, {
       chrome: createChromeStub({
         tabs: {
           query: async () => [{ id: 4, url: 'https://example.com/shop/item' }],
+          reload: async () => undefined,
         },
         permissions: {
           contains: async () => true,
@@ -238,6 +262,7 @@ describe('collectDomForActiveTab', () => {
   it('saves a valid documentUrl longer than maxStringChars without dom-evidence-invalid', async () => {
     const longPath = 'a'.repeat(2_500);
     const longUrl = `https://example.com/${longPath}`;
+    seedObservedNavigation(4, longUrl);
     Object.assign(globalThis, {
       chrome: createChromeStub({
         tabs: {
@@ -273,6 +298,7 @@ describe('collectDomForActiveTab', () => {
 
   it('bounds an oversized documentUrl after navigation-race comparison', async () => {
     const exactUrl = `https://example.com/${'b'.repeat(9_000)}`;
+    seedObservedNavigation(4, exactUrl);
     Object.assign(globalThis, {
       chrome: createChromeStub({
         tabs: {

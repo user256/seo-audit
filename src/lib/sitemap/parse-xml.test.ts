@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseSitemapXml, sanitizeSitemapXml } from './parse-xml';
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
@@ -106,6 +106,33 @@ describe('parseSitemapXml', () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error).toMatch(/urlset or sitemapindex/);
+  });
+
+  it('parses fixtures when DOMParser is unavailable (service worker path)', () => {
+    vi.stubGlobal('DOMParser', undefined);
+    try {
+      for (const name of [
+        'urlset-basic.xml',
+        'urlset-hreflang.xml',
+        'sitemap-index.xml',
+        'malformed.xml',
+      ]) {
+        const result = parseSitemapXml(fixture(name));
+        expect(result.ok, `fixture ${name}: ${!result.ok ? result.error : ''}`).toBe(true);
+      }
+
+      const hreflang = parseSitemapXml(fixture('urlset-hreflang.xml'));
+      if (!hreflang.ok) return;
+      const entry = hreflang.entries.get('https://example.com/en/page');
+      expect(entry?.alternates.map((a) => a.hreflang)).toEqual(['en', 'de', 'x-default']);
+
+      const bad = parseSitemapXml('<urlset><url><loc>unclosed');
+      expect(bad.ok).toBe(false);
+      if (bad.ok) return;
+      expect(bad.error).toMatch(/Malformed/i);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('truncates when entry count exceeds the limit', () => {

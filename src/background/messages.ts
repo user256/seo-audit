@@ -40,7 +40,7 @@ import {
   type VariantTestProgress,
   type VariantTestRunResult,
 } from '../lib/variants';
-import { navigationCapture } from './navigation-listeners';
+import { navigationCapture, reloadAndObserveNavigation } from './navigation-listeners';
 
 const repo = new SessionRepository();
 
@@ -201,22 +201,7 @@ function broadcastCssJsComparisonProgress(progress: CssJsComparisonProgress): vo
 }
 
 async function reloadAndObserve(tabId: number): Promise<NavigationObservationStatus> {
-  navigationCapture.watchTab(tabId);
-  const before = navigationCapture.getObservation(tabId);
-  const beforeKey = before.status === 'observed' ? `${before.finalUrl}|${before.observedAt}` : null;
-
-  await chrome.tabs.reload(tabId);
-
-  const deadline = Date.now() + 20_000;
-  while (Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, 150));
-    const observation = navigationCapture.getObservation(tabId);
-    if (observation.status === 'observed') {
-      const key = `${observation.finalUrl}|${observation.observedAt}`;
-      if (key !== beforeKey) return observation;
-    }
-  }
-  return navigationCapture.getObservation(tabId);
+  return reloadAndObserveNavigation(tabId);
 }
 
 export async function handleExtensionRequest(

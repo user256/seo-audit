@@ -65,3 +65,29 @@ export function registerNavigationWebRequestListeners(): void {
     });
   }, FILTER);
 }
+
+/**
+ * Reload the tab once while watching so main-frame status/headers are observed.
+ * Used on panel open and before audit when no prior observation exists.
+ */
+export async function reloadAndObserveNavigation(
+  tabId: number,
+  timeoutMs = 20_000,
+): Promise<ReturnType<typeof navigationCapture.getObservation>> {
+  navigationCapture.watchTab(tabId);
+  const before = navigationCapture.getObservation(tabId);
+  const beforeKey = before.status === 'observed' ? `${before.finalUrl}|${before.observedAt}` : null;
+
+  await chrome.tabs.reload(tabId);
+
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 150));
+    const observation = navigationCapture.getObservation(tabId);
+    if (observation.status === 'observed') {
+      const key = `${observation.finalUrl}|${observation.observedAt}`;
+      if (key !== beforeKey) return observation;
+    }
+  }
+  return navigationCapture.getObservation(tabId);
+}
