@@ -1,5 +1,7 @@
 import type { DomFacts, FieldState } from '../../content/dom-collector';
 import type { NavigationObservationStatus } from '../network/types';
+import type { RobotsFetchResult } from '../robots/fetch-robots';
+import { evaluateRobotsForUrl } from '../robots/evaluate-robots';
 
 export type SignalAvailability = 'present' | 'unavailable' | 'needs-access';
 
@@ -172,13 +174,14 @@ export function buildGrantedShellDashboard(tabUrl: string, detail: string): SeoD
   };
 }
 
-/** Glance dashboard from DOM inventory, optionally enriched with Ticket 201 navigation. */
+/** Glance dashboard from DOM inventory, optionally enriched with navigation + robots. */
 export function buildGlanceDashboard(input: {
   tabUrl: string;
   facts: DomFacts;
   navigation?: NavigationObservationStatus;
+  robots?: RobotsFetchResult | null;
 }): SeoDashboardModel {
-  const { facts, tabUrl, navigation } = input;
+  const { facts, tabUrl, navigation, robots } = input;
   const headings =
     facts.headings.state === 'present'
       ? (facts.headings.value as {
@@ -194,6 +197,21 @@ export function buildGlanceDashboard(input: {
     facts.html5.state === 'present' ? (facts.html5.value as SeoDashboardModel['html5']) : null;
 
   const network = networkSlotsFromObservation(navigation, facts.documentUrl);
+  const robotsRow = robotsIndexabilityRow(robots, facts.documentUrl || tabUrl);
+  const hasNav = navigation?.status === 'observed';
+  const hasRobots = robots?.ok === true;
+  let summary: string;
+  if (hasNav && hasRobots) {
+    summary = 'DOM + browser-navigation headers + robots.txt captured.';
+  } else if (hasNav) {
+    summary = 'DOM + browser-navigation headers captured. robots.txt not fetched yet.';
+  } else if (hasRobots) {
+    summary =
+      'DOM + robots.txt captured. Browser-navigation headers were not observed (reload while the panel watches the tab).';
+  } else {
+    summary =
+      'DOM signals only — browser-navigation headers were not observed (reload while the panel watches the tab). robots.txt not fetched.';
+  }
 
   return {
     tabUrl,
@@ -202,11 +220,8 @@ export function buildGlanceDashboard(input: {
     status: network.status,
     journey: network.journey,
     indexability: {
-      status: navigation?.status === 'observed' ? 'signals-partial' : 'unknown',
-      summary:
-        navigation?.status === 'observed'
-          ? 'DOM + browser-navigation headers captured. robots.txt not fetched yet.'
-          : 'DOM signals only — browser-navigation headers were not observed (reload while the panel watches the tab). robots.txt not fetched.',
+      status: hasNav || hasRobots ? 'signals-partial' : 'unknown',
+      summary,
       rows: [
         { label: 'Document URL', value: facts.documentUrl, source: 'dom' },
         { label: 'Canonical', value: canonicalText(facts.canonical), source: 'dom' },
@@ -216,7 +231,7 @@ export function buildGlanceDashboard(input: {
           value: network.xRobotsValue,
           source: 'network',
         },
-        { label: 'robots.txt', value: 'not fetched', source: 'robots' },
+        robotsRow,
       ],
     },
     title: fieldText(facts.title),
@@ -226,6 +241,41 @@ export function buildGlanceDashboard(input: {
     links,
     images,
     inventoryLoaded: true,
+  };
+}
+
+function robotsIndexabilityRow(
+  robots: RobotsFetchResult | null | undefined,
+  auditedUrl: string,
+): { label: string; value: string; source: string } {
+  if (!robots) {
+    return { label: 'robots.txt', value: 'not fetched', source: 'robots' };
+  }
+  if (!robots.ok) {
+    return {
+      label: 'robots.txt',
+      value: `fetch issue (${robots.error.code})`,
+      source: 'robots',
+    };
+  }
+  const evaluation = evaluateRobotsForUrl(robots.parsed, auditedUrl);
+  if (!evaluation.ok) {
+    return {
+      label: 'robots.txt',
+      value: `fetched (HTTP ${robots.status}); path evaluation unavailable`,
+      source: 'robots',
+    };
+  }
+  const googlebot = evaluation.profiles.Googlebot;
+  const wildcard = evaluation.profiles['*'];
+  const bits = [
+    `Googlebot ${googlebot.crawlable ? 'allowed' : 'blocked'}`,
+    `* ${wildcard.crawlable ? 'allowed' : 'blocked'}`,
+  ];
+  return {
+    label: 'robots.txt',
+    value: `fetched (HTTP ${robots.status}) — ${bits.join('; ')} for ${evaluation.path}`,
+    source: 'robots',
   };
 }
 

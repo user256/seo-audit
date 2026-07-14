@@ -73,6 +73,9 @@ function appendTruncationNote(parent: HTMLElement, shown: number, total: number)
   parent.append(el('p', 'crawl-truncation', `Showing ${shown} of ${total}.`));
 }
 
+/** Open-panel ids captured before each re-render (replaceChildren clears the DOM). */
+let crawlPanelOpenIds: ReadonlySet<string> = new Set(['crawl-panel-navigation']);
+
 function panel(
   id: string,
   title: string,
@@ -82,7 +85,7 @@ function panel(
 ): HTMLDetailsElement {
   const details = el('details', 'crawl-panel') as HTMLDetailsElement;
   details.id = id;
-  details.open = id === 'crawl-panel-navigation';
+  details.open = crawlPanelOpenIds.has(id);
 
   const summary = el('summary', 'crawl-panel-summary');
   summary.append(el('span', 'crawl-panel-title', title), availabilityBadge(availability));
@@ -980,6 +983,14 @@ export function renderCrawlSignalsPanel(
   model: CrawlSignalsModel,
   handlers: CrawlSignalsViewHandlers,
 ): void {
+  const previouslyOpen = new Set<string>();
+  for (const node of container.querySelectorAll('details.crawl-panel')) {
+    const details = node as HTMLDetailsElement;
+    if (details.open && details.id) previouslyOpen.add(details.id);
+  }
+  if (previouslyOpen.size === 0) previouslyOpen.add('crawl-panel-navigation');
+  crawlPanelOpenIds = previouslyOpen;
+
   container.replaceChildren();
   container.hidden = false;
 

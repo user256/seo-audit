@@ -20,7 +20,11 @@ import type { NavigationObservationStatus } from '../lib/network/types';
 import { fetchRobotsForOrigin, type RobotsFetchResult } from '../lib/robots/fetch-robots';
 import type { UaProfileSelection } from '../lib/ua-profiles/types';
 import type { AuditSession } from '../lib/schemas/audit';
-import { fetchSitemap, type SitemapFetchResult } from '../lib/sitemap/fetch-sitemap';
+import {
+  fetchSitemap,
+  serializeSitemapFetchResult,
+  type SitemapFetchResult,
+} from '../lib/sitemap/fetch-sitemap';
 import { SessionRepository } from '../lib/storage/session-repository';
 import { getActiveTabSnapshot, pingActiveTab, type ActiveTabSnapshot } from '../lib/tab-access';
 import {
@@ -234,14 +238,22 @@ export async function handleExtensionRequest(
         type: 'GLANCE_DOM_RESULT',
         result: await glanceDomInventoryForActiveTab(),
       };
-    case 'COLLECT_DOM_SNAPSHOT':
-      return {
-        type: 'COLLECT_DOM_RESULT',
-        result: await collectDomForActiveTab(
-          repo,
-          message.selectedCheckIds ? new Set(message.selectedCheckIds) : undefined,
-        ),
-      };
+    case 'COLLECT_DOM_SNAPSHOT': {
+      const collected = await collectDomForActiveTab(
+        repo,
+        message.selectedCheckIds ? new Set(message.selectedCheckIds) : undefined,
+      );
+      if (collected.ok && collected.sitemapResult) {
+        return {
+          type: 'COLLECT_DOM_RESULT',
+          result: {
+            ...collected,
+            sitemapResult: serializeSitemapFetchResult(collected.sitemapResult),
+          },
+        };
+      }
+      return { type: 'COLLECT_DOM_RESULT', result: collected };
+    }
     case 'LOAD_SESSION': {
       const loaded = await repo.get(message.sessionId);
       if (loaded.status === 'ok') {
@@ -323,7 +335,7 @@ export async function handleExtensionRequest(
     case 'FETCH_SITEMAP':
       return {
         type: 'SITEMAP_FETCH_RESULT',
-        result: await fetchSitemap(message.rootUrls),
+        result: serializeSitemapFetchResult(await fetchSitemap(message.rootUrls)),
       };
     case 'VALIDATE_HREFLANG_CLUSTER':
       return {

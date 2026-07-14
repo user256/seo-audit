@@ -9,6 +9,8 @@ export {
   fetchSitemap,
   normalizeSitemapUrl,
   processSitemapFetch,
+  reviveSitemapFetchResult,
+  serializeSitemapFetchResult,
   sitemapContainsAuditedUrl,
   sitemapUrlVariants,
   type SitemapCaptureError,

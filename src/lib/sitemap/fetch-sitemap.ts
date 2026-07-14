@@ -146,17 +146,18 @@ export function sitemapUrlVariants(url: string): string[] {
  * Whether the audited final URL appears in parsed sitemap entries.
  */
 export function sitemapContainsAuditedUrl(
-  entries: Map<string, SitemapUrlEntry>,
+  entries: Map<string, SitemapUrlEntry> | Record<string, SitemapUrlEntry>,
   auditedUrl: string,
 ): SitemapUrlMembership {
+  const map = entries instanceof Map ? entries : new Map(Object.entries(entries));
   const variants = sitemapUrlVariants(auditedUrl);
   for (const variant of variants) {
-    const entry = entries.get(variant);
+    const entry = map.get(variant);
     if (entry) {
       return { present: true, matchedLoc: variant, entry };
     }
   }
-  for (const [loc, entry] of entries) {
+  for (const [loc, entry] of map) {
     const locVariants = sitemapUrlVariants(loc);
     for (const variant of variants) {
       if (locVariants.includes(variant)) {
@@ -165,6 +166,25 @@ export function sitemapContainsAuditedUrl(
     }
   }
   return { present: false };
+}
+
+/** JSON-safe sitemap result (Map → plain object) for chrome.runtime messaging. */
+export function serializeSitemapFetchResult(result: SitemapFetchResult): SitemapFetchResult {
+  if (!result.ok) return result;
+  return {
+    ...result,
+    entries: Object.fromEntries(result.entries) as unknown as Map<string, SitemapUrlEntry>,
+  };
+}
+
+/** Revive entries after messaging (plain object or Map). */
+export function reviveSitemapFetchResult(result: SitemapFetchResult): SitemapFetchResult {
+  if (!result.ok) return result;
+  const entries = result.entries as Map<string, SitemapUrlEntry> | Record<string, SitemapUrlEntry>;
+  return {
+    ...result,
+    entries: entries instanceof Map ? entries : new Map(Object.entries(entries)),
+  };
 }
 
 type WalkState = {

@@ -5,7 +5,10 @@ import {
 } from '../content/dom-collector';
 import { domFactsToPageSnapshot } from '../content/dom-facts-to-snapshot';
 import { navigationCapture } from '../background/navigation-listeners';
-import { fetchRobotsForOrigin } from './robots/fetch-robots';
+import { buildCrawlNetworkEvidence } from './crawl/build-crawl-evidence';
+import { fetchRobotsForOrigin, type RobotsFetchResult } from './robots/fetch-robots';
+import { discoverSitemapCandidates } from './sitemap/discover';
+import { fetchSitemap, type SitemapFetchResult } from './sitemap/fetch-sitemap';
 import { evaluatePageSnapshot, type PageSummary } from './rules/engine';
 import { availabilityFromEvidence, resolveAuditCheckSelection } from './rules/check-selection';
 import type {
@@ -35,6 +38,10 @@ export type CollectDomResult =
       summary: PageSummary;
       captureErrors: CaptureError[];
       checkSelection: AuditCheckSelection;
+      /** Robots capture used during this audit (for Crawl signals hydration). */
+      robotsResult: RobotsFetchResult | null;
+      /** Sitemap capture used during this audit (for Crawl signals hydration). */
+      sitemapResult: SitemapFetchResult | null;
     }
   | { ok: false; error: string; captureError?: CaptureError };
 
@@ -268,25 +275,59 @@ export async function collectDomForActiveTab(
     }
 
     let robotsFetch: boolean | 'unavailable' = 'unavailable';
+    let robotsResult: RobotsFetchResult | null = null;
+    let sitemapResult: SitemapFetchResult | null = null;
     try {
       const origin = new URL(urlBefore).origin;
       const robots = await fetchRobotsForOrigin(origin);
+      robotsResult = robots;
       if (robots.ok) {
         robotsFetch = true;
-        networkEvidence.push({
-          id: newId('ev'),
-          kind: 'robots',
-          source: 'robots.txt',
-          value: {
+        networkEvidence.push(
+          ...buildCrawlNetworkEvidence({
+            auditedUrl: urlBefore,
+            robots,
+            capturedAt: robots.fetchedAt,
+          }),
+        );
+
+        try {
+          const candidates = discoverSitemapCandidates({
             origin,
-            finalUrl: robots.finalUrl,
-            status: robots.status,
-            fetchedAt: robots.fetchedAt,
-            sitemaps: robots.parsed.sitemaps,
-            groupCount: robots.parsed.groups.length,
-          },
-          capturedAt: robots.fetchedAt,
-        });
+            robotsSitemaps: robots.parsed.sitemaps,
+          });
+          if (candidates.length > 0) {
+            const sitemap = await fetchSitemap(candidates.map((c) => c.url));
+            sitemapResult = sitemap;
+            if (sitemap.ok) {
+              networkEvidence.push(
+                ...buildCrawlNetworkEvidence({
+                  auditedUrl: urlBefore,
+                  sitemap,
+                  capturedAt: new Date().toISOString(),
+                }),
+              );
+            } else {
+              captureErrors.push({
+                id: newId('cerr'),
+                code: sitemap.error.code,
+                source: 'sitemapFetch',
+                message: sitemap.error.message,
+                url: sitemap.error.url ?? urlBefore,
+                capturedAt: sitemap.error.capturedAt,
+              });
+            }
+          }
+        } catch (err) {
+          captureErrors.push({
+            id: newId('cerr'),
+            code: 'sitemap-fetch-failed',
+            source: 'sitemapFetch',
+            message: err instanceof Error ? err.message : String(err),
+            url: urlBefore,
+            capturedAt: new Date().toISOString(),
+          });
+        }
       } else {
         captureErrors.push({
           id: newId('cerr'),
@@ -296,6 +337,40 @@ export async function collectDomForActiveTab(
           url: robots.error.url ?? urlBefore,
           capturedAt: new Date().toISOString(),
         });
+        try {
+          const candidates = discoverSitemapCandidates({ origin });
+          if (candidates.length > 0) {
+            const sitemap = await fetchSitemap(candidates.map((c) => c.url));
+            sitemapResult = sitemap;
+            if (sitemap.ok) {
+              networkEvidence.push(
+                ...buildCrawlNetworkEvidence({
+                  auditedUrl: urlBefore,
+                  sitemap,
+                  capturedAt: new Date().toISOString(),
+                }),
+              );
+            } else {
+              captureErrors.push({
+                id: newId('cerr'),
+                code: sitemap.error.code,
+                source: 'sitemapFetch',
+                message: sitemap.error.message,
+                url: sitemap.error.url ?? urlBefore,
+                capturedAt: sitemap.error.capturedAt,
+              });
+            }
+          }
+        } catch (err) {
+          captureErrors.push({
+            id: newId('cerr'),
+            code: 'sitemap-fetch-failed',
+            source: 'sitemapFetch',
+            message: err instanceof Error ? err.message : String(err),
+            url: urlBefore,
+            capturedAt: new Date().toISOString(),
+          });
+        }
       }
     } catch (err) {
       captureErrors.push({
@@ -368,6 +443,8 @@ export async function collectDomForActiveTab(
       summary,
       captureErrors,
       checkSelection: saved.checkSelection,
+      robotsResult,
+      sitemapResult,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

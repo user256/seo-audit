@@ -27,7 +27,7 @@ import type { NavigationObservationStatus } from '../lib/network/types';
 import type { RobotsFetchResult } from '../lib/robots/fetch-robots';
 import type { AuditSession, Evidence } from '../lib/schemas/audit';
 import type { SitemapCandidate } from '../lib/sitemap/discover';
-import type { SitemapFetchResult } from '../lib/sitemap/fetch-sitemap';
+import { reviveSitemapFetchResult, type SitemapFetchResult } from '../lib/sitemap/fetch-sitemap';
 import {
   ALTERNATES_SOURCE,
   htmlAlternatesFromField,
@@ -539,6 +539,7 @@ async function loadGlanceDashboard(): Promise<void> {
     tabUrl: response.result.tabUrl,
     facts: response.result.facts,
     navigation: navigationObservation,
+    robots: robotsResult,
   });
   await rebuildCrawlSignals(tab);
   wizardEvidence = domFactsToPageSnapshot(
@@ -577,6 +578,7 @@ async function fetchRobotsForTab(): Promise<void> {
     sitemapCandidates = buildSitemapCandidatesForOrigin(tab.origin, robotsResult);
     await rebuildCrawlSignals(tab);
     renderWorkspace();
+    openCrawlPanelAfterCapture(robotsResult, null);
     if (response.result.ok) {
       setStatus(`robots.txt fetched (HTTP ${response.result.status}).`, 'ok');
     } else {
@@ -615,15 +617,16 @@ async function fetchSitemapForTab(): Promise<void> {
       setStatus('Unexpected sitemap fetch response.', 'error');
       return;
     }
-    sitemapResult = response.result;
+    sitemapResult = reviveSitemapFetchResult(response.result);
     await rebuildCrawlSignals(tab);
     renderWorkspace();
+    openCrawlPanelAfterCapture(robotsResult, sitemapResult);
     if (response.result.ok) {
       const membership = crawlSignals?.sitemap.membership.state;
       setStatus(
         membership === 'present'
-          ? `Sitemap fetched — audited URL is listed (${response.result.entries.size} entries parsed).`
-          : `Sitemap fetched — audited URL not listed among ${response.result.entries.size} entries.`,
+          ? `Sitemap fetched — audited URL is listed (${response.result.entries instanceof Map ? response.result.entries.size : Object.keys(response.result.entries as object).length} entries parsed).`
+          : `Sitemap fetched — audited URL not listed among ${response.result.entries instanceof Map ? response.result.entries.size : Object.keys(response.result.entries as object).length} entries.`,
         membership === 'present' ? 'ok' : 'plain',
       );
     } else {
@@ -1090,6 +1093,19 @@ async function ping(): Promise<void> {
   }
 }
 
+function openCrawlPanelAfterCapture(
+  robots: RobotsFetchResult | null,
+  sitemap: SitemapFetchResult | null,
+): void {
+  const openIds: string[] = ['crawl-panel-navigation'];
+  if (robots) openIds.push('crawl-panel-robots');
+  if (sitemap) openIds.push('crawl-panel-sitemap');
+  for (const id of openIds) {
+    const panel = document.getElementById(id) as HTMLDetailsElement | null;
+    if (panel) panel.open = true;
+  }
+}
+
 async function collectDom(selectedCheckIds?: ReadonlySet<string>): Promise<void> {
   const tab = workspace.tab;
   if (!tab || tab.status !== 'ready' || !tab.granted) return;
@@ -1121,9 +1137,18 @@ async function collectDom(selectedCheckIds?: ReadonlySet<string>): Promise<void>
       return;
     }
 
+    robotsResult = response.result.robotsResult;
+    sitemapResult = response.result.sitemapResult
+      ? reviveSitemapFetchResult(response.result.sitemapResult)
+      : null;
+    if (tab.status === 'ready') {
+      sitemapCandidates = buildSitemapCandidatesForOrigin(tab.origin, robotsResult);
+    }
+
     evidenceById = new Map(
       response.result.snapshot.evidence.map((item) => [item.id, item] as const),
     );
+    wizardEvidence = response.result.snapshot.evidence;
     resetComparisonEvidenceState();
     workspace = withSavedAudit(workspace, {
       sessionId: response.result.sessionId,
@@ -1136,7 +1161,17 @@ async function collectDom(selectedCheckIds?: ReadonlySet<string>): Promise<void>
     const selectionSummary = selection
       ? ` · ${selection.selectedCheckIds.length} checks run, ${selection.skippedChecks.length} skipped`
       : '';
-    collectSummaryEl.textContent = `Audit saved for ${response.result.snapshot.url}${selectionSummary}`;
+    const robotsBit = robotsResult?.ok
+      ? ' · robots.txt evaluated'
+      : robotsResult
+        ? ' · robots.txt fetch issue'
+        : '';
+    const sitemapBit = sitemapResult?.ok
+      ? ` · sitemap ${sitemapResult.entries.size} entries`
+      : sitemapResult
+        ? ' · sitemap fetch issue'
+        : '';
+    collectSummaryEl.textContent = `Audit saved for ${response.result.snapshot.url}${selectionSummary}${robotsBit}${sitemapBit}`;
 
     // Refresh glance from the same capture so the dashboard stays in sync.
     await loadGlanceDashboard();
@@ -1148,7 +1183,10 @@ async function collectDom(selectedCheckIds?: ReadonlySet<string>): Promise<void>
     if (loadedSelection.type === 'SESSION_LOADED' && loadedSelection.result.status === 'ok') {
       await ensureReportEditor(loadedSelection.result.session);
     }
+    if (tab.status === 'ready') await rebuildCrawlSignals(tab);
     renderWorkspace();
+    openCrawlPanelAfterCapture(robotsResult, sitemapResult);
+    return;
   } finally {
     collectBtn.disabled = false;
   }
