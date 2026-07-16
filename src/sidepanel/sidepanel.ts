@@ -24,6 +24,11 @@ import {
   buildPreAccessDashboard,
   type SeoDashboardModel,
 } from '../lib/dashboard/model';
+import {
+  hydrateCrawlSignals,
+  targetsCurrentTab,
+  type HydrateTabRef,
+} from '../lib/dashboard/hydrate-crawl-signals';
 import type { NavigationObservationStatus } from '../lib/network/types';
 import type { RobotsFetchResult } from '../lib/robots/fetch-robots';
 import type { AuditSession, Evidence } from '../lib/schemas/audit';
@@ -568,89 +573,81 @@ async function loadGlanceDashboard(): Promise<void> {
   void hydrateCrawlSignalsInBackground(tab);
 }
 
+/** The panel's current tab as a hydrate reference, or null when not ready. */
+function readyTabRef(): HydrateTabRef | null {
+  const current = workspace.tab;
+  return current && current.status === 'ready'
+    ? { tabId: current.tabId, origin: current.origin }
+    : null;
+}
+
+/** Rebuild the crawl-signals model and re-render if the tab is still ready. */
+async function refreshCrawlSignalsView(): Promise<void> {
+  const live = workspace.tab;
+  if (live?.status === 'ready') {
+    await rebuildCrawlSignals(live);
+    renderWorkspace();
+  }
+}
+
 /**
- * Quietly fill robots + sitemap after glance. Re-renders as each result arrives.
- * Never reloads the page.
+ * Quietly fill robots + sitemap after glance (Ticket 214). Re-renders as each
+ * result arrives. Never reloads the page. Sequencing and guards live in
+ * `hydrateCrawlSignals`; this wires the panel's state and messaging into it.
  */
 async function hydrateCrawlSignalsInBackground(
   tab: Extract<NonNullable<WorkspaceModel['tab']>, { status: 'ready' }>,
 ): Promise<void> {
   if (!tab.granted) return;
-  const originAtStart = tab.origin;
-  const tabIdAtStart = tab.tabId;
-
-  const stillSameTab = (): boolean => {
-    const current = workspace.tab;
-    return (
-      !!current &&
-      current.status === 'ready' &&
-      current.tabId === tabIdAtStart &&
-      current.origin === originAtStart
-    );
-  };
-
-  if (!robotsResult && !robotsFetchBusy) {
-    robotsFetchBusy = true;
-    try {
-      await rebuildCrawlSignals(tab);
-      renderWorkspace();
-      const response = await send<ExtensionResponse>({
-        type: 'FETCH_ROBOTS_FOR_ORIGIN',
-        origin: originAtStart,
-      });
-      if (stillSameTab() && response.type === 'ROBOTS_FETCH_RESULT') {
-        robotsResult = response.result;
-        sitemapCandidates = buildSitemapCandidatesForOrigin(originAtStart, robotsResult);
+  await hydrateCrawlSignals(
+    {
+      currentTab: readyTabRef,
+      hasRobotsResult: () => robotsResult !== null,
+      robotsBusy: () => robotsFetchBusy,
+      setRobotsBusy: (busy) => {
+        robotsFetchBusy = busy;
+      },
+      fetchRobots: async (origin) => {
+        const response = await send<ExtensionResponse>({
+          type: 'FETCH_ROBOTS_FOR_ORIGIN',
+          origin,
+        });
+        return response.type === 'ROBOTS_FETCH_RESULT' ? response.result : null;
+      },
+      applyRobots: async (result) => {
+        robotsResult = result;
+        sitemapCandidates = buildSitemapCandidatesForOrigin(tab.origin, robotsResult);
         rebuildDashboardFromCache();
-        const live = workspace.tab;
-        if (live?.status === 'ready') {
-          await rebuildCrawlSignals(live);
-          renderWorkspace();
-          openCrawlPanelAfterCapture(robotsResult, null);
-        }
-      }
-    } finally {
-      robotsFetchBusy = false;
-      const live = workspace.tab;
-      if (live?.status === 'ready' && stillSameTab()) {
-        await rebuildCrawlSignals(live);
-        renderWorkspace();
-      }
-    }
-  }
-
-  if (!stillSameTab() || sitemapFetchBusy || sitemapResult) return;
-
-  const current = workspace.tab;
-  if (!current || current.status !== 'ready') return;
-  sitemapCandidates = buildSitemapCandidatesForOrigin(current.origin, robotsResult);
-  const rootUrls = sitemapCandidates.map((c) => c.url);
-  if (rootUrls.length === 0) return;
-
-  sitemapFetchBusy = true;
-  try {
-    await rebuildCrawlSignals(current);
-    renderWorkspace();
-    const response = await send<ExtensionResponse>({
-      type: 'FETCH_SITEMAP',
-      rootUrls,
-    });
-    if (stillSameTab() && response.type === 'SITEMAP_FETCH_RESULT') {
-      const live = workspace.tab;
-      if (!live || live.status !== 'ready') return;
-      sitemapResult = reviveSitemapFetchResult(response.result);
-      await rebuildCrawlSignals(live);
-      renderWorkspace();
-      openCrawlPanelAfterCapture(robotsResult, sitemapResult);
-    }
-  } finally {
-    sitemapFetchBusy = false;
-    const live = workspace.tab;
-    if (live?.status === 'ready' && stillSameTab()) {
-      await rebuildCrawlSignals(live);
-      renderWorkspace();
-    }
-  }
+        await refreshCrawlSignalsView();
+        openCrawlPanelAfterCapture(robotsResult, null);
+      },
+      hasSitemapResult: () => sitemapResult !== null,
+      sitemapBusy: () => sitemapFetchBusy,
+      setSitemapBusy: (busy) => {
+        sitemapFetchBusy = busy;
+      },
+      sitemapCandidateUrls: () => {
+        sitemapCandidates = buildSitemapCandidatesForOrigin(tab.origin, robotsResult);
+        return sitemapCandidates.map((c) => c.url);
+      },
+      fetchSitemap: async (rootUrls) => {
+        const response = await send<ExtensionResponse>({
+          type: 'FETCH_SITEMAP',
+          rootUrls,
+        });
+        return response.type === 'SITEMAP_FETCH_RESULT'
+          ? reviveSitemapFetchResult(response.result)
+          : null;
+      },
+      applySitemap: async (result) => {
+        sitemapResult = result;
+        await refreshCrawlSignalsView();
+        openCrawlPanelAfterCapture(robotsResult, sitemapResult);
+      },
+      refresh: refreshCrawlSignalsView,
+    },
+    { tabId: tab.tabId, origin: tab.origin },
+  );
 }
 
 function rebuildDashboardFromCache(): void {
@@ -667,12 +664,10 @@ async function applySilentNavigationUpdate(
   tabId: number,
   observation: NavigationObservationStatus,
 ): Promise<void> {
-  const tab = workspace.tab;
-  if (!tab || tab.status !== 'ready' || tab.tabId !== tabId) return;
+  if (!targetsCurrentTab(readyTabRef(), tabId)) return;
   navigationObservation = observation;
   rebuildDashboardFromCache();
-  await rebuildCrawlSignals(tab);
-  renderWorkspace();
+  await refreshCrawlSignalsView();
 }
 
 async function fetchRobotsForTab(): Promise<void> {
