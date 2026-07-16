@@ -1007,6 +1007,16 @@ export function renderCrawlSignalsPanel(
     ),
   );
 
+  const autoFetchNote = el(
+    'p',
+    'lede crawl-auto-fetch-note',
+    'When this panel opens on a granted site, robots.txt and any declared sitemaps ' +
+      'are fetched automatically in the background (capped, without cookies or ' +
+      'credentials). The page itself is never reloaded.',
+  );
+  autoFetchNote.id = 'crawl-auto-fetch-note';
+  container.append(autoFetchNote);
+
   const meta = el('dl', 'facts crawl-meta');
   meta.append(row('Audited URL', model.auditedUrl), row('Origin', model.origin));
   container.append(meta);

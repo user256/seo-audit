@@ -42,11 +42,11 @@ What shipped:
 - [x] Robots/sitemap conclusions reachable from Start audit findings (PR #34).
 - [x] Sitemap XML parses inside the MV3 service worker (PR #35).
 - [x] No automatic page reload; silent hydration is same-tab-guarded (PR #36).
-- [ ] Add a visible disclosure for the panel-open background fetches (e.g. a
+- [x] Add a visible disclosure for the panel-open background fetches (e.g. a
   crawl-signals line such as "robots.txt and declared sitemaps are fetched
   automatically when the panel opens — no page reload"), or decide and record
   that panel-open is sufficient consent for these capped fetches.
-- [ ] Add regression tests for `hydrateCrawlSignalsInBackground` and
+- [x] Add regression tests for `hydrateCrawlSignalsInBackground` and
   `applySilentNavigationUpdate` (same-tab guard, robots→sitemap ordering,
   busy-flag reentry, stale-tab bailout).
 - [ ] Operator smoke: open the panel on a public site, confirm no reload, and
@@ -62,6 +62,17 @@ What shipped:
 
 - 2026-07-16 — Ticket filed retroactively during the programme review; scope
   above reconstructed from the merged PRs.
+- 2026-07-16 — Disclosure + tests landed. The hydrate sequencing was extracted
+  to `src/lib/dashboard/hydrate-crawl-signals.ts` (dependency-injected, no DOM
+  or `chrome.*` access) and `sidepanel.ts` now delegates to it; 12 regression
+  tests cover ordering, busy-flag reentry, stale-tab/origin bailout, error
+  passthrough, and the silent-navigation tab guard. The crawl-signals panel
+  gained an always-visible note (`#crawl-auto-fetch-note`) stating that
+  robots.txt and declared sitemaps are fetched automatically on panel open,
+  capped, without cookies/credentials, and that the page is never reloaded —
+  4 new view tests cover the note, panel inventory, button wiring, and
+  open-state retention (the view previously had 0% coverage). Gate: 67 files /
+  406 tests, lint, build all pass. Only the operator smoke item remains.
 
 ---
 
