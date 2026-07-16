@@ -1,50 +1,48 @@
 # Delivery Roadmap
 
-**Last reconciled:** 2026-07-13
+**Last reconciled:** 2026-07-16
 **Authoritative ticket register:** [overview.md](./overview.md)
 
 This is the dependency-ordered delivery view. Ticket files remain the source
-of truth for scope and acceptance criteria; completed Sprint 1 implementation
-tickets are archived in [completed/](./completed/).
+of truth for scope and acceptance criteria; completed implementation tickets
+are archived in [completed/](./completed/).
 
-## Now — complete the Sprint 2 go/no-go gate
+## Now — clear the operator gates (single manual sitting)
 
-1. [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md) — **blocked externally** on the recorded fixture and three-site review.
+All implementation through Sprint 3 is merged. The critical path is entirely
+manual: run [`docs/operator-gates.md`](../docs/operator-gates.md) to clear all
+four gates in one session.
 
-Tickets 201–213 are implemented and archived in [completed/](./completed/).
+1. [Ticket 109](./109-sprint-1-verification-and-documentation-reconciliation.md) — Sprint 1 smoke rows 5–9 (Block A).
+2. [Ticket 199](./199-sprint-1-review.md) — Sprint 1 go/no-go (Block B).
+3. [Ticket 299](./299-sprint-2-review.md) — Sprint 2 go/no-go, three-site review (Block C).
+4. [Ticket 399](./399-sprint-3-review.md) — Sprint 3 keep/defer/remove + go/no-go (Block D); repository review already recorded in the ticket.
 
-## Parallel manual lane — finish the Sprint 1 gate
+## Parallel — Sprint 2 remediation
 
-1. [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md) — **blocked externally** (fresh Chrome 114+ smoke record).
-2. [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md) — after 109.
+1. [Ticket 214](./214-crawl-signals-auto-capture-and-silent-hydration.md) —
+   retroactive ticket for PRs #34–#36 (crawl wiring, SW sitemap parser,
+   panel-open auto-capture, silent hydration). Open items: background-fetch
+   disclosure decision and regression tests for the hydrate paths. This is the
+   only open implementation work before Sprint 4.
 
-Merged remediations on this lane: 113–115 (PR #22).
+## Then — Sprint 4: durable audits (do not start before 399 closes)
 
-## Then — Sprint 3: bounded experiments
-
-Completed implementation: [301](./completed/301-url-variant-and-redirect-test-runner.md),
-[302](./completed/302-soft-404-probe.md),
-[303](./completed/303-css-and-javascript-comparison-experiment.md),
-[304](./completed/304-googlebot-style-render-experiment-spike.md) (spike outcome: **defer**,
-see `docs/googlebot-style-experiment.md`),
-[305](./completed/305-user-agent-profiles-and-audit-disclosures.md) (network-probe-only UA
-profiles now that 304 deferred debugger-backed rendering; see `docs/ua-profiles.md`),
-[306](./completed/306-sprint-3-quality-gate-remediation.md).
-They remain subject to the external Sprint 2 go/no-go gate (**299**).
-
-1. [399](./399-sprint-3-review.md) — only remaining Sprint 3 ticket, gated on
-   an operator review.
-
-## Release path — Sprint 4: durable audits
-
-Completed ahead of the settings surface: [405](./completed/405-user-defined-theme-editor.md).
+Completed ahead of the settings surface: [405](./completed/405-user-defined-theme-editor.md)
+and its remediation [406](./completed/406-theme-preference-write-ordering.md).
 
 1. [401](./401-session-browser-and-historical-comparison.md).
 2. [402](./402-markdown-and-json-export.md) and [403](./403-error-states-privacy-controls-and-data-retention.md).
 3. [404](./404-quality-gates-and-release-packaging.md).
-4. [406](./406-theme-preference-write-ordering.md) — preserve the latest local
-   theme action, including Reset.
-5. [499](./499-sprint-4-review-and-release-go-no-go.md).
+4. [499](./499-sprint-4-review-and-release-go-no-go.md).
+
+## Archived lanes
+
+- Sprint 1 implementation + remediations 100–115: [completed/](./completed/).
+- Sprint 2 implementation 201–213: [completed/](./completed/).
+- Sprint 3 implementation 301–306: [completed/](./completed/) —
+  304 spike outcome **defer** (`docs/googlebot-style-experiment.md`);
+  305 shipped network-probe-only UA profiles (`docs/ua-profiles.md`).
 
 ## Ordering rules
 
@@ -52,4 +50,5 @@ Completed ahead of the settings surface: [405](./completed/405-user-defined-them
 - External/manual gates are blockers, not inferred passes.
 - New remediation work must receive the next available number in its sprint and
   be inserted at the earliest dependency-safe point in this file and in
-  `overview.md`.
+  `overview.md`. **Every merged PR maps to a ticket — PRs #34–#36 broke this
+  rule and cost a retroactive reconstruction (Ticket 214). Don't repeat it.**

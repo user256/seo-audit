@@ -1,5 +1,20 @@
 # Chrome Extension Concept: Mini SEO Technical Audit Toolkit
 
+> **Status note (2026-07-16).** This is the original concept document and is
+> kept as written. Delivery scope is governed by `tickets/overview.md`; where
+> the two differ, the tickets win. Recorded deviations so far:
+>
+> - **Googlebot rendering simulation** — deferred after the Ticket 304 spike
+>   (permission/recovery cost; see `docs/googlebot-style-experiment.md`).
+> - **JS-off toggle / JavaScript difference test** — deliberately omitted;
+>   only the CSS-off comparison shipped (Ticket 303,
+>   `docs/css-js-comparison.md`).
+> - **User-agent switcher** — narrowed to network-probe-only UA profiles; it
+>   never alters the live tab or `navigator.userAgent` (Ticket 305,
+>   `docs/ua-profiles.md`).
+> - **API responses / cloud sync** — out of scope for the first release
+>   (local-first invariant in `CLAUDE.md`).
+
 ## Overview
 
 The goal is to build a Chrome extension that provides tools + an optional wizard to help a user performs a comprehensive technical SEO audit as you browse a website. Rather than being a
