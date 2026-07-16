@@ -1,7 +1,7 @@
 # Ticket 214: Crawl-Signals Auto-Capture and Silent Hydration (retroactive)
 
 **Sprint:** 2 — Crawl and Index Signals
-**Status:** In progress — implementation merged; disclosure + test debt open
+**Status:** Blocked — final operator smoke after Ticket 215
 **Owner:** unassigned
 **Estimate:** S
 
@@ -36,6 +36,10 @@ What shipped:
 - **Test debt:** PR #36 (143-line `sidepanel.ts` change) and the type-narrowing
   follow-up shipped without tests, against the "ship a test with every change"
   rule.
+- **Follow-up:** PR #38 resolved the disclosure and test debt, but review found
+  that a second hydrate call can begin the sitemap stage while a first robots
+  fetch is still busy. Ticket 215 serialises that edge case before the final
+  operator smoke.
 
 ## Acceptance criteria
 
@@ -55,7 +59,7 @@ What shipped:
 ## Dependencies
 
 - **Blocks:** 299 (the Sprint 2 go/no-go should review this surface too)
-- **Blocked by:** —
+- **Blocked by:** 215 (automatic-stage serialization before the final smoke)
 - **External:** operator smoke (see `docs/operator-gates.md`)
 
 ## Notes / decisions log
@@ -73,6 +77,8 @@ What shipped:
   4 new view tests cover the note, panel inventory, button wiring, and
   open-state retention (the view previously had 0% coverage). Gate: 67 files /
   406 tests, lint, build all pass. Only the operator smoke item remains.
+- 2026-07-16 — PR #38 merged to `main`. Review filed Ticket 215 for the narrow
+  concurrent-entry edge before the operator smoke is recorded.
 
 ---
 

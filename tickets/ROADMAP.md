@@ -7,24 +7,28 @@ This is the dependency-ordered delivery view. Ticket files remain the source
 of truth for scope and acceptance criteria; completed implementation tickets
 are archived in [completed/](./completed/).
 
-## Now — clear the operator gates (single manual sitting)
+## Now — serialize the hydrate stage, then clear operator gates
 
-All implementation through Sprint 3 is merged. The critical path is entirely
-manual: run [`docs/operator-gates.md`](../docs/operator-gates.md) to clear all
-four gates in one session.
+All planned implementation through Sprint 3 is merged. First complete the
+small automatic-hydration ordering remediation; then run
+[`docs/operator-gates.md`](../docs/operator-gates.md) to clear all gates in one
+session.
 
-1. [Ticket 109](./109-sprint-1-verification-and-documentation-reconciliation.md) — Sprint 1 smoke rows 5–9 (Block A).
-2. [Ticket 199](./199-sprint-1-review.md) — Sprint 1 go/no-go (Block B).
-3. [Ticket 299](./299-sprint-2-review.md) — Sprint 2 go/no-go, three-site review (Block C).
-4. [Ticket 399](./399-sprint-3-review.md) — Sprint 3 keep/defer/remove + go/no-go (Block D); repository review already recorded in the ticket.
+1. [Ticket 215](./215-hydrate-stage-serialization.md) — prevent a concurrent
+   hydrate call from fetching sitemap candidates before the robots stage ends.
+2. [Ticket 109](./109-sprint-1-verification-and-documentation-reconciliation.md) — Sprint 1 smoke rows 5–9 (Block A).
+3. [Ticket 199](./199-sprint-1-review.md) — Sprint 1 go/no-go (Block B).
+4. [Ticket 214](./214-crawl-signals-auto-capture-and-silent-hydration.md) + [Ticket 299](./299-sprint-2-review.md) — final no-reload smoke and Sprint 2 three-site review (Block C).
+5. [Ticket 399](./399-sprint-3-review.md) — Sprint 3 keep/defer/remove + go/no-go (Block D); repository review already recorded in the ticket.
 
 ## Parallel — Sprint 2 remediation
 
 1. [Ticket 214](./214-crawl-signals-auto-capture-and-silent-hydration.md) —
-   retroactive ticket for PRs #34–#36 (crawl wiring, SW sitemap parser,
-   panel-open auto-capture, silent hydration). Open items: background-fetch
-   disclosure decision and regression tests for the hydrate paths. This is the
-   only open implementation work before Sprint 4.
+   retroactive ticket for PRs #34–#36. Disclosure and regression tests are
+   merged; only its Block C operator smoke remains, after Ticket 215.
+2. [Ticket 215](./215-hydrate-stage-serialization.md) — small concurrent-entry
+   correctness remediation found during PR #38 review; it blocks 214's smoke
+   and Ticket 299.
 
 ## Then — Sprint 4: durable audits (do not start before 399 closes)
 

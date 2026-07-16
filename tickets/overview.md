@@ -40,7 +40,7 @@ Constraints that shape the plan:
 | Area | State | Outstanding / next |
 |---|---|---|
 | **Sprint 1 — Inspect one page** | Blocked | Tickets **109** / **199** need operator Chrome smoke + go/no-go |
-| **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **299** needs its recorded public-site review; Ticket **214** (retroactive, PRs #34–#36) carries disclosure + test follow-ups |
+| **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **215** must serialize automatic hydrate stages; then Ticket **214**'s smoke and Ticket **299**'s public-site review remain |
 | **Sprint 3 — Comparisons and site checks** | Gate pending | Implementation done through **306**; Ticket **399** repository review recorded, operator half outstanding |
 | **Sprint 4 — Durable audits** | Not started (405/406 pulled ahead) | Do **not** start 401–404 until 399 closes; theme editor (405) and its remediation (406) are done |
 
@@ -48,20 +48,19 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-Every implementation ticket through Sprint 3 is merged. The **only** work on
-the critical path is manual: an operator must run the browser gates. All the
-outstanding manual steps are consolidated in
-[`docs/operator-gates.md`](../docs/operator-gates.md) — one sitting clears
-Tickets **109**, **199**, **299**, and **399**.
+Every planned implementation ticket through Sprint 3 is merged. Resolve the
+small Ticket **215** correctness remediation before running the browser gates.
+All outstanding manual steps are consolidated in
+[`docs/operator-gates.md`](../docs/operator-gates.md) — one sitting then clears
+Tickets **109**, **199**, **214**/**299**, and **399**.
 
-1. Run the operator gate runbook (Blocks A–D) and record results in the four
-   gate tickets.
-2. Close out Ticket **214**'s open acceptance items (hydration disclosure +
-   regression tests) — the only open implementation work before Sprint 4.
+1. Complete Ticket **215**; it is the only unmerged code remediation.
+2. Run the operator gate runbook (Blocks A–D) and record results in the four
+   gate tickets (including Ticket 214's Block C addendum).
 3. Then, and only then, open Sprint 4: **401** → **402**/**403** → **404** → **499**.
 
-**Recommended next pick:** the operator runbook. No new feature work should
-land ahead of the gates — that is how the programme drifted.
+**Recommended next pick:** Ticket 215, then the operator runbook. No new
+feature work should land ahead of the gates — that is how the programme drifted.
 
 ---
 
@@ -126,6 +125,7 @@ be discovered, crawled, and indexed.
 **Open tickets:**
 
 - [ ] [Ticket 214: Crawl-Signals Auto-Capture and Silent Hydration (retroactive)](./214-crawl-signals-auto-capture-and-silent-hydration.md)
+- [ ] [Ticket 215: Serialize Automatic Crawl-Signal Hydration](./215-hydrate-stage-serialization.md)
 - [ ] [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md)
 
 **Exit criteria:**
