@@ -9,10 +9,11 @@ findings. It is an interactive inspector, not a site crawler.
 # Current Product Shape
 
 The repository contains the project specification, ticket workflow, and a
-working Sprint 1 extension: the MV3 shell, origin permission flow, local audit
-sessions, DOM collection/rules, Markdown report editor, and side-panel
-workspace. The audit review found remedial hardening required before Sprint 1
-can pass its go/no-go gate.
+working extension through Sprint 3: the MV3 shell, local audit sessions, DOM
+collection/rules, crawl/index signals (robots, sitemap, headers, redirects),
+bounded comparison experiments, Markdown report editor, and side-panel
+workspace. All remedial hardening is merged; Sprints 1–3 now await their
+operator gate records (see `docs/operator-gates.md`).
 
 The product will provide:
 
@@ -39,21 +40,28 @@ Constraints that shape the plan:
 | Area | State | Outstanding / next |
 |---|---|---|
 | **Sprint 1 — Inspect one page** | Blocked | Tickets **109** / **199** need operator Chrome smoke + go/no-go |
-| **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **299** needs its recorded public-site review and go/no-go |
-| **Sprint 3 — Comparisons and site checks** | In progress | Tickets **303**/**304**/**305**/**306** done (304: defer, see `docs/googlebot-style-experiment.md`; 305: network-probe-only UA profiles, see `docs/ua-profiles.md`); gate **299**/**399** still need operator |
-| **Sprint 4 — Durable audits** | In progress | Ticket **405** done (theme editor, see `docs/theme-editor.md`); finish storage, export, accessibility, and release hardening |
+| **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **299** needs its recorded public-site review; Ticket **214** (retroactive, PRs #34–#36) carries disclosure + test follow-ups |
+| **Sprint 3 — Comparisons and site checks** | Gate pending | Implementation done through **306**; Ticket **399** repository review recorded, operator half outstanding |
+| **Sprint 4 — Durable audits** | Not started (405/406 pulled ahead) | Do **not** start 401–404 until 399 closes; theme editor (405) and its remediation (406) are done |
 
 ---
 
 # Current Priority Lane
 
-1. Parallel: Ticket **299** / **109** / **199** when an operator can run Chrome smoke.
-2. Then Ticket **399** (Sprint 3 review) once the external gates land — Ticket
-   305 is done, so 399 is unblocked from the implementation side.
+Every implementation ticket through Sprint 3 is merged. The **only** work on
+the critical path is manual: an operator must run the browser gates. All the
+outstanding manual steps are consolidated in
+[`docs/operator-gates.md`](../docs/operator-gates.md) — one sitting clears
+Tickets **109**, **199**, **299**, and **399**.
 
-**Recommended next pick:** Ticket **399** (operator gate), or the parallel
-**299**/**109**/**199** operator gates. Do not close Ticket **399** without
-operator review.
+1. Run the operator gate runbook (Blocks A–D) and record results in the four
+   gate tickets.
+2. Close out Ticket **214**'s open acceptance items (hydration disclosure +
+   regression tests) — the only open implementation work before Sprint 4.
+3. Then, and only then, open Sprint 4: **401** → **402**/**403** → **404** → **499**.
+
+**Recommended next pick:** the operator runbook. No new feature work should
+land ahead of the gates — that is how the programme drifted.
 
 ---
 
@@ -115,8 +123,9 @@ be discovered, crawled, and indexed.
 **Completed implementation:** Tickets 201–213 are archived in
 [completed/](./completed/).
 
-**Open gate:**
+**Open tickets:**
 
+- [ ] [Ticket 214: Crawl-Signals Auto-Capture and Silent Hydration (retroactive)](./214-crawl-signals-auto-capture-and-silent-hydration.md)
 - [ ] [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md)
 
 **Exit criteria:**
