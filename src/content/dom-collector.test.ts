@@ -62,6 +62,24 @@ describe('collectDomFactsInPage', () => {
     }
   });
 
+  it('does not count SVG icon <title> elements toward document-title duplication (Ticket 216)', () => {
+    loadFixture(
+      `<!doctype html><html><head><title>Milroy's – Milroy's of Soho</title></head>
+      <body>
+        <ul>
+          <li><svg xmlns="http://www.w3.org/2000/svg"><title id="pi-visa">Visa</title></svg></li>
+          <li><svg xmlns="http://www.w3.org/2000/svg"><title id="pi-master">Mastercard</title></svg></li>
+        </ul>
+      </body></html>`,
+      'https://example.com/shop',
+    );
+    const facts = collectDomFactsInPage();
+    expect(facts.title.state).toBe('present');
+    if (facts.title.state === 'present') {
+      expect(facts.title.value).toBe("Milroy's – Milroy's of Soho");
+    }
+  });
+
   it('captures multiple robots directives as duplicate', () => {
     loadFixture(FIXTURE_MULTIPLE_ROBOTS, 'https://example.com/page');
     const facts = collectDomFactsInPage();

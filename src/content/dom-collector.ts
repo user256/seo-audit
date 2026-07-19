@@ -182,7 +182,13 @@ export function collectDomFactsInPage(limits?: DomCollectLimits | number): DomFa
   };
 
   const title = safe('title', (): FieldState => {
-    const nodes = Array.from(document.querySelectorAll('title'));
+    // `querySelectorAll('title')` matches by tag name across namespaces, so it
+    // also picks up SVG <title> elements (accessible names for icons/graphics,
+    // e.g. payment-method sprites) — those are unrelated to the document
+    // title and must not count toward a title-duplicate finding.
+    const nodes = Array.from(document.querySelectorAll('title')).filter(
+      (n): n is HTMLTitleElement => n instanceof HTMLTitleElement,
+    );
     if (nodes.length === 0) return { state: 'absent' };
     const all = nodes.map((n, i) => {
       const clipped = clip((n.textContent ?? '').trim());
