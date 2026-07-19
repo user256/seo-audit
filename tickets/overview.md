@@ -39,8 +39,8 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | Blocked | Tickets **109** / **199** need operator Chrome smoke + go/no-go |
-| **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **215** must serialize automatic hydrate stages; then Ticket **214**'s smoke and Ticket **299**'s public-site review remain |
+| **Sprint 1 — Inspect one page** | Blocked | Tickets **109** / **216** (SVG-title false positive, fixed pending merge) / **199** need operator Chrome smoke + go/no-go |
+| **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **215** must serialize automatic hydrate stages; then Ticket **214**'s smoke and Ticket **299**'s public-site review (re-check Milroys once **216** merges) remain |
 | **Sprint 3 — Comparisons and site checks** | Gate pending | Implementation done through **306**; Ticket **399** repository review recorded, operator half outstanding |
 | **Sprint 4 — Durable audits** | Not started (405/406 pulled ahead) | Do **not** start 401–404 until 399 closes; theme editor (405) and its remediation (406) are done |
 
@@ -97,6 +97,7 @@ useful from the side panel.
 **Tickets:**
 
 - [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
+- [ ] [Ticket 216: SVG Icon `<title>` Elements Falsely Counted as Duplicate Document Titles](./216-svg-title-false-duplicate.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
 **Exit criteria:**
