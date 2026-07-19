@@ -53,7 +53,15 @@ export async function hydrateCrawlSignals(
 ): Promise<void> {
   const stillSameTab = (): boolean => sameHydrateTab(deps.currentTab(), start);
 
-  if (!deps.hasRobotsResult() && !deps.robotsBusy()) {
+  // Another hydrate run — or an explicit Fetch robots — already owns the robots
+  // stage and no result has landed yet. Bail out entirely rather than falling
+  // through: deriving sitemap candidates now would see only fallback URLs and
+  // miss robots-declared sitemaps, contradicting the documented robots →
+  // sitemap ordering. The in-flight run reaches the sitemap stage itself, so
+  // nothing is dropped. Neither busy flag is touched (Ticket 215).
+  if (!deps.hasRobotsResult() && deps.robotsBusy()) return;
+
+  if (!deps.hasRobotsResult()) {
     deps.setRobotsBusy(true);
     try {
       await deps.refresh();

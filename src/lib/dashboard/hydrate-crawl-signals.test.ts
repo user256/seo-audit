@@ -40,7 +40,7 @@ function harness(overrides: Overrides = {}) {
       sitemapBusy = busy;
       calls.push(`sitemap-busy:${busy}`);
     },
-    sitemapCandidateUrls: () => ['https://example.com/sitemap.xml'],
+    sitemapCandidateUrls: vi.fn(() => ['https://example.com/sitemap.xml']),
     fetchSitemap: vi.fn(async (rootUrls: string[]) => {
       calls.push(`fetch-sitemap:${rootUrls.join(',')}`);
       return SITEMAP;
@@ -89,12 +89,67 @@ describe('hydrateCrawlSignals', () => {
     expect(deps.applySitemap).toHaveBeenCalled();
   });
 
-  it('does not re-enter a robots fetch that is already in flight', async () => {
-    const { deps } = harness({ robotsBusy: () => true });
+  it('waits for an in-flight robots fetch instead of hydrating the sitemap first (Ticket 215)', async () => {
+    const { deps, calls } = harness({ robotsBusy: () => true });
     await hydrateCrawlSignals(deps, START);
 
+    // Robots is owned by another run and no result exists yet, so this call
+    // must do nothing at all — fetching a sitemap here would derive candidates
+    // without robots directives.
     expect(deps.fetchRobots).not.toHaveBeenCalled();
-    expect(deps.fetchSitemap).toHaveBeenCalled();
+    expect(deps.fetchSitemap).not.toHaveBeenCalled();
+    expect(deps.sitemapCandidateUrls).not.toHaveBeenCalled();
+    // An empty call log proves neither busy flag was written and no refresh
+    // was triggered — the call is a complete no-op.
+    expect(calls).toEqual([]);
+  });
+
+  it('still hydrates the sitemap when robots is busy but a result already landed', async () => {
+    const { deps } = harness({ robotsBusy: () => true, hasRobotsResult: () => true });
+    await hydrateCrawlSignals(deps, START);
+
+    // Robots directives are available, so the ordering guarantee is satisfied
+    // and an unrelated in-flight robots refresh must not stall the sitemap.
+    expect(deps.fetchRobots).not.toHaveBeenCalled();
+    expect(deps.fetchSitemap).toHaveBeenCalledWith(['https://example.com/sitemap.xml']);
+  });
+
+  it('a second hydrate entering mid-robots-fetch does not overtake the sitemap stage', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { deps } = harness({
+      fetchRobots: vi.fn(async () => {
+        await gate;
+        return ROBOTS;
+      }),
+    });
+
+    const first = hydrateCrawlSignals(deps, START);
+    // The first run set the robots busy flag synchronously before awaiting.
+    const second = hydrateCrawlSignals(deps, START);
+    await second;
+
+    expect(deps.fetchRobots).toHaveBeenCalledTimes(1);
+    expect(deps.fetchSitemap).not.toHaveBeenCalled();
+
+    release();
+    await first;
+
+    // The in-flight run still reaches the sitemap stage, so nothing is dropped.
+    expect(deps.fetchSitemap).toHaveBeenCalledTimes(1);
+  });
+
+  it('derives sitemap candidates only after its own robots stage completes', async () => {
+    const { deps, calls } = harness();
+    await hydrateCrawlSignals(deps, START);
+
+    // Robots-declared sitemap URLs are only visible once robots has been
+    // applied, so candidate derivation must not precede it.
+    expect(calls.indexOf('apply-robots')).toBeLessThan(
+      calls.indexOf('fetch-sitemap:https://example.com/sitemap.xml'),
+    );
   });
 
   it('does not re-enter a sitemap fetch and skips when a sitemap result exists', async () => {

@@ -39,8 +39,8 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | Gate pending | Ticket **216** (SVG-title false positive) merged; Tickets **109** / **199** need operator Chrome smoke + go/no-go |
-| **Sprint 2 — Crawl/index signals** | Blocked | Ticket **215** must serialize automatic hydrate stages — the only unmerged code remediation; then Ticket **214**'s smoke and Ticket **299**'s public-site review (re-check Milroys, now that **216** is merged) remain |
+| **Sprint 1 — Inspect one page** | Gate pending | Ticket **216** (SVG-title false positive) merged; Tickets **109** / **199** need operator Chrome smoke + go/no-go. Ticket **116** (flaky suite timeout) is open but does not gate the operator pass |
+| **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **215** is merged — **all code remediation through Sprint 3 is now complete**. Ticket **214**'s smoke and Ticket **299**'s public-site review (re-check Milroys, now that **216** is merged) remain |
 | **Sprint 3 — Comparisons and site checks** | Gate pending | Implementation done through **306**; Ticket **399** repository review recorded, operator half outstanding |
 | **Sprint 4 — Durable audits** | Not started (405/406/407 pulled ahead) | Do **not** start 401–404 until 399 closes; theme editor (**405**), its write-order remediation (**406**), and the CannyForge reskin (**407**) are merged. **407** still needs a user visual smoke check; **408** (theme a11y fidelity) is filed and open |
 
@@ -48,22 +48,23 @@ Constraints that shape the plan:
 
 # Current Priority Lane
 
-Every planned implementation ticket through Sprint 3 is merged. Resolve the
-small Ticket **215** correctness remediation before running the browser gates.
-All outstanding manual steps are consolidated in
-[`docs/operator-gates.md`](../docs/operator-gates.md) — one sitting then clears
+Every planned implementation ticket through Sprint 3 is merged, **and so is the
+last code remediation (Ticket 215)**. Nothing in the critical path is code work
+any more — the programme is now waiting entirely on a human in a real Chrome
+profile. All outstanding manual steps are consolidated in
+[`docs/operator-gates.md`](../docs/operator-gates.md) — one sitting clears
 Tickets **109**, **199**, **214**/**299**, and **399**.
 
-1. Complete Ticket **215**; it is the only unmerged code remediation.
-2. Run the operator gate runbook (Blocks A–D) and record results in the four
+1. Run the operator gate runbook (Blocks A–D) and record results in the four
    gate tickets (including Ticket 214's Block C addendum). Block C should
    re-check the Milroys title finding now that Ticket **216** is merged.
-3. Then, and only then, open Sprint 4: **401** → **402**/**403** → **404** →
+2. Then, and only then, open Sprint 4: **401** → **402**/**403** → **404** →
    **499**, with **408** folded in before **404** certifies an accessibility
    baseline.
 
-**Recommended next pick:** Ticket 215, then the operator runbook. No new
-feature work should land ahead of the gates — that is how the programme drifted.
+**Recommended next pick:** the operator runbook — it is the only thing standing
+between Sprints 1–3 and their go/no-go. No new feature work should land ahead of
+the gates; that is how the programme drifted.
 
 **Off-lane cosmetic work (does not gate the above):** Ticket **407** is merged
 and needs only the user's visual smoke check in light and dark; Ticket **408**
@@ -103,6 +104,7 @@ useful from the side panel.
 
 **Tickets:**
 
+- [ ] [Ticket 116: Flaky `collect-dom` Session Test Timeout](./116-flaky-collect-dom-timeout.md)
 - [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
@@ -132,7 +134,6 @@ be discovered, crawled, and indexed.
 **Open tickets:**
 
 - [ ] [Ticket 214: Crawl-Signals Auto-Capture and Silent Hydration (retroactive)](./214-crawl-signals-auto-capture-and-silent-hydration.md)
-- [ ] [Ticket 215: Serialize Automatic Crawl-Signal Hydration](./215-hydrate-stage-serialization.md)
 - [ ] [Ticket 299: Sprint 2 Review and Go/No-Go](./299-sprint-2-review.md)
 
 **Exit criteria:**
