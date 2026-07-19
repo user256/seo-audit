@@ -73,8 +73,52 @@ export type ThemeTokens = {
   dark: ThemeTokenSet;
 };
 
-/** Exact values shipped in `sidepanel.css` today — the Canonicals reskin. */
-const CANONICALS_LIGHT: ThemeTokenSet = {
+/** Exact values shipped in `sidepanel.css` today — the CannyForge reskin. */
+const CANNYFORGE_LIGHT: ThemeTokenSet = {
+  bg: '#f7f5ff',
+  fg: '#1b143f',
+  surface: '#ffffff',
+  border: '#e5e7eb',
+  muted: '#655e82',
+  accent: '#ca8a04',
+  brand: '#6d4aff',
+  link: '#5533c9',
+  sevInfoBg: '#e2dbff',
+  sevInfoFg: '#372580',
+  sevWarningBg: '#fdf3d9',
+  sevWarningFg: '#6b4b02',
+  sevErrorBg: '#fbe4e4',
+  sevErrorFg: '#8a2323',
+  sevCriticalBg: '#7a1f2e',
+  sevCriticalFg: '#ffffff',
+};
+
+const CANNYFORGE_DARK: ThemeTokenSet = {
+  bg: '#08031f',
+  fg: '#f7f5ff',
+  surface: '#1b1340',
+  border: '#362a63',
+  muted: '#b09dff',
+  accent: '#fbbf24',
+  brand: '#6d4aff',
+  link: '#9a82ff',
+  sevInfoBg: '#2a2258',
+  sevInfoFg: '#cdbfff',
+  sevWarningBg: '#3a2a0a',
+  sevWarningFg: '#fbbf24',
+  sevErrorBg: '#3a1414',
+  sevErrorFg: '#ff9a8a',
+  sevCriticalBg: '#fbbf24',
+  sevCriticalFg: '#1b143f',
+};
+
+export const DEFAULT_THEME_TOKENS: ThemeTokens = {
+  light: CANNYFORGE_LIGHT,
+  dark: CANNYFORGE_DARK,
+};
+
+/** The original ink/cream/lime neo-brutalist skin, preserved as a selectable preset. */
+const CLASSIC_LIGHT: ThemeTokenSet = {
   bg: '#f5f0e8',
   fg: '#1a1a1a',
   surface: '#ffffff',
@@ -93,7 +137,7 @@ const CANONICALS_LIGHT: ThemeTokenSet = {
   sevCriticalFg: '#ffffff',
 };
 
-const CANONICALS_DARK: ThemeTokenSet = {
+const CLASSIC_DARK: ThemeTokenSet = {
   bg: '#1a1a1a',
   fg: '#f5f0e8',
   surface: '#232320',
@@ -110,11 +154,6 @@ const CANONICALS_DARK: ThemeTokenSet = {
   sevErrorFg: '#ff9a8a',
   sevCriticalBg: '#ff5c38',
   sevCriticalFg: '#1a1a1a',
-};
-
-export const DEFAULT_THEME_TOKENS: ThemeTokens = {
-  light: CANONICALS_LIGHT,
-  dark: CANONICALS_DARK,
 };
 
 const HIGH_CONTRAST_LIGHT: ThemeTokenSet = {
@@ -202,10 +241,16 @@ export type ThemePreset = {
 
 export const THEME_PRESETS: readonly ThemePreset[] = [
   {
-    id: 'canonicals-default',
-    label: 'Canonicals default',
-    description: 'The shipped ink/cream/lime skin.',
+    id: 'cannyforge-default',
+    label: 'CannyForge default',
+    description: 'The shipped violet, lavender, and gold CannyForge skin.',
     tokens: DEFAULT_THEME_TOKENS,
+  },
+  {
+    id: 'classic-brutalist',
+    label: 'Classic (brutalist)',
+    description: 'The original ink/cream/lime neo-brutalist skin.',
+    tokens: { light: CLASSIC_LIGHT, dark: CLASSIC_DARK },
   },
   {
     id: 'high-contrast',

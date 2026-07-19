@@ -10,7 +10,7 @@ it needs rather than inventing one.
 ## Token set
 
 The editor exposes exactly the CSS custom properties that already drive
-`sidepanel.css`'s Canonicals-inspired skin (`src/lib/theme/tokens.ts`):
+`sidepanel.css`'s CannyForge-inspired skin (`src/lib/theme/tokens.ts`):
 `bg`, `fg` (text), `surface`, `border`, `muted`, `accent`, `brand`, `link`,
 and the four severity pairs (`sevInfoBg`/`Fg`, `sevWarningBg`/`Fg`,
 `sevErrorBg`/`Fg`, `sevCriticalBg`/`Fg`) — 16 tokens, each with an independent
@@ -22,15 +22,16 @@ colour custom properties.
 
 ## Presets
 
-`THEME_PRESETS` (`src/lib/theme/tokens.ts`) ships three built-ins, each with
+`THEME_PRESETS` (`src/lib/theme/tokens.ts`) ships four built-ins, each with
 both light and dark values that independently pass WCAG AA on every checked
 pair (verified in `contrast-check.test.ts`):
 
-| Preset             | Id                   | Intent                                                                 |
-| ------------------ | -------------------- | ---------------------------------------------------------------------- |
-| Canonicals default | `canonicals-default` | The shipped ink/cream/lime skin (identical to `DEFAULT_THEME_TOKENS`). |
-| High contrast      | `high-contrast`      | Maximised black/white contrast.                                        |
-| Neutral            | `neutral`            | Desaturated greys, low-distraction workspace.                          |
+| Preset              | Id                   | Intent                                                                       |
+| ------------------- | -------------------- | ---------------------------------------------------------------------------- |
+| CannyForge default  | `cannyforge-default` | The shipped violet/lavender/gold skin (identical to `DEFAULT_THEME_TOKENS`). |
+| Classic (brutalist) | `classic-brutalist`  | The original ink/cream/lime neo-brutalist skin, preserved for continuity.    |
+| High contrast       | `high-contrast`      | Maximised black/white contrast.                                              |
+| Neutral             | `neutral`            | Desaturated greys, low-distraction workspace.                                |
 
 Clicking a preset button replaces the in-memory tokens, re-applies the theme,
 and persists it — the preset itself is not "sticky" as a separate concept;

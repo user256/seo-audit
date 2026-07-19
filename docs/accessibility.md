@@ -70,9 +70,9 @@ Run after loading unpacked `dist/` in Chrome (see also
   against WCAG AA on every edit (`src/lib/theme/contrast-check.ts`); failing
   pairs render a visible, non-`aria-hidden` warning with the exact ratio —
   saving is never blocked, so this is advisory rather than a hard gate.
-- All three shipped presets (Canonicals default, high contrast, neutral) pass
-  AA on every checked pair in both light and dark, asserted in
-  `contrast-check.test.ts`.
+- All four shipped presets (CannyForge default, classic brutalist, high
+  contrast, neutral) pass AA on every checked pair in both light and dark,
+  asserted in `contrast-check.test.ts`.
 - See `docs/theme-editor.md` for the full design.
 
 ## Crawl signals (Ticket 205)
