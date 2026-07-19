@@ -180,7 +180,8 @@ cloaking detection claims, guarantees about Google’s renderer.
 
 **Completed implementation:** [Ticket 405](./completed/405-user-defined-theme-editor.md)
 (pulled ahead of the settings surface per its own Approach note — see
-`docs/theme-editor.md`).
+`docs/theme-editor.md`); Ticket 407 (CannyForge visual reskin) also pulled
+ahead per direct user request.
 
 **Tickets:**
 
@@ -188,6 +189,7 @@ cloaking detection claims, guarantees about Google’s renderer.
 - [ ] [Ticket 402: Markdown and JSON Export](./402-markdown-and-json-export.md)
 - [ ] [Ticket 403: Error States, Privacy Controls, and Data Retention](./403-error-states-privacy-controls-and-data-retention.md)
 - [ ] [Ticket 404: Quality Gates and Release Packaging](./404-quality-gates-and-release-packaging.md)
+- [ ] [Ticket 407: CannyForge Visual Reskin](./407-cannyforge-visual-reskin.md)
 - [ ] [Ticket 499: Sprint 4 Review and Release Go/No-Go](./499-sprint-4-review-and-release-go-no-go.md)
 
 **Exit criteria:**

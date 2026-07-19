@@ -53,8 +53,8 @@ describe('fillThemeTokens', () => {
 });
 
 describe('THEME_PRESETS', () => {
-  it('includes the Canonicals default plus at least one high-contrast and one neutral preset', () => {
-    expect(findPreset('canonicals-default')?.tokens).toEqual(DEFAULT_THEME_TOKENS);
+  it('includes the CannyForge default plus at least one high-contrast and one neutral preset', () => {
+    expect(findPreset('cannyforge-default')?.tokens).toEqual(DEFAULT_THEME_TOKENS);
     expect(findPreset('high-contrast')).toBeDefined();
     expect(findPreset('neutral')).toBeDefined();
   });

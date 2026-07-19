@@ -7,7 +7,7 @@ describe('theme editor view', () => {
     const host = document.createElement('div');
     renderThemeEditor(
       host,
-      { tokens: DEFAULT_THEME_TOKENS, activePresetId: 'canonicals-default' },
+      { tokens: DEFAULT_THEME_TOKENS, activePresetId: 'cannyforge-default' },
       { onTokenChange: () => undefined, onPresetSelect: () => undefined, onReset: () => undefined },
     );
 
@@ -22,12 +22,12 @@ describe('theme editor view', () => {
     const host = document.createElement('div');
     renderThemeEditor(
       host,
-      { tokens: DEFAULT_THEME_TOKENS, activePresetId: 'canonicals-default' },
+      { tokens: DEFAULT_THEME_TOKENS, activePresetId: 'cannyforge-default' },
       { onTokenChange: () => undefined, onPresetSelect: () => undefined, onReset: () => undefined },
     );
 
     expect(
-      host.querySelector('#theme-preset-canonicals-default')?.getAttribute('aria-pressed'),
+      host.querySelector('#theme-preset-cannyforge-default')?.getAttribute('aria-pressed'),
     ).toBe('true');
     expect(host.querySelector('#theme-preset-high-contrast')?.getAttribute('aria-pressed')).toBe(
       'false',
@@ -39,7 +39,7 @@ describe('theme editor view', () => {
     const onTokenChange = vi.fn();
     renderThemeEditor(
       host,
-      { tokens: DEFAULT_THEME_TOKENS, activePresetId: 'canonicals-default' },
+      { tokens: DEFAULT_THEME_TOKENS, activePresetId: 'cannyforge-default' },
       { onTokenChange, onPresetSelect: () => undefined, onReset: () => undefined },
     );
 
