@@ -16,6 +16,7 @@
 - [x] [Ticket 113: Dashboard Rendering and Clipboard UI Tests](./113-dashboard-rendering-and-clipboard-ui-tests.md)
 - [x] [Ticket 114: DOM Evidence Save-Boundary Enforcement](./114-dom-evidence-save-boundary-enforcement.md)
 - [x] [Ticket 115: Long-URL DOM Capture Bounds](./115-long-url-dom-capture-bounds.md)
+- [x] [Ticket 216: SVG Icon `<title>` Elements Falsely Counted as Duplicate Document Titles](./216-svg-title-false-duplicate.md)
 
 # Sprint 2: Crawl and Index Signals
 

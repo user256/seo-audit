@@ -39,10 +39,10 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | Blocked | Tickets **109** / **216** (SVG-title false positive, fixed pending merge) / **199** need operator Chrome smoke + go/no-go |
-| **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **215** must serialize automatic hydrate stages; then Ticket **214**'s smoke and Ticket **299**'s public-site review (re-check Milroys once **216** merges) remain |
+| **Sprint 1 — Inspect one page** | Gate pending | Ticket **216** (SVG-title false positive) merged; Tickets **109** / **199** need operator Chrome smoke + go/no-go |
+| **Sprint 2 — Crawl/index signals** | Blocked | Ticket **215** must serialize automatic hydrate stages — the only unmerged code remediation; then Ticket **214**'s smoke and Ticket **299**'s public-site review (re-check Milroys, now that **216** is merged) remain |
 | **Sprint 3 — Comparisons and site checks** | Gate pending | Implementation done through **306**; Ticket **399** repository review recorded, operator half outstanding |
-| **Sprint 4 — Durable audits** | Not started (405/406 pulled ahead) | Do **not** start 401–404 until 399 closes; theme editor (405) and its remediation (406) are done |
+| **Sprint 4 — Durable audits** | Not started (405/406/407 pulled ahead) | Do **not** start 401–404 until 399 closes; theme editor (**405**), its write-order remediation (**406**), and the CannyForge reskin (**407**) are merged. **407** still needs a user visual smoke check; **408** (theme a11y fidelity) is filed and open |
 
 ---
 
@@ -56,11 +56,18 @@ Tickets **109**, **199**, **214**/**299**, and **399**.
 
 1. Complete Ticket **215**; it is the only unmerged code remediation.
 2. Run the operator gate runbook (Blocks A–D) and record results in the four
-   gate tickets (including Ticket 214's Block C addendum).
-3. Then, and only then, open Sprint 4: **401** → **402**/**403** → **404** → **499**.
+   gate tickets (including Ticket 214's Block C addendum). Block C should
+   re-check the Milroys title finding now that Ticket **216** is merged.
+3. Then, and only then, open Sprint 4: **401** → **402**/**403** → **404** →
+   **499**, with **408** folded in before **404** certifies an accessibility
+   baseline.
 
 **Recommended next pick:** Ticket 215, then the operator runbook. No new
 feature work should land ahead of the gates — that is how the programme drifted.
+
+**Off-lane cosmetic work (does not gate the above):** Ticket **407** is merged
+and needs only the user's visual smoke check in light and dark; Ticket **408**
+cleans up the two accessibility gaps its review surfaced.
 
 ---
 
@@ -97,7 +104,6 @@ useful from the side panel.
 **Tickets:**
 
 - [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
-- [ ] [Ticket 216: SVG Icon `<title>` Elements Falsely Counted as Duplicate Document Titles](./216-svg-title-false-duplicate.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 
 **Exit criteria:**
@@ -183,13 +189,17 @@ cloaking detection claims, guarantees about Google’s renderer.
 `docs/theme-editor.md`); Ticket 407 (CannyForge visual reskin) also pulled
 ahead per direct user request.
 
-**Tickets:**
+**Tickets:** listed in intended execution order — **407** is merged and needs
+only the user's light/dark visual smoke check, **408** cleans up the two
+accessibility gaps its review surfaced and should land before **404** certifies
+an accessibility baseline. Neither gates the Sprint 1–3 operator work.
 
+- [ ] [Ticket 407: CannyForge Visual Reskin](./407-cannyforge-visual-reskin.md)
+- [ ] [Ticket 408: Theme Accessibility Fidelity](./408-theme-a11y-fidelity.md)
 - [ ] [Ticket 401: Session Browser and Historical Comparison](./401-session-browser-and-historical-comparison.md)
 - [ ] [Ticket 402: Markdown and JSON Export](./402-markdown-and-json-export.md)
 - [ ] [Ticket 403: Error States, Privacy Controls, and Data Retention](./403-error-states-privacy-controls-and-data-retention.md)
 - [ ] [Ticket 404: Quality Gates and Release Packaging](./404-quality-gates-and-release-packaging.md)
-- [ ] [Ticket 407: CannyForge Visual Reskin](./407-cannyforge-visual-reskin.md)
 - [ ] [Ticket 499: Sprint 4 Review and Release Go/No-Go](./499-sprint-4-review-and-release-go-no-go.md)
 
 **Exit criteria:**
