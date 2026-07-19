@@ -34,6 +34,7 @@
 - [x] [Ticket 204: Indexability Reconciliation Rules](./204-indexability-reconciliation-rules.md)
 - [x] [Ticket 205: Crawl Signals Workspace](./205-crawl-signals-workspace.md)
 - [x] [Ticket 213: Hreflang Page-Cluster Validation (Opt-In Fetch)](./213-hreflang-page-cluster-validation.md)
+- [x] [Ticket 215: Serialize Automatic Crawl-Signal Hydration](./215-hydrate-stage-serialization.md)
 # Sprint 3: Bounded Comparisons and Site Checks
 
 **Tickets:**
