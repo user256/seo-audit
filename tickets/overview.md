@@ -39,7 +39,7 @@ Constraints that shape the plan:
 
 | Area | State | Outstanding / next |
 |---|---|---|
-| **Sprint 1 — Inspect one page** | Gate pending | Ticket **216** (SVG-title false positive) merged; Tickets **109** / **199** need operator Chrome smoke + go/no-go. Ticket **116** (flaky suite timeout) is open but does not gate the operator pass |
+| **Sprint 1 — Inspect one page** | Gate pending | Tickets **216** (SVG-title false positive) and **116** (flaky suite timeout) are merged; the suite is now deterministic, so "tests green" is trustworthy evidence again. Tickets **109** / **199** need operator Chrome smoke + go/no-go |
 | **Sprint 2 — Crawl/index signals** | Gate pending | Ticket **215** is merged — **all code remediation through Sprint 3 is now complete**. Ticket **214**'s smoke and Ticket **299**'s public-site review (re-check Milroys, now that **216** is merged) remain |
 | **Sprint 3 — Comparisons and site checks** | Gate pending | Implementation done through **306**; Ticket **399** repository review recorded, operator half outstanding |
 | **Sprint 4 — Durable audits** | Not started (405/406/407 pulled ahead) | Do **not** start 401–404 until 399 closes; theme editor (**405**), its write-order remediation (**406**), and the CannyForge reskin (**407**) are merged. **407** still needs a user visual smoke check; **408** (theme a11y fidelity) is filed and open |
@@ -104,7 +104,6 @@ useful from the side panel.
 
 **Tickets:**
 
-- [ ] [Ticket 116: Flaky `collect-dom` Session Test Timeout](./116-flaky-collect-dom-timeout.md)
 - [ ] [Ticket 109: Sprint 1 Verification and Documentation Reconciliation](./109-sprint-1-verification-and-documentation-reconciliation.md)
 - [ ] [Ticket 199: Sprint 1 Review and Go/No-Go](./199-sprint-1-review.md)
 

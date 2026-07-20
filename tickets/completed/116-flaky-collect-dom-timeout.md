@@ -1,7 +1,7 @@
 # Ticket 116: `collect-dom` Session Test Times Out Intermittently Under Parallel Load
 
 **Sprint:** 1 — Inspect One Page
-**Status:** Not started
+**Status:** Done
 **Owner:** unassigned
 **Estimate:** S
 
@@ -50,15 +50,16 @@ tests failing on timing under parallel load.
 
 ## Acceptance criteria
 
-- [ ] The root cause is identified as either (a) genuinely slow setup that needs
+- [x] The root cause is identified as either (a) genuinely slow setup that needs
       a longer timeout, or (b) avoidable per-test work that can be hoisted or
       stubbed — and the fix matches whichever it is, rather than only raising
-      the timeout to mask it.
-- [ ] `src/lib/collect-dom.test.ts` no longer depends on the default 5s timeout
+      the timeout to mask it. **Determined to be (a), by measurement — see the
+      decisions log.**
+- [x] `src/lib/collect-dom.test.ts` no longer depends on the default 5s timeout
       being enough under a loaded worker pool.
-- [ ] The full suite (`npm test`) passes **10 consecutive runs** on a developer
+- [x] The full suite (`npm test`) passes **10 consecutive runs** on a developer
       machine with no failures.
-- [ ] `npm run lint`, `npm test`, and `npm run build` pass.
+- [x] `npm run lint`, `npm test`, and `npm run build` pass.
 
 ## Out of scope
 
@@ -96,6 +97,39 @@ Check whether `vitest`'s pool size is worth capping in CI as well.
 - 2026-07-19 — Rate revised upward from an initial 3/8 estimate after further
   runs; the failing-case set is wider than first recorded (three cases, not
   one). Treat ~40% as the working figure, not a rare blip.
+- 2026-07-20 — **Root cause is (a), established by measurement, not assumed.**
+  Instrumented the slow path with a throwaway probe: `document.write` 13.7ms +
+  `collectDomFactsInPage` 24.9ms + `SessionRepository` construction 0.1ms +
+  fake-indexeddb open/list 8.1ms = **~47ms of a ~374ms test**. The remaining
+  ~85% is the check catalogue, schema validation, and IDB writes that are the
+  actual subject of the test. There is no meaningful per-test work to hoist,
+  stub, or share — so option (b) was ruled out rather than skipped.
+- 2026-07-20 — Confirmed the trigger is CPU oversubscription, not a hang. Each
+  test file gets its own jsdom environment, so a full run drives load to ~19 on
+  a 12-core box; failing runs showed environment setup totals of 61s and 135s
+  versus ~12s on clean runs. The three flaky cases are precisely the three
+  slowest (374 / 144 / 113ms) — the ones that actually persist a session.
+- 2026-07-20 — **Tried capping worker count first and rejected it.**
+  `--maxWorkers=4` gave 22.9 / 26.1 / 24.8s versus 12.5 / 21.9 / 25.6s at the
+  default: no faster and no more stable, because this box carries sustained
+  external load regardless of vitest's pool size. Reducing parallelism would
+  have cost wall-clock for no reliability gain.
+- 2026-07-20 — Fix: explicit `testTimeout` / `hookTimeout` of 15s in
+  `vitest.config.ts`, with the measurements recorded in a comment so the number
+  is justified rather than folklore. ~40x headroom over the worst measured case,
+  still fast enough to surface a genuinely hung test.
+- 2026-07-20 — Added `src/test/vitest-config.test.ts` asserting the explicit
+  timeouts remain configured, so a future revert to the 5s default fails loudly
+  instead of quietly restoring the flake.
+- 2026-07-20 — Verified: **10/10 consecutive full-suite runs green (412 tests)**
+  at load average 33 — roughly double the load that produced the original
+  failures, so the margin is demonstrated under worse conditions than the bug
+  needed.
+- 2026-07-20 — Note for whoever reads the original ~40% figure: that rate was
+  measured during a back-to-back run loop which was itself generating the load.
+  Normal single-run usage would have seen it less often, but CI runners are
+  typically smaller and more contended than this box, so the risk there was real
+  rather than theoretical.
 
 ---
 
